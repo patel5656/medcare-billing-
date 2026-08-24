@@ -109,7 +109,7 @@ export const ScheduleAppointmentModal = ({
         ...formData,
         serviceLines,
         totalEstimatedCharge,
-        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(', '),
+        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(',').substring(0, 10),
         modifiers: serviceLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
         providerName: selectedProv?.name || 'JOSMIC Wellness Center'
       });

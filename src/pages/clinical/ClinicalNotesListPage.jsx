@@ -23,7 +23,11 @@ export const ClinicalNotesListPage = () => {
     const filterObj = {};
     const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
     if (!isFullAccess) {
-      filterObj.providerId = currentUser?.providerId || currentUser?.id || `prov-${currentUser?.name || 'unknown'}`;
+      if (currentUser?.role === ROLES.COUNSELOR) {
+        filterObj.providerId = 'prov-counselor';
+      } else {
+        filterObj.providerId = currentUser?.providerId || currentUser?.id || `prov-${currentUser?.name || 'unknown'}`;
+      }
     }
 
     apiClinicalNoteService.getNotes(filterObj).then(res => {

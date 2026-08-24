@@ -42,7 +42,11 @@ export const PatientListPage = () => {
     const filterObj = { search, status: statusFilter };
     const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
     if (!isFullAccess) {
-      filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+      if (currentUser?.role === ROLES.COUNSELOR) {
+        filterObj.providerId = 'prov-counselor';
+      } else {
+        filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+      }
     }
 
     mockPatientService.getPatients(filterObj).then(res => {

@@ -33,7 +33,11 @@ export const CaseListPage = () => {
     const filterObj = { search };
     const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
     if (!isFullAccess) {
-      filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+      if (currentUser?.role === ROLES.COUNSELOR) {
+        filterObj.providerId = 'prov-counselor';
+      } else {
+        filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+      }
     }
 
     mockCaseService.getCases(filterObj).then(res => setCases(res || [])).catch(() => {});
