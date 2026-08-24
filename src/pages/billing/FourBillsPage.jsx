@@ -420,9 +420,9 @@ export const FourBillsPage = () => {
         </div>
 
         <div className="grid grid-cols-4 gap-2 p-2 bg-slate-100 rounded text-xs font-mono border border-slate-300">
-          <div>Total Charges: <strong>{formatCurrency(grandCharges)}</strong></div>
-          <div>Payments: <strong>{formatCurrency(grandPayments)}</strong></div>
-          <div>Adjustments: <strong>{formatCurrency(grandAdjustments)}</strong></div>
+          <div>Total Charges: <strong>{formatCurrency(grandTotalCharges)}</strong></div>
+          <div>Payments: <strong>{formatCurrency(grandTotalPayments)}</strong></div>
+          <div>Adjustments: <strong>{formatCurrency(grandTotalAdjustments)}</strong></div>
           <div>Balance Due: <strong className="text-emerald-800">{formatCurrency(grandBalanceDue)}</strong></div>
         </div>
 
