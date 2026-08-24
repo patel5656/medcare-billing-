@@ -1,4 +1,3 @@
-// src/pages/billing/BillDetailsPage.jsx
 import React, { useEffect, useState } from 'react';
 import { apiBillingService } from '../../services/api/apiBillingService';
 import { formatCurrency } from '../../utils/billingCalculations';
@@ -6,7 +5,8 @@ import { formatStatus } from '../../utils/formatters';
 import { PrintableStatementModal } from '../../components/billing/PrintableStatementModal';
 import { useUIStore } from '../../store/uiStore';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, DollarSign, FileText, CheckCircle2, Lock, Plus, FileCheck, Printer } from 'lucide-react';
+import { ArrowLeft, DollarSign, FileText, CheckCircle2, Lock, Plus, FileCheck, Printer, FileSpreadsheet } from 'lucide-react';
+import { exportToCSV, getTimestampedFilename } from '../../utils/exportUtils';
 
 export const BillDetailsPage = () => {
   const { id } = useParams();
@@ -30,6 +30,42 @@ export const BillDetailsPage = () => {
   }, [id]);
 
   if (!bill) return <div className="p-6 text-xs text-slate-500">Loading provider bill statement...</div>;
+
+  const handleExportCSV = () => {
+    try {
+      const lineItems = (bill.lineItems || []).map((item, idx) => ({
+        index: idx + 1,
+        dos: item.dos || '',
+        cptCode: item.cptCode || '',
+        description: item.description || '',
+        units: item.units || 1,
+        charge: item.charge || 0,
+        insPay: item.payments?.insurance || 0,
+        patPay: item.payments?.patient || 0,
+        adjustments: item.adjustments || 0,
+        balance: item.lineBalance || 0
+      }));
+
+      const columns = [
+        { key: 'index', label: 'Item #' },
+        { key: 'dos', label: 'Date of Service (DOS)' },
+        { key: 'cptCode', label: 'CPT / HCPCS' },
+        { key: 'description', label: 'Description' },
+        { key: 'units', label: 'Units' },
+        { key: 'charge', label: 'Billed Charge ($)', formatter: (v) => formatCurrency(v) },
+        { key: 'insPay', label: 'Insurance Paid ($)', formatter: (v) => formatCurrency(v) },
+        { key: 'patPay', label: 'Patient Paid ($)', formatter: (v) => formatCurrency(v) },
+        { key: 'adjustments', label: 'Adjustments ($)', formatter: (v) => formatCurrency(v) },
+        { key: 'balance', label: 'Line Balance ($)', formatter: (v) => formatCurrency(v) },
+      ];
+
+      const filename = getTimestampedFilename(`bill_statement_${bill.statementNumber || bill.id}`, 'csv');
+      exportToCSV(filename, lineItems, columns);
+      addToast(`Exported ${lineItems.length} service lines to ${filename}`, 'success');
+    } catch (err) {
+      addToast('Failed to export statement CSV', 'error');
+    }
+  };
 
   const handlePostPayment = async (e) => {
     e.preventDefault();
@@ -93,18 +129,25 @@ export const BillDetailsPage = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setShowPrintModal(true)}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5"
+            onClick={handleExportCSV}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-bold text-xs rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+            title="Download Service Lines CSV"
           >
-            <Printer className="w-4 h-4" /> Print PDF Statement
+            <FileSpreadsheet className="w-4 h-4 text-teal-600" /> Export CSV
           </button>
-          <button onClick={() => setShowPaymentModal(true)} className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-sm transition">
+          <button
+            onClick={() => setShowPrintModal(true)}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <Printer className="w-4 h-4 text-teal-400" /> Print PDF Statement
+          </button>
+          <button onClick={() => setShowPaymentModal(true)} className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-sm transition cursor-pointer">
             Post Payment
           </button>
-          <button onClick={() => setShowAdjustmentModal(true)} className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition">
+          <button onClick={() => setShowAdjustmentModal(true)} className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition cursor-pointer">
             Post Adjustment
           </button>
-          <button onClick={handleFinalise} className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition">
+          <button onClick={handleFinalise} className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition cursor-pointer">
             Finalise Bill
           </button>
         </div>

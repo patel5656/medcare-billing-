@@ -6,7 +6,7 @@ export const AnikCoverPage = ({ packetData, onFieldChange, readOnly, blankMode =
   const val = (v) => blankMode ? '' : v;
 
   return (
-    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-12 space-y-8" style={{ width: '850px', height: '1100px' }}>
+    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-12 space-y-8 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px' }}>
       
       {/* Header */}
       <div className="text-center border-b-2 border-slate-900 pb-6">

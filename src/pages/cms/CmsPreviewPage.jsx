@@ -1,14 +1,14 @@
-// src/pages/cms/CmsPreviewPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiBillingService as mockBillingService } from '../../services/api/apiBillingService';
-import { mockCms1500Service } from '../../services/mock/mockCms1500Service';
+import { apiCms1500Service } from '../../services/api/apiCms1500Service';
 import { CmsRedGridForm } from '../../components/cms/CmsRedGridForm';
 import { useUIStore } from '../../store/uiStore';
-import {
-  ArrowLeft, Printer, ChevronLeft, ChevronRight, ZoomIn, ZoomOut,
-  Maximize2, Download, AlertTriangle, FileCheck, ShieldAlert
+import { 
+  ArrowLeft, Printer, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, 
+  Maximize2, Download, AlertTriangle, FileCheck, ShieldAlert, FileSpreadsheet 
 } from 'lucide-react';
+import { triggerPrint, exportToCSV, getTimestampedFilename } from '../../utils/exportUtils';
 
 export const CmsPreviewPage = () => {
   const { id } = useParams();
@@ -22,7 +22,7 @@ export const CmsPreviewPage = () => {
 
   useEffect(() => {
     mockBillingService.getBillById(id).then(setBill);
-    mockCms1500Service.getClaimsByBillId(id).then(res => {
+    apiCms1500Service.getClaimsByBillId(id).then(res => {
       setClaims(res || []);
       setActiveClaimIndex(0);
     });
@@ -69,30 +69,65 @@ export const CmsPreviewPage = () => {
 
   const handlePrintCurrent = () => {
     setPrintAllMode(false);
-    setTimeout(() => window.print(), 150);
+    triggerPrint('printable-cms-claim');
+    addToast('Opening print dialog for current CMS-1500 claim...', 'info');
   };
 
   const handlePrintAll = () => {
     setPrintAllMode(true);
     addToast(`Preparing all ${claims.length} claims for print...`, 'info');
     setTimeout(() => {
-      window.print();
-      setPrintAllMode(false);
+      triggerPrint('printable-cms-claim');
+      setTimeout(() => setPrintAllMode(false), 800);
     }, 200);
   };
 
-  const handleSavePdf = () => {
-    addToast('Generated PDF export simulation for CMS claim.', 'success');
+  const handleExportClaimCSV = () => {
+    try {
+      const claimData = claims.map((c, i) => ({
+        claimNumber: i + 1,
+        claimId: c.claimId,
+        dos: c.dosDisplay || '',
+        provider: c.providerName || '',
+        patient: c.box2 || '',
+        patientDob: c.box3Dob || '',
+        insuredName: c.box4 || '',
+        referringProvider: c.box17ReferringName || '',
+        diagnoses: (c.box21Diagnoses || []).join('; '),
+        totalCharge: c.box28TotalCharge || 0,
+        amountPaid: c.box29AmountPaid || 0,
+        balanceDue: c.box30BalanceDue || 0,
+        status: c.status || 'Validated'
+      }));
+
+      const columns = [
+        { key: 'claimNumber', label: 'Claim #' },
+        { key: 'dos', label: 'Date of Service' },
+        { key: 'provider', label: 'Billing Provider' },
+        { key: 'patient', label: 'Patient Name' },
+        { key: 'patientDob', label: 'Patient DOB' },
+        { key: 'referringProvider', label: 'Referring Provider' },
+        { key: 'diagnoses', label: 'ICD-10 Diagnoses' },
+        { key: 'totalCharge', label: 'Total Billed ($)' },
+        { key: 'status', label: 'NUCC Status' },
+      ];
+
+      const filename = getTimestampedFilename(`cms1500_bill_${bill.statementNumber || bill.id}`, 'csv');
+      exportToCSV(filename, claimData, columns);
+      addToast(`Exported ${claims.length} claims to ${filename}`, 'success');
+    } catch (err) {
+      addToast('Failed to export CMS claims data', 'error');
+    }
   };
 
   return (
     <div className="space-y-4">
-
+      
       {/* APP HEADER CONTROLS (Hidden during Printing) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate(-1)}
+          <button 
+            onClick={() => navigate(-1)} 
             className="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl shadow-2xs transition flex items-center gap-2 cursor-pointer group"
             title="Go back to previous page"
           >
@@ -100,15 +135,15 @@ export const CmsPreviewPage = () => {
             <span>Back</span>
           </button>
 
-          <button
-            onClick={() => navigate('/cms-1500')}
+          <button 
+            onClick={() => navigate('/cms-1500')} 
             className="px-3 py-2 text-xs font-bold text-teal-700 hover:text-teal-900 hover:bg-teal-50 rounded-xl transition cursor-pointer"
           >
             Claims Queue
           </button>
 
-          <button
-            onClick={() => navigate('/billing/provider-bills')}
+          <button 
+            onClick={() => navigate('/billing/provider-bills')} 
             className="px-3 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer hidden md:inline-block"
           >
             Provider Bills Ledger
@@ -116,38 +151,48 @@ export const CmsPreviewPage = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={handleSavePdf} className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer">
-            <Download className="w-3.5 h-3.5 text-slate-600" /> Save PDF
+          <button 
+            onClick={handleExportClaimCSV} 
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+            title="Export Claim Data to CSV"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-teal-600" /> Export CSV
           </button>
-          <button onClick={handlePrintCurrent} className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
-            <Printer className="w-3.5 h-3.5" /> Print Claim
+          <button 
+            onClick={handlePrintCurrent} 
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5" /> Print / Save PDF
           </button>
           {claims.length > 1 && (
-            <button onClick={handlePrintAll} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+            <button 
+              onClick={handlePrintAll} 
+              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+            >
               <Printer className="w-3.5 h-3.5" /> Print All ({claims.length})
             </button>
           )}
         </div>
       </div>
 
-      <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl text-xs text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center border border-teal-500/30">
-            <FileCheck className="w-4 h-4 text-teal-400" />
+        <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl text-xs text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm print:hidden">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center border border-teal-500/30">
+              <FileCheck className="w-4 h-4 text-teal-400" />
+            </div>
+            <span className="text-xs text-slate-300">
+              <strong className="text-white">Standard HCFA CMS-1500 (02/12):</strong> Form mapped to Box 1-33 NUCC Compliance
+            </span>
           </div>
-          <span className="text-xs text-slate-300">
-            <strong className="text-white">Standard HCFA CMS-1500 (02/12):</strong> Form mapped to Box 1-33 NUCC Compliance
-          </span>
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 rounded-full font-bold text-xs shrink-0 self-start sm:self-auto">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>✓ Ready to File &bull; Generated &amp; Validated</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 rounded-full font-bold text-xs shrink-0 self-start sm:self-auto">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>✓ Ready to File &bull; Generated &amp; Validated</span>
-        </div>
-      </div>
 
       {/* VIEWER NAVIGATION TOOLBAR (Hidden during Printing) */}
       <div className="bg-slate-900 text-white p-3 sm:p-4 rounded-xl border border-slate-800 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
-
+        
         {/* Pagination & Claim Counter */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">
@@ -197,15 +242,16 @@ export const CmsPreviewPage = () => {
       </div>
 
       {/* CLAIM CANVAS VIEWER - Responsive Container */}
-      <div className="overflow-x-auto p-2 sm:p-6 bg-slate-950 rounded-2xl border border-slate-800 flex justify-center print:bg-white print:p-0 print:border-none min-h-[500px]">
-
+      <div id="printable-cms-claim" className="overflow-x-auto p-2 sm:p-6 bg-slate-950 rounded-2xl border border-slate-800 flex justify-center print:bg-white print:p-0 print:border-none min-h-[500px] printable-area">
+        
         {/* Single Claim View mode */}
         {!printAllMode && (
           <div
-            className="w-full flex justify-center overflow-x-auto"
+            className="w-full flex justify-center overflow-x-auto print-page-sheet-wrapper print:min-h-0 print:h-auto print:m-0 print:p-0"
             style={{ minHeight: `${842 * zoomLevel}px` }}
           >
             <div
+              className="print-page-sheet print:w-full print:max-w-none print:m-0 print:p-0"
               style={{
                 transform: `scale(${zoomLevel})`,
                 transformOrigin: 'top center',
@@ -222,7 +268,9 @@ export const CmsPreviewPage = () => {
         {printAllMode && (
           <div className="space-y-0 w-full">
             {claims.map((claimItem) => (
-              <CmsRedGridForm key={claimItem.claimId} claim={claimItem} />
+              <div key={claimItem.claimId} className="print-page-item">
+                <CmsRedGridForm claim={claimItem} />
+              </div>
             ))}
           </div>
         )}
@@ -231,8 +279,8 @@ export const CmsPreviewPage = () => {
 
       {/* BOTTOM NAVIGATION FOOTER (Hidden during Printing) */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm print:hidden">
-        <button
-          onClick={() => navigate(-1)}
+        <button 
+          onClick={() => navigate(-1)} 
           className="w-full sm:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4 text-slate-600" />
@@ -240,8 +288,8 @@ export const CmsPreviewPage = () => {
         </button>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <button
-            onClick={handlePrintCurrent}
+          <button 
+            onClick={handlePrintCurrent} 
             className="w-full sm:w-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" /> Print Current Claim

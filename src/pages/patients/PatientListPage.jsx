@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { apiPatientService as mockPatientService } from '../../services/api/apiPatientService';
+import { apiPatientService as mockPatientService, apiPatientService } from '../../services/api/apiPatientService';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { ROLES } from '../../constants/rolePermissions';
-import { Search, PlusCircle, User, Phone, Mail, ChevronRight, Filter, Eye, MapPin, Trash2 } from 'lucide-react';
+import { Search, PlusCircle, User, Phone, Mail, ChevronRight, Filter, Eye, MapPin, Trash2, Download, FileSpreadsheet } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AddPatientModal } from '../../components/modals/AddPatientModal';
 import { PatientDetailsModal } from '../../components/modals/PatientDetailsModal';
+import { ExportDataModal } from '../../components/common/ExportDataModal';
+import { exportToCSV, getTimestampedFilename } from '../../utils/exportUtils';
 
 export const PatientListPage = () => {
   const location = useLocation();
@@ -24,6 +26,7 @@ export const PatientListPage = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
 
   useEffect(() => {
@@ -36,7 +39,13 @@ export const PatientListPage = () => {
 
   const loadPatients = () => {
     setIsLoading(true);
-    mockPatientService.getPatients({ search, status: statusFilter }).then(res => {
+    const filterObj = { search, status: statusFilter };
+    const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
+    if (!isFullAccess && currentUser?.providerId) {
+      filterObj.providerId = currentUser.providerId;
+    }
+
+    mockPatientService.getPatients(filterObj).then(res => {
       setPatients(res || []);
       setIsLoading(false);
     }).catch(() => {
@@ -58,12 +67,10 @@ export const PatientListPage = () => {
   const formatDobDDMMYYYY = (dobStr) => {
     if (!dobStr) return 'N/A';
     const clean = dobStr.trim();
-    // YYYY-MM-DD format (e.g. 1988-08-15)
     if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
       const [yyyy, mm, dd] = clean.split('-');
       return `${dd}-${mm}-${yyyy}`;
     }
-    // MM/DD/YYYY format (e.g. 08/15/1988)
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(clean)) {
       const [mm, dd, yyyy] = clean.split('/');
       const paddedMm = mm.padStart(2, '0');
@@ -96,20 +103,42 @@ export const PatientListPage = () => {
     return pat.assignedProviderIds?.includes(activeProviderFilter);
   });
 
+  const patientExportColumns = [
+    { key: 'patientId', label: 'Patient MRN', formatter: (v, r) => v || r.id || 'N/A' },
+    { key: 'firstName', label: 'First Name' },
+    { key: 'lastName', label: 'Last Name' },
+    { key: 'dob', label: 'Date of Birth (DOB)', formatter: (v) => formatDobDDMMYYYY(v) },
+    { key: 'gender', label: 'Gender' },
+    { key: 'phone', label: 'Contact Phone' },
+    { key: 'email', label: 'Email Address' },
+    { key: 'city', label: 'City' },
+    { key: 'state', label: 'State' },
+    { key: 'status', label: 'Account Status' },
+  ];
+
   return (
     <div className="space-y-5">
-      {/* -- Top Header & Register Action -- */}
+      {/* -- Top Header & Actions -- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">Patient Registry</h1>
           <p className="text-xs text-slate-500">Master patient records, contact details, assigned providers &amp; accident case links</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 self-start sm:self-auto cursor-pointer"
-        >
-          <PlusCircle className="w-4 h-4" /> Register New Patient
-        </button>
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+            title="Export Patient Records (CSV/JSON/PDF)"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-teal-600" /> Export Roster
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 self-start sm:self-auto cursor-pointer"
+          >
+            <PlusCircle className="w-4 h-4" /> Register New Patient
+          </button>
+        </div>
       </div>
 
       {/* -- Search & Filter Controls -- */}
@@ -361,6 +390,60 @@ export const PatientListPage = () => {
           patient={selectedPatient}
         />
       )}
+
+      {/* PRINT-ONLY PATIENT ROSTER SUMMARY REPORT */}
+      <div id="printable-patient-roster-report" className="hidden print:block printable-area space-y-4 bg-white text-slate-900 p-2">
+        <div className="border-b-2 border-slate-900 pb-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight">F&amp;M HEALTH &amp; WELLNESS</h1>
+              <h2 className="text-xs font-bold text-slate-700 uppercase mt-0.5">Patient Directory &amp; Registry Roster Report</h2>
+            </div>
+            <div className="text-right font-mono text-[10px] text-slate-600">
+              <p>Total Patients: <strong>{filteredPatients.length}</strong></p>
+              <p>Generated: <strong>{new Date().toLocaleString()}</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <table className="w-full text-left text-xs border-collapse border border-slate-300">
+          <thead className="bg-slate-200 text-slate-900 font-bold uppercase text-[9px] border-b border-slate-400">
+            <tr>
+              <th className="p-2 border-r border-slate-300">Patient Name</th>
+              <th className="p-2 border-r border-slate-300">MRN / DOB</th>
+              <th className="p-2 border-r border-slate-300">Phone</th>
+              <th className="p-2 border-r border-slate-300">Email</th>
+              <th className="p-2 border-r border-slate-300">Accident Cases</th>
+              <th className="p-2 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-300">
+            {filteredPatients.map((p) => (
+              <tr key={p.id} className="font-mono text-[11px] print-avoid-break">
+                <td className="p-2 border-r border-slate-200 font-bold">{p.firstName} {p.lastName}</td>
+                <td className="p-2 border-r border-slate-200">{p.mrn} &bull; {p.dob}</td>
+                <td className="p-2 border-r border-slate-200">{p.phone}</td>
+                <td className="p-2 border-r border-slate-200">{p.email}</td>
+                <td className="p-2 border-r border-slate-200">{p.activeCaseCount || 1} Active Case</td>
+                <td className="p-2 text-center text-emerald-800 font-bold">Active</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* -- Export Patient Roster Modal -- */}
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        title="Export Patient Registry Roster"
+        subtitle={`Exporting ${filteredPatients.length} patient records with contact and case info`}
+        data={filteredPatients}
+        availableColumns={patientExportColumns}
+        defaultFilename="patient_registry_roster"
+        printableContainerId="printable-patient-roster-report"
+      />
     </div>
   );
 };
+

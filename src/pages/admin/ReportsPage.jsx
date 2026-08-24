@@ -7,12 +7,14 @@ import {
 import {
   Download, TrendingUp, DollarSign, Users, FileText,
   Activity, Clock, CheckCircle, AlertCircle, PieChart as PieIcon,
-  BarChart2, Calendar, Filter
+  BarChart2, Calendar, Filter, Printer, FileSpreadsheet, Sparkles, SlidersHorizontal
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { apiBillingService } from '../../services/api/apiBillingService';
 import { formatCurrency } from '../../utils/billingCalculations';
 import { useSettings } from '../../utils/settingsCache';
+import { exportToCSV, triggerPrint, getTimestampedFilename } from '../../utils/exportUtils';
+import { ExportDataModal } from '../../components/common/ExportDataModal';
 
 const COLORS = ['#0d9488', '#3b82f6', '#7c3aed', '#f59e0b'];
 
@@ -44,6 +46,7 @@ export const ReportsPage = () => {
   const [claimStatus, setClaimStatus] = useState([]);
   const [agingData, setAgingData] = useState([]);
   const [recentClaims, setRecentClaims] = useState([]);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -74,78 +77,150 @@ export const ReportsPage = () => {
     { id: 'aging', label: 'AR Aging', icon: Clock },
   ];
 
-  const handleExportCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    let filename = "export.csv";
-
+  // Quick export configuration based on active tab
+  const getExportConfig = () => {
     if (activeTab === 'billing') {
-      csvContent += "Provider,Sessions,Total Billed,Payments,Adjustments,Balance Due\n";
-      providerBilling.forEach(p => {
-        csvContent += `"${p.provider}",${p.sessions},${p.charges},${p.payments},${p.adjustments},${p.balance}\n`;
-      });
-      filename = "provider_billing.csv";
+      return {
+        data: providerBilling,
+        filename: 'practice_billing_summary',
+        title: 'Export Billing Summary Report',
+        columns: [
+          { key: 'provider', label: 'Provider Name' },
+          { key: 'sessions', label: 'Sessions Count' },
+          { key: 'charges', label: 'Total Billed ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'payments', label: 'Payments Received ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'adjustments', label: 'Adjustments ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'balance', label: 'Balance Due ($)', formatter: (v) => formatCurrency(v) },
+        ]
+      };
     } else if (activeTab === 'sessions') {
-      csvContent += "Treatment Type,Provider,CPT Code,Sessions,Total Charge\n";
-      sessionBreakdown.forEach(s => {
-        csvContent += `"${s.type}","${s.provider}","${s.cpt}",${s.count},${s.charge}\n`;
-      });
-      filename = "treatment_sessions.csv";
+      return {
+        data: sessionBreakdown,
+        filename: 'treatment_sessions_report',
+        title: 'Export Treatment Sessions',
+        columns: [
+          { key: 'type', label: 'Treatment Modality' },
+          { key: 'provider', label: 'Provider' },
+          { key: 'cpt', label: 'CPT Code' },
+          { key: 'count', label: 'Completed Sessions' },
+          { key: 'charge', label: 'Total Charge ($)', formatter: (v) => formatCurrency(v) },
+        ]
+      };
     } else if (activeTab === 'claims') {
-      csvContent += "Claim DOS,Provider,Patient,Diagnosis,Total Charge,Status\n";
-      recentClaims.forEach(c => {
-        csvContent += `"${c.dos}","${c.provider}","${c.patient}","${c.dx}",${c.charge},"${c.status}"\n`;
-      });
-      filename = "cms_claims.csv";
-    } else if (activeTab === 'aging') {
-      csvContent += "Provider,Total AR,Current,31-60 Days,61-90 Days,90+ Days\n";
-      providerBilling.forEach(p => {
-        csvContent += `"${p.provider}",${p.balance},${p.balance},0,0,0\n`;
-      });
-      filename = "ar_aging.csv";
+      return {
+        data: recentClaims,
+        filename: 'cms1500_claims_report',
+        title: 'Export CMS-1500 Claims',
+        columns: [
+          { key: 'dos', label: 'Date of Service (DOS)' },
+          { key: 'provider', label: 'Provider' },
+          { key: 'patient', label: 'Patient Name' },
+          { key: 'dx', label: 'Diagnosis Codes' },
+          { key: 'charge', label: 'Total Charge ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'status', label: 'Claim Status' },
+        ]
+      };
+    } else {
+      return {
+        data: providerBilling.map(p => ({
+          provider: p.provider,
+          totalAr: p.balance,
+          current: p.balance,
+          past30: 0,
+          past60: 0,
+          past90: 0,
+          risk: p.balance === 0 ? 'None' : 'Current'
+        })),
+        filename: 'ar_aging_report',
+        title: 'Export AR Aging Report',
+        columns: [
+          { key: 'provider', label: 'Provider' },
+          { key: 'totalAr', label: 'Total AR ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'current', label: 'Current 0-30 Days ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'past30', label: '31-60 Days ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'past60', label: '61-90 Days ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'past90', label: '90+ Days ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'risk', label: 'Risk Assessment' },
+        ]
+      };
     }
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    addToast('CSV exported successfully!', 'success');
   };
 
+  const handleQuickCSV = () => {
+    const config = getExportConfig();
+    try {
+      const filename = getTimestampedFilename(config.filename, 'csv');
+      exportToCSV(filename, config.data, config.columns);
+      addToast(`Exported ${config.data.length} records to ${filename}!`, 'success');
+    } catch (err) {
+      addToast(err.message || 'Export failed', 'error');
+    }
+  };
+
+  const handleQuickPrint = () => {
+    triggerPrint('printable-report');
+    addToast('Opening print dialog for Analytics & Practice Reports...', 'info');
+  };
+
+  const exportConfig = getExportConfig();
+
   return (
-    <div className="space-y-6">
+    <div id="printable-report" className="space-y-6">
+
+      {/* -- Print-Only Executive Header -- */}
+      <div className="hidden print:block border-b-2 border-slate-900 pb-4 mb-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">MedPractice Pro &bull; Executive Practice Report</h1>
+            <p className="text-xs text-slate-600 mt-1">Multi-Provider Financial, Clinical &amp; Ledger Analytics</p>
+            <p className="text-[11px] text-slate-500 font-mono mt-0.5">Filter: {activeProviderFilter} &bull; Generated: {new Date().toLocaleString()}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-bold text-slate-700">Total Billed: <span className="font-mono text-slate-900">{formatCurrency(totalBilled)}</span></p>
+            <p className="text-xs font-bold text-emerald-700">Total Collected: <span className="font-mono">{formatCurrency(totalCollected)}</span></p>
+            <p className="text-xs font-bold text-teal-700">Outstanding: <span className="font-mono">{formatCurrency(totalBilled - totalCollected)}</span></p>
+          </div>
+        </div>
+      </div>
 
       {/* -- Header -- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <BarChart2 className="w-6 h-6 text-teal-600" />
-            Analytics & Practice Reports
+            Analytics &amp; Practice Reports
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Comprehensive billing, clinical, and financial analytics across all 4 provider ledgers
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <button
-            onClick={() => window.print()}
-            className="px-3.5 py-2 bg-slate-700 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 hover:bg-slate-800 transition print:hidden"
+            onClick={handleQuickPrint}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition cursor-pointer"
+            title="Print or Save Report as PDF"
           >
-            <Download className="w-4 h-4" /> Export PDF
+            <Printer className="w-4 h-4 text-teal-400" /> Export PDF
           </button>
           <button
-            onClick={handleExportCSV}
-            className="px-3.5 py-2 bg-teal-600 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 hover:bg-teal-700 transition"
+            onClick={handleQuickCSV}
+            className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5 transition cursor-pointer"
+            title="Download formatted CSV spreadsheet"
           >
-            <Download className="w-4 h-4" /> Export CSV
+            <FileSpreadsheet className="w-4 h-4" /> Export CSV
+          </button>
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
+            title="Advanced Export Options (Pick fields, JSON, PDF)"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-teal-600" /> Options
           </button>
         </div>
       </div>
 
       {/* -- KPI Summary Cards -- */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print-avoid-break">
         {[
           { label: 'Total Amount Billed', value: formatCurrency(totalBilled), sub: 'Across all 4 providers', icon: DollarSign, color: 'teal' },
           { label: 'Total Collected', value: formatCurrency(totalCollected), sub: 'Insurance & patient payments', icon: CheckCircle, color: 'emerald' },
@@ -534,6 +609,19 @@ export const ReportsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Advanced Export Modal */}
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        title={exportConfig.title}
+        subtitle={`Exporting ${exportConfig.data.length} records for ${activeTab.toUpperCase()} analysis`}
+        data={exportConfig.data}
+        availableColumns={exportConfig.columns}
+        defaultFilename={exportConfig.filename}
+        printableContainerId="printable-report"
+      />
     </div>
   );
 };
+

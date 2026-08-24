@@ -44,6 +44,7 @@ import {
   Printer, Download, Eye, Edit3, Lock, Unlock, ZoomIn, ZoomOut, 
   Maximize2, ChevronLeft, ChevronRight, FileCheck, AlertCircle, Sparkles, FileText, RotateCcw
 } from 'lucide-react';
+import { triggerPrint } from '../../utils/exportUtils';
 
 const getInitialZoom = () => {
   if (typeof window === 'undefined') return 0.9;
@@ -119,7 +120,8 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   }, [zoomLevel]);
 
   const handlePrint = () => {
-    window.print();
+    triggerPrint('printable-packet');
+    addToast(`Opening print dialog for ${manifest.providerName} packet (${manifest.totalPages} pages)...`, 'info');
   };
 
   const handleFinaliseLock = () => {
@@ -300,11 +302,11 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
               
               {/* Scaled Sheet Container */}
               <div
-                className="w-full flex justify-center overflow-x-auto print-page-sheet-wrapper"
+                className="w-full flex justify-center overflow-x-auto print-page-sheet-wrapper print:min-h-0 print:h-auto print:m-0 print:p-0"
                 style={{ minHeight: `${1100 * zoomLevel + 20}px` }}
               >
                 <div
-                  className="print-page-sheet"
+                  className="print-page-sheet print:w-full print:max-w-none print:m-0 print:p-0"
                   style={{
                     transform: `scale(${zoomLevel})`,
                     transformOrigin: 'top center',

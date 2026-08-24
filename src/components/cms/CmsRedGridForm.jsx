@@ -146,13 +146,11 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
 
   return (
     <div
-      className="cms-claim-page relative bg-white text-black font-sans shadow-2xl mx-auto border-2 border-[#b91c1c] p-3 print:border-none print:shadow-none print:m-0 select-text"
+      className="cms-claim-page relative bg-white text-black font-sans shadow-2xl mx-auto border-2 border-[#b91c1c] p-3 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none select-text"
       style={{
-        width: '850px',
+        width: '100%',
+        maxWidth: '850px',
         minHeight: '1100px',
-        minWidth: '850px',
-        breakAfter: 'page',
-        pageBreakAfter: 'always',
         WebkitPrintColorAdjust: 'exact',
         printColorAdjust: 'exact'
       }}

@@ -6,7 +6,7 @@ import { useSettings } from '../../../utils/settingsCache';
 export const AnikFinalReport = ({ reportPage = 1, blankMode = false, packetData = null }) => {
   const settings = useSettings();
   return (
-    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-12 space-y-6" style={{ width: '850px', height: '1100px' }}>
+    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-12 space-y-6 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px' }}>
       
       <div className="flex justify-between items-start border-b border-slate-300 pb-4">
         <div>

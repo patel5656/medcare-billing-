@@ -9,7 +9,8 @@ const TOKEN_KEY = 'medpractice_auth_token';
 
 export const apiAuthService = {
   /**
-   * Login with email and password against the backend with graceful demo fallback
+   * Login with email and password strictly against the backend server.
+   * Fails if backend server is stopped or unreachable.
    */
   async login(email, password) {
     let res;
@@ -19,35 +20,20 @@ export const apiAuthService = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem(TOKEN_KEY, data.token);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.user));
-        return data.user;
-      }
     } catch (err) {
-      console.warn('[apiAuthService] Backend API login failed, using local demo fallback:', err.message);
+      console.error('[apiAuthService] Backend server connection error:', err);
+      throw new Error('Unable to connect to backend server. Please make sure the backend server is running.');
     }
 
-    if (res && !res.ok) {
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.user));
+      return data.user;
+    } else {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || `Login failed with status ${res.status}`);
+      throw new Error(errData.error || `Login failed (${res.status}): Invalid email or password.`);
     }
-
-    // Fallback demo authentication
-    const matched = DEMO_ACCOUNTS.find(a => a.email.toLowerCase() === email.toLowerCase()) || {
-      id: `usr-${Date.now()}`,
-      email: email,
-      name: email.split('@')[0] || 'Staff User',
-      role: 'Super Admin',
-      title: 'Administrator',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120'
-    };
-
-    localStorage.setItem(TOKEN_KEY, `demo_token_${Date.now()}`);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(matched));
-    return matched;
   },
 
   /**
@@ -154,25 +140,26 @@ export const apiAuthService = {
     const account = demoAccounts?.find(a => a.role === roleName) || demoAccounts?.[0];
     if (!account) throw new Error('Role not found');
 
+    let res;
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: account.email, password: 'password123' }),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem(TOKEN_KEY, data.token);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.user));
-        return data.user;
-      }
     } catch (err) {
-      console.warn('[apiAuthService] Backend loginAsRole failed, using local demo fallback:', err.message);
+      console.error('[apiAuthService] Backend connection error during role switch:', err);
+      throw new Error('Unable to connect to backend server. Please start the backend server to log in.');
     }
 
-    localStorage.setItem(TOKEN_KEY, `demo_token_${Date.now()}`);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(account));
-    return account;
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.user));
+      return data.user;
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Role login failed (${res.status}).`);
+    }
   },
 };

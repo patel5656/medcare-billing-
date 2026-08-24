@@ -12,6 +12,8 @@ import { ArrowLeft, Calendar, Save, Bell, User, MapPin, FileText, Tag } from 'lu
 
 import { isClinicClosed } from '../../constants/usHolidays';
 
+import { apiProviderService } from '../../services/api/apiProviderService';
+
 const inputCls = 'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none transition';
 const labelCls = 'block text-xs font-bold text-slate-900 mb-1';
 
@@ -24,6 +26,18 @@ const SectionHead = ({ Icon, title }) => (
 export const ScheduleAppointmentPage = () => {
   const [searchParams] = useSearchParams();
   const patientIdFromUrl = searchParams.get('patientId');
+  const [dbProviders, setDbProviders] = useState([]);
+
+  useEffect(() => {
+    apiProviderService.getProviders()
+      .then(res => {
+        if (res) {
+          const list = Array.isArray(res) ? res : Object.values(res);
+          setDbProviders(list || []);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   const getTodayDateString = () => {
     const today = new Date();
@@ -243,6 +257,12 @@ export const ScheduleAppointmentPage = () => {
                 <option value="prov-davs">DAV'S Anatomy (Shockwave ESWT)</option>
                 <option value="prov-anik">ANIK Laser Therapy (Laser Therapy)</option>
                 <option value="prov-counselor">Counselor Practice (Counseling - Pending Config)</option>
+                {dbProviders
+                  .filter(p => !['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor'].includes(p.id))
+                  .map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.serviceCategory || 'Specialist Doctor'})</option>
+                  ))
+                }
               </select>
             </div>
 

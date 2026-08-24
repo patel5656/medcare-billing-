@@ -11,6 +11,8 @@ import {
   Sparkles, ArrowRight, ArrowLeft, ShieldCheck, AlertCircle,
   Building2, Stethoscope, Check, Search, FileText, Tag, RefreshCw, Printer, Scale
 } from 'lucide-react';
+import { triggerPrint } from '../../utils/exportUtils';
+
 
 export const PatientSelfBookingPage = () => {
   const navigate = useNavigate();
@@ -808,13 +810,21 @@ export const PatientSelfBookingPage = () => {
 
           {/* STEP 4: Success & Confirmation */}
           {step === 4 && confirmedBooking && (
-            <div className="bg-white rounded-3xl border border-emerald-200 p-6 sm:p-10 shadow-lg space-y-6 text-center">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+            <div id="printable-booking-receipt" className="bg-white rounded-3xl border border-emerald-200 p-6 sm:p-10 shadow-lg space-y-6 text-center printable-area">
+              
+              {/* Print-Only Receipt Header */}
+              <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-3 text-left">
+                <h1 className="text-xl font-black text-slate-900 uppercase">MedPractice Healthcare &bull; Appointment Receipt</h1>
+                <p className="text-xs text-slate-600">Official Clinical Appointment Confirmation Ticket</p>
+                <p className="text-[10px] text-slate-500 font-mono mt-0.5">Booking Ref: {confirmedBooking.bookingRef} &bull; Generated: {new Date().toLocaleString()}</p>
+              </div>
+
+              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner print:hidden">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
 
               <div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-extrabold mb-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-extrabold mb-2 print:hidden">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" /> Booking Confirmed Successfully
                 </div>
                 <h2 className="text-2xl font-extrabold text-slate-900">Your Appointment is Scheduled!</h2>
@@ -850,7 +860,7 @@ export const PatientSelfBookingPage = () => {
               </div>
 
               {/* Reminder Dispatch Cards (Email & SMS) */}
-              <div className="max-w-lg mx-auto space-y-2.5">
+              <div className="max-w-lg mx-auto space-y-2.5 print:hidden">
                 {/* Email Confirmation Dispatch Card */}
                 <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between text-left text-xs">
                   <div className="flex items-center gap-3">
@@ -889,13 +899,16 @@ export const PatientSelfBookingPage = () => {
               </div>
 
               {/* Action Buttons for Patient & Staff */}
-              <div className="flex flex-wrap justify-center gap-3 pt-4">
+              <div className="flex flex-wrap justify-center gap-3 pt-4 print:hidden">
                 <button
                   type="button"
-                  onClick={() => window.print()}
-                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+                  onClick={() => {
+                    triggerPrint('printable-booking-receipt');
+                    addToast('Printing appointment confirmation receipt...', 'info');
+                  }}
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Printer className="w-4 h-4" /> Print Confirmation
+                  <Printer className="w-4 h-4 text-teal-400" /> Print Confirmation Receipt
                 </button>
 
                 <button

@@ -1,9 +1,9 @@
-﻿// src/components/packets/davs/DavCoverPage.jsx
+// src/components/packets/davs/DavCoverPage.jsx
 import React from 'react';
 
 export const DavCoverPage = ({ packetData, blankMode = false }) => {
   return (
-    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-12 space-y-8" style={{ width: '850px', height: '1100px' }}>
+    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-12 space-y-8 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px' }}>
       <div className="text-center border-b-2 border-slate-900 pb-6">
         <h1 className="text-2xl font-black uppercase text-teal-800 tracking-tight">DAV'S ANATOMY</h1>
         <p className="text-xs font-bold text-slate-600">10101 HARWIN DR. SUITE 274 HOUSTON TX 77036</p>

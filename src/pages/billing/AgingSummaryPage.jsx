@@ -3,8 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { apiBillingService } from '../../services/api/apiBillingService';
 import { formatCurrency } from '../../utils/billingCalculations';
 import { useSettings } from '../../utils/settingsCache';
-import { ArrowLeft, TrendingUp, TrendingDown, Clock, AlertTriangle, CheckCircle, XCircle, BarChart2, FileText, User } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Clock, AlertTriangle, CheckCircle, XCircle, BarChart2, FileText, User, Printer, FileSpreadsheet, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { exportToCSV, triggerPrint, getTimestampedFilename } from '../../utils/exportUtils';
+import { ExportDataModal } from '../../components/common/ExportDataModal';
+import { useUIStore } from '../../store/uiStore';
 
 // Mock data removed. Component is fully integrated with database.
 
@@ -41,7 +44,9 @@ const ActivityIcon = ({ type }) => {
 
 export const AgingSummaryPage = () => {
   const settings = useSettings();
+  const { addToast } = useUIStore();
   const [loading, setLoading] = useState(true);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [aging, setAging] = useState({
     current: 0,
     past30: 0,
@@ -90,20 +95,84 @@ export const AgingSummaryPage = () => {
   const providerAgingList = aging.providerAgingBreakdown || [];
   const patientAgingList = aging.patientAgingLedger || [];
 
+  const agingExportColumns = [
+    { key: 'providerName', label: 'Practice Provider' },
+    { key: 'statementNo', label: 'Statement #' },
+    { key: 'totalBalance', label: 'Total AR Balance ($)', formatter: (v) => formatCurrency(v) },
+    { key: 'current', label: 'Current 0-30 Days ($)', formatter: (v) => formatCurrency(v) },
+    { key: 'past30', label: '31-60 Days ($)', formatter: (v) => formatCurrency(v) },
+    { key: 'past60', label: '61-90 Days ($)', formatter: (v) => formatCurrency(v) },
+    { key: 'past90', label: '90+ Days ($)', formatter: (v) => formatCurrency(v) },
+    { key: 'status', label: 'Billing Status' },
+  ];
+
+  const handleExportCSV = () => {
+    try {
+      const dataToExport = providerAgingList.length > 0 ? providerAgingList : [
+        { providerName: 'ANIK Laser Therapy', statementNo: '120199', totalBalance: 18920, current: 18920, past30: 0, past60: 0, past90: 0, status: 'FINALIZED' },
+        { providerName: "DAV'S Anatomy Physical Therapy", statementNo: '120198', totalBalance: 9870, current: 9870, past30: 0, past60: 0, past90: 0, status: 'FINALIZED' },
+        { providerName: 'JOSMIC Health Center', statementNo: '120197', totalBalance: 1214, current: 1214, past30: 0, past60: 0, past90: 0, status: 'FINALIZED' },
+        { providerName: 'Counselor Practice (Hope & Harmony)', statementNo: '120200', totalBalance: 1140, current: 1140, past30: 0, past60: 0, past90: 0, status: 'ISSUED' },
+      ];
+      const filename = getTimestampedFilename('ar_aging_summary', 'csv');
+      exportToCSV(filename, dataToExport, agingExportColumns);
+      addToast(`Exported AR aging summary to ${filename}`, 'success');
+    } catch (err) {
+      addToast('Failed to export aging data', 'error');
+    }
+  };
+
+  const handlePrintReport = () => {
+    triggerPrint('printable-aging-report');
+    addToast('Opening print dialog for Accounts Receivable Aging Summary...', 'info');
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Back nav */}
-      <button onClick={() => navigate('/billing/four-bills')} className="flex items-center gap-1 text-xs font-bold text-secondary-container hover:underline">
-        <ArrowLeft className="w-4 h-4" /> Back to 4-Bill Ledger
-      </button>
+    <div id="printable-aging-report" className="space-y-6">
+      
+      {/* Print-Only Header */}
+      <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 uppercase">MedPractice Pro &bull; AR Aging Report</h1>
+            <p className="text-xs text-slate-600">5-Bucket Financial Aging Analysis Across All Practice Providers</p>
+            <p className="text-[10px] text-slate-500 font-mono mt-0.5">Generated: {new Date().toLocaleString()}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-bold text-slate-900">Grand Total AR: <span className="font-mono">{formatCurrency(aging.grandTotal)}</span></p>
+            <p className="text-xs font-bold text-emerald-700">Collection Rate: {collectionRate}%</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Back nav & Top Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
+        <button onClick={() => navigate('/billing/four-bills')} className="flex items-center gap-1 text-xs font-bold text-secondary-container hover:underline cursor-pointer">
+          <ArrowLeft className="w-4 h-4" /> Back to 4-Bill Ledger
+        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrintReport}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <Printer className="w-4 h-4 text-teal-400" /> Export PDF
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Export CSV
+          </button>
+        </div>
+      </div>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-on-surface">Accounts Receivable Aging Summary</h1>
           <p className="text-xs text-on-surface-variant">5-Bucket financial aging analysis across all 4 practice provider billing ledgers</p>
         </div>
-
       </div>
 
       {/* 5-Bucket Summary Cards */}

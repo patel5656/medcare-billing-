@@ -2,16 +2,19 @@
 import React, { useEffect, useState } from 'react';
 import { apiDocumentService } from '../../services/api/apiDocumentService';
 import { apiCaseService } from '../../services/api/apiCaseService';
-import { FolderOpen, Eye, X, Printer, Upload, Edit, FileText, CheckCircle2, Trash2 } from 'lucide-react';
+import { FolderOpen, Eye, X, Printer, Upload, Edit, FileText, CheckCircle2, Trash2, FileSpreadsheet, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UnifiedPacketViewer } from '../../components/packets/UnifiedPacketViewer';
 import { useUIStore } from '../../store/uiStore';
+import { ExportDataModal } from '../../components/common/ExportDataModal';
+import { triggerPrint } from '../../utils/exportUtils';
 
 export const DocumentListPage = () => {
   const [docs, setDocs] = useState([]);
   const [casesList, setCasesList] = useState([]);
   const [previewDoc, setPreviewDoc] = useState(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const { addToast } = useUIStore();
   const navigate = useNavigate();
 
@@ -53,6 +56,15 @@ export const DocumentListPage = () => {
     return 'prov-anik';
   };
 
+  const docExportColumns = [
+    { key: 'name', label: 'Document Name' },
+    { key: 'providerName', label: 'Practice Provider' },
+    { key: 'type', label: 'Document Category' },
+    { key: 'date', label: 'Attached / Upload Date' },
+    { key: 'size', label: 'File Size' },
+    { key: 'status', label: 'Verification Status' },
+  ];
+
   const getEditPath = (doc) => {
     const provider = doc.providerName || '';
     const type = doc.type || '';
@@ -79,19 +91,21 @@ export const DocumentListPage = () => {
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (!newDocName.trim()) {
-      addToast('Please enter a document name.', 'error');
+      addToast('Please enter a document filename', 'error');
       return;
     }
-    const payload = {
-      caseId: newDocCaseId,
-      name: newDocName.endsWith('.pdf') ? newDocName : `${newDocName}.pdf`,
-      providerName: newDocProvider,
-      type: newDocType,
-      documentType: newDocType,
-      status: newDocStatus,
-      size: newDocSize
-    };
+
     try {
+      const payload = {
+        name: newDocName.endsWith('.pdf') ? newDocName : `${newDocName}.pdf`,
+        providerName: newDocProvider,
+        type: newDocType,
+        date: new Date().toISOString().split('T')[0],
+        size: newDocSize,
+        status: newDocStatus,
+        caseId: newDocCaseId,
+        url: '#'
+      };
       await apiDocumentService.uploadDocument(payload);
       addToast(`Document "${payload.name}" imported and attached to case!`, 'success');
       setIsUploadModalOpen(false);
@@ -112,15 +126,22 @@ export const DocumentListPage = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Document Management Repository</h1>
           <p className="text-xs text-slate-500">Centralized medical reports, cover pages, billing statements &amp; CMS claim attachments</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+            title="Export Document Index to CSV / JSON"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-teal-600" /> Export Register
+          </button>
           <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl shadow flex items-center justify-center gap-1.5 self-start sm:self-auto border border-slate-700 transition"
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl shadow flex items-center justify-center gap-1.5 self-start sm:self-auto border border-slate-700 transition cursor-pointer"
           >
             <Upload className="w-4 h-4" /> Import Document
           </button>
-          <button onClick={() => navigate('/documents/packet-builder')} className="px-3.5 py-2 bg-teal-600 text-white text-xs font-bold rounded-xl shadow hover:bg-teal-700 flex items-center justify-center gap-1.5 self-start sm:self-auto transition">
-            <FolderOpen className="w-4 h-4" /> Open Patient Packet Builder
+          <button onClick={() => navigate('/documents/packet-builder')} className="px-3.5 py-2 bg-teal-600 text-white text-xs font-bold rounded-xl shadow hover:bg-teal-700 flex items-center justify-center gap-1.5 self-start sm:self-auto transition cursor-pointer">
+            <FolderOpen className="w-4 h-4" /> Packet Builder
           </button>
         </div>
       </div>
@@ -347,6 +368,17 @@ export const DocumentListPage = () => {
         </div>
       )}
 
+      {/* Export Document Index Modal */}
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        title="Export Document Repository Index"
+        subtitle={`Exporting ${docs.length} document metadata records`}
+        data={docs}
+        availableColumns={docExportColumns}
+        defaultFilename="document_repository_index"
+      />
     </div>
   );
 };
+

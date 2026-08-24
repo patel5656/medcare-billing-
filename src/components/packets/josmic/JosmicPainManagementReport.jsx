@@ -497,7 +497,7 @@ export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, 
   const PageContent = pageComponents[reportPage] || Page1;
 
   return (
-    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300" style={{ width: '850px', minHeight: '1100px', padding: '40px 56px', paddingBottom: '60px' }}>
+    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '40px 56px', paddingBottom: '60px' }}>
       <PageHeader page={reportPage} blankMode={blankMode} packetData={packetData} />
       <PatientInfoBar blankMode={blankMode} packetData={packetData} />
       <PageContent blankMode={blankMode} packetData={packetData} />
