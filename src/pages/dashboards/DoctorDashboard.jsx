@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
-import { Brain, FileCheck, Award, FileText, PlusCircle, Sparkles, ChevronRight, PenTool } from 'lucide-react';
+import { apiPatientService } from '../../services/api/apiPatientService';
+import { Brain, FileCheck, Award, FileText, PlusCircle, Sparkles, ChevronRight, PenTool, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { ROLES } from '../../constants/rolePermissions';
 
 export const DoctorDashboard = () => {
   const [notes, setNotes] = useState([]);
+  const [patientCount, setPatientCount] = useState(0);
   const navigate = useNavigate();
   const { currentUser } = useAuthStore();
 
@@ -18,6 +20,7 @@ export const DoctorDashboard = () => {
     }
 
     apiClinicalNoteService.getNotes(filterObj).then(setNotes).catch(console.error);
+    apiPatientService.getPatients(filterObj).then(p => setPatientCount(p?.length || 0)).catch(() => setPatientCount(0));
   }, [currentUser]);
 
   return (
@@ -62,11 +65,11 @@ export const DoctorDashboard = () => {
 
         <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-on-surface-variant">AI Note Draft Presets</span>
-            <Brain className="w-5 h-5 text-secondary-container" />
+            <span className="text-xs font-bold text-on-surface-variant">Assigned Active Patients</span>
+            <Users className="w-5 h-5 text-secondary-container" />
           </div>
-          <p className="text-2xl font-bold text-on-surface font-tabular">4 Presets</p>
-          <p className="text-[11px] text-on-surface-variant">HPI, ROS, Exam, Assessment</p>
+          <p className="text-2xl font-bold text-on-surface font-tabular">{patientCount} Patients</p>
+          <p className="text-[11px] text-on-surface-variant">Active accident &amp; clinical cases</p>
         </div>
       </div>
 
