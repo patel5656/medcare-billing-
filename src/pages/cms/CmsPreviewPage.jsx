@@ -2,11 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiBillingService as mockBillingService } from '../../services/api/apiBillingService';
+import { mockCms1500Service } from '../../services/mock/mockCms1500Service';
 import { CmsRedGridForm } from '../../components/cms/CmsRedGridForm';
 import { useUIStore } from '../../store/uiStore';
-import { 
-  ArrowLeft, Printer, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, 
-  Maximize2, Download, AlertTriangle, FileCheck, ShieldAlert 
+import {
+  ArrowLeft, Printer, ChevronLeft, ChevronRight, ZoomIn, ZoomOut,
+  Maximize2, Download, AlertTriangle, FileCheck, ShieldAlert
 } from 'lucide-react';
 
 export const CmsPreviewPage = () => {
@@ -86,12 +87,12 @@ export const CmsPreviewPage = () => {
 
   return (
     <div className="space-y-4">
-      
+
       {/* APP HEADER CONTROLS (Hidden during Printing) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
         <div className="flex items-center gap-2">
-          <button 
-            onClick={() => navigate(-1)} 
+          <button
+            onClick={() => navigate(-1)}
             className="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl shadow-2xs transition flex items-center gap-2 cursor-pointer group"
             title="Go back to previous page"
           >
@@ -99,15 +100,15 @@ export const CmsPreviewPage = () => {
             <span>Back</span>
           </button>
 
-          <button 
-            onClick={() => navigate('/cms-1500')} 
+          <button
+            onClick={() => navigate('/cms-1500')}
             className="px-3 py-2 text-xs font-bold text-teal-700 hover:text-teal-900 hover:bg-teal-50 rounded-xl transition cursor-pointer"
           >
             Claims Queue
           </button>
 
-          <button 
-            onClick={() => navigate('/billing/provider-bills')} 
+          <button
+            onClick={() => navigate('/billing/provider-bills')}
             className="px-3 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer hidden md:inline-block"
           >
             Provider Bills Ledger
@@ -129,24 +130,24 @@ export const CmsPreviewPage = () => {
         </div>
       </div>
 
-        <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl text-xs text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center border border-teal-500/30">
-              <FileCheck className="w-4 h-4 text-teal-400" />
-            </div>
-            <span className="text-xs text-slate-300">
-              <strong className="text-white">Standard HCFA CMS-1500 (02/12):</strong> Form mapped to Box 1-33 NUCC Compliance
-            </span>
+      <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl text-xs text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center border border-teal-500/30">
+            <FileCheck className="w-4 h-4 text-teal-400" />
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 rounded-full font-bold text-xs shrink-0 self-start sm:self-auto">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>✓ Ready to File &bull; Generated &amp; Validated</span>
-          </div>
+          <span className="text-xs text-slate-300">
+            <strong className="text-white">Standard HCFA CMS-1500 (02/12):</strong> Form mapped to Box 1-33 NUCC Compliance
+          </span>
         </div>
+        <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 rounded-full font-bold text-xs shrink-0 self-start sm:self-auto">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>✓ Ready to File &bull; Generated &amp; Validated</span>
+        </div>
+      </div>
 
       {/* VIEWER NAVIGATION TOOLBAR (Hidden during Printing) */}
       <div className="bg-slate-900 text-white p-3 sm:p-4 rounded-xl border border-slate-800 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
-        
+
         {/* Pagination & Claim Counter */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">
@@ -197,7 +198,7 @@ export const CmsPreviewPage = () => {
 
       {/* CLAIM CANVAS VIEWER - Responsive Container */}
       <div className="overflow-x-auto p-2 sm:p-6 bg-slate-950 rounded-2xl border border-slate-800 flex justify-center print:bg-white print:p-0 print:border-none min-h-[500px]">
-        
+
         {/* Single Claim View mode */}
         {!printAllMode && (
           <div
@@ -230,8 +231,8 @@ export const CmsPreviewPage = () => {
 
       {/* BOTTOM NAVIGATION FOOTER (Hidden during Printing) */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm print:hidden">
-        <button 
-          onClick={() => navigate(-1)} 
+        <button
+          onClick={() => navigate(-1)}
           className="w-full sm:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4 text-slate-600" />
@@ -239,8 +240,8 @@ export const CmsPreviewPage = () => {
         </button>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <button 
-            onClick={handlePrintCurrent} 
+          <button
+            onClick={handlePrintCurrent}
             className="w-full sm:w-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" /> Print Current Claim

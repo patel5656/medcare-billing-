@@ -24,7 +24,7 @@ export const CmsClaimListPage = () => {
             const claims = await mockCms1500Service.getClaimsByBillId(bill.id);
             allResults.push(...claims);
           }
-        } catch {}
+        } catch { }
       }
 
       if (allResults.length > 0) {

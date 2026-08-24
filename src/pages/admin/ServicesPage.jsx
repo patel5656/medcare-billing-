@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tag, X, Save, Edit3, Plus, Shield } from 'lucide-react';
 
 export const ServicesPage = () => {
@@ -62,7 +62,7 @@ export const ServicesPage = () => {
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Fee Schedules & CPT</h1>
           <p className="text-xs font-medium text-slate-500 mt-1">Manage service codes, standard rates, and payer-specific fee schedules.</p>
         </div>
-        <button 
+        <button
           onClick={openAddModal}
           className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-teal-500/20 transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto"
         >
@@ -70,7 +70,7 @@ export const ServicesPage = () => {
           Add Service / CPT
         </button>
       </div>
-      
+
       {services.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center text-slate-500">
           <Tag className="w-12 h-12 text-slate-300 mx-auto mb-4" />
@@ -115,20 +115,20 @@ export const ServicesPage = () => {
                     </td>
                     <td className="p-3.5 text-center">
                       <div className="flex items-center justify-center gap-3">
-                        <button 
+                        <button
                           onClick={() => setViewingSvc(svc)}
                           className="text-blue-600 hover:text-blue-800 text-xs font-bold transition cursor-pointer"
                         >
                           View
                         </button>
-                        <button 
+                        <button
                           onClick={() => openEditModal(svc)}
                           className="text-amber-600 hover:text-amber-800 text-xs font-bold transition cursor-pointer"
                         >
                           Edit
                         </button>
-                        <button 
-                          onClick={() => setServices(services.filter(s => s.id !== svc.id))} 
+                        <button
+                          onClick={() => setServices(services.filter(s => s.id !== svc.id))}
                           className="text-red-600 hover:text-red-800 text-xs font-bold transition cursor-pointer"
                         >
                           Delete

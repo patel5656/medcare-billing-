@@ -84,11 +84,10 @@ export const CaseDetailsPage = () => {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-bold text-secondary-container truncate">{bill.providerName}</span>
-                  <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${
-                    bill.status === 'FINALISED_DEMO' ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20' :
-                    bill.status === 'CONFIGURATION_PENDING' ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' :
-                    'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                  }`}>
+                  <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${bill.status === 'FINALISED_DEMO' ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20' :
+                      bill.status === 'CONFIGURATION_PENDING' ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' :
+                        'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                    }`}>
                     {bill.status}
                   </span>
                 </div>

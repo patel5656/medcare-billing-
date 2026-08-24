@@ -40,13 +40,13 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
             patientName: initialCase.patientName || 'Accident Patient'
           }));
         }
-      }).catch(() => {});
+      }).catch(() => { });
 
       apiProviderService.getProviders().then(res => {
         if (res) {
           setProvidersList(Object.values(res));
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [isOpen, selectedCaseId]);
 
@@ -62,7 +62,7 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
     if (pid === 'prov-anik') { cpt = '97039'; desc = 'Laser Therapy Session'; fee = '2000.00'; }
     if (pid === 'srv-trigger-point' || pid === 'prov-tpi') { cpt = '20552'; desc = 'Trigger Point Injection (1-2 muscles)'; fee = '450.00'; }
     if (pid === 'srv-tecar-therapy' || pid === 'prov-tecar') { cpt = '97014'; desc = 'TECAR Radiofrequency Therapy Session'; fee = '350.00'; }
-    
+
     setFormData(p => ({ ...p, providerId: pid, cptCode: cpt, description: desc, charge: fee }));
   };
 
@@ -71,7 +71,7 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
     setIsLoading(true);
     try {
       let targetBillId = `bill-${formData.providerId.replace('prov-', '')}-${formData.caseId}`;
-      
+
       try {
         await apiBillingService.createBill({
           id: targetBillId,

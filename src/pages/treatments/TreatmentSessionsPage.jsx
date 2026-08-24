@@ -582,7 +582,7 @@ export const TreatmentSessionsPage = () => {
   });
 
   const totalCharge = filtered.reduce((a, s) => a + s.charge, 0);
-  const completedSessions = filtered.filter(s => s.status === 'Completed' || s.status === 'CHECKED_IN').length;
+  const completedSessions = filtered.filter(s => s.status === 'Completed' || s.status === 'COMPLETED' || s.status === 'CHECKED_IN').length;
   const uniqueClinicsCount = activeProviderFilter === 'ALL'
     ? (sessions.length > 0 ? new Set(sessions.map(s => s.providerShort)).size : 4)
     : 1;

@@ -27,10 +27,10 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   // If this provider packet expects 3 claims (e.g. ANIK or DAV'S) but only 1 DOS was registered, generate the 3 session claims
   const pid = providerConfig?.id || bill.providerId;
   if (dosKeys.length < 3 && (pid === 'prov-anik' || pid === 'prov-davs')) {
-    const fallbackDates = pid === 'prov-anik' 
-      ? ['01/22/2026', '01/24/2026', '01/26/2026'] 
+    const fallbackDates = pid === 'prov-anik'
+      ? ['01/22/2026', '01/24/2026', '01/26/2026']
       : ['01/06/2026', '01/07/2026', '01/08/2026'];
-    
+
     // Ensure all 3 dates have entries mapped from lineItems or default
     fallbackDates.forEach(d => {
       if (!dosGroups[d]) {
