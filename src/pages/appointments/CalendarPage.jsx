@@ -13,8 +13,12 @@ import {
   ChevronLeft, ChevronRight, Check, X, Shield, ExternalLink, Globe, Copy
 } from 'lucide-react';
 
+import { useAuthStore } from '../../store/authStore';
+import { ROLES } from '../../constants/rolePermissions';
+
 export const CalendarPage = () => {
   const { addToast, activeProviderFilter } = useUIStore();
+  const { currentUser } = useAuthStore();
 
   const [allApts, setAllApts] = useState([]);
   const [apts, setApts] = useState([]);
@@ -41,7 +45,7 @@ export const CalendarPage = () => {
 
   useEffect(() => {
     fetchAppointments();
-  }, [selectedDate, selectedProvider, viewMode]);
+  }, [selectedDate, selectedProvider, viewMode, currentUser]);
 
   const fetchProviders = async () => {
     try {
@@ -55,7 +59,13 @@ export const CalendarPage = () => {
   const fetchAppointments = async () => {
     setLoading(true);
     try {
-      const data = await apiAppointmentService.getAllAppointments();
+      const filterObj = {};
+      const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
+      if (!isFullAccess) {
+        filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+      }
+
+      const data = await apiAppointmentService.getAllAppointments(filterObj);
       const rawList = Array.isArray(data) ? data : (data?.appointments || []);
       setAllApts(rawList);
 

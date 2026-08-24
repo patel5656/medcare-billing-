@@ -41,8 +41,8 @@ export const PatientListPage = () => {
     setIsLoading(true);
     const filterObj = { search, status: statusFilter };
     const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
-    if (!isFullAccess && currentUser?.providerId) {
-      filterObj.providerId = currentUser.providerId;
+    if (!isFullAccess) {
+      filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
     }
 
     mockPatientService.getPatients(filterObj).then(res => {

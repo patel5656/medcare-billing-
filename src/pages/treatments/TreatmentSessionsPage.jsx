@@ -8,6 +8,8 @@ import { useUIStore } from '../../store/uiStore';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../../utils/billingCalculations';
 import { useSettings } from '../../utils/settingsCache';
+import { useAuthStore } from '../../store/authStore';
+import { ROLES } from '../../constants/rolePermissions';
 
 const STATUS_COLORS = {
   Completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -480,6 +482,7 @@ const CompleteClinicalNoteModal = ({ session, onClose, onSuccess }) => {
 export const TreatmentSessionsPage = () => {
   const settings = useSettings();
   const navigate = useNavigate();
+  const { currentUser } = useAuthStore();
   const [search, setSearch] = useState('');
   const [filterProvider, setFilterProvider] = useState('ALL');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -490,9 +493,15 @@ export const TreatmentSessionsPage = () => {
 
   const fetchSessions = async () => {
     try {
+      const filterObj = {};
+      const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
+      if (!isFullAccess) {
+        filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+      }
+
       const [data, notesData] = await Promise.all([
-        apiAppointmentService.getAllAppointments(),
-        apiClinicalNoteService.getNotes().catch(() => [])
+        apiAppointmentService.getAllAppointments(filterObj),
+        apiClinicalNoteService.getNotes(filterObj).catch(() => [])
       ]);
 
       const notesList = Array.isArray(notesData) ? notesData : (notesData?.notes || []);

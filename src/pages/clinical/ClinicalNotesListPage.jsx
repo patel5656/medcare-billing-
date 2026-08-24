@@ -6,6 +6,9 @@ import { useNavigate } from 'react-router-dom';
 import { CounselorSessionModal } from '../../components/modals/CounselorSessionModal';
 import { DeleteConfirmModal } from '../../components/modals/DeleteConfirmModal';
 
+import { useAuthStore } from '../../store/authStore';
+import { ROLES } from '../../constants/rolePermissions';
+
 export const ClinicalNotesListPage = () => {
   const [notes, setNotes] = useState([]);
   const [showCounselorModal, setShowCounselorModal] = useState(false);
@@ -14,9 +17,16 @@ export const ClinicalNotesListPage = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
+  const { currentUser } = useAuthStore();
 
   const loadNotes = () => {
-    apiClinicalNoteService.getNotes().then(res => {
+    const filterObj = {};
+    const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
+    if (!isFullAccess) {
+      filterObj.providerId = currentUser?.providerId || currentUser?.id || `prov-${currentUser?.name || 'unknown'}`;
+    }
+
+    apiClinicalNoteService.getNotes(filterObj).then(res => {
       const raw = Array.isArray(res) ? res : (res?.notes || []);
       setNotes(raw);
     }).catch(() => {});
@@ -24,7 +34,7 @@ export const ClinicalNotesListPage = () => {
 
   useEffect(() => {
     loadNotes();
-  }, []);
+  }, [currentUser]);
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;

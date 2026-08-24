@@ -63,6 +63,18 @@ export const AiAssistantPage = () => {
   const [selectedDraft, setSelectedDraft] = useState(null);
   const [activeTab, setActiveTab] = useState('generate');
   const [doctorNotes, setDoctorNotes] = useState('');
+  const [dbProviders, setDbProviders] = useState([]);
+
+  useEffect(() => {
+    import('../../services/api/apiProviderService').then(mod => {
+      mod.apiProviderService.getProviders().then(res => {
+        if (res) {
+          const list = Array.isArray(res) ? res : Object.values(res);
+          setDbProviders(list || []);
+        }
+      }).catch(() => {});
+    });
+  }, []);
 
   const currentClinician = CLINICIANS.find(c => c.id === selectedClinicianId) || CLINICIANS[0];
 
@@ -87,8 +99,14 @@ export const AiAssistantPage = () => {
       }
     }).catch(() => {});
 
-    // Load real database drafts
-    apiClinicalNoteService.getNotes().then(res => {
+    // Load real database drafts for logged-in provider
+    const filterObj = {};
+    const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
+    if (!isFullAccess) {
+      filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+    }
+
+    apiClinicalNoteService.getNotes(filterObj).then(res => {
       const notes = Array.isArray(res) ? res : (res?.notes || []);
       const draftNotes = notes
         .filter(n => n.status === 'DRAFT' || n.status === 'UNSIGNED')
@@ -442,6 +460,14 @@ export const AiAssistantPage = () => {
                     {cl.name} &mdash; {cl.title}
                   </option>
                 ))}
+                {dbProviders
+                  .filter(p => !CLINICIANS.some(cl => cl.providerId === p.id))
+                  .map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} &mdash; {p.serviceCategory || 'Specialist Doctor'}
+                    </option>
+                  ))
+                }
               </select>
             </div>
 

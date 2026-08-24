@@ -8,6 +8,7 @@ export const apiCaseService = {
     const params = new URLSearchParams();
     if (filters.patientId) params.append('patientId', filters.patientId);
     if (filters.search) params.append('search', filters.search);
+    if (filters.providerId) params.append('providerId', filters.providerId);
 
     const res = await fetch(`${API_BASE}/cases?${params.toString()}`);
     if (!res.ok) {

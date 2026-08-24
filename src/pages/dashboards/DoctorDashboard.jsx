@@ -1,16 +1,24 @@
-// src/pages/dashboards/DoctorDashboard.jsx
 import React, { useEffect, useState } from 'react';
 import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
 import { Brain, FileCheck, Award, FileText, PlusCircle, Sparkles, ChevronRight, PenTool } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
+import { ROLES } from '../../constants/rolePermissions';
 
 export const DoctorDashboard = () => {
   const [notes, setNotes] = useState([]);
   const navigate = useNavigate();
+  const { currentUser } = useAuthStore();
 
   useEffect(() => {
-    apiClinicalNoteService.getNotes().then(setNotes).catch(console.error);
-  }, []);
+    const filterObj = {};
+    const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST].includes(currentUser?.role);
+    if (!isFullAccess) {
+      filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+    }
+
+    apiClinicalNoteService.getNotes(filterObj).then(setNotes).catch(console.error);
+  }, [currentUser]);
 
   return (
     <div className="space-y-6">

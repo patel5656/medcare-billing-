@@ -30,7 +30,13 @@ export const CaseListPage = () => {
   const { activeProviderFilter } = useUIStore();
 
   const loadCases = () => {
-    mockCaseService.getCases({ search }).then(res => setCases(res || [])).catch(() => {});
+    const filterObj = { search };
+    const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
+    if (!isFullAccess) {
+      filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+    }
+
+    mockCaseService.getCases(filterObj).then(res => setCases(res || [])).catch(() => {});
   };
 
   const handleDeleteConfirm = async () => {
