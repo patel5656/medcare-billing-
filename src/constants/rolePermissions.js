@@ -99,6 +99,7 @@ export const ROLE_ROUTE_PERMISSIONS = {
     '/clinical-notes/*',
     '/billing/provider-bills/*',
     '/billing/four-bills/*',
+    '/billing/bills/*',
     '/documents/*',
     '/settings/*',
   ],

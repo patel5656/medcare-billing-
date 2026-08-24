@@ -203,7 +203,7 @@ export const DocumentListPage = () => {
 
       {/* Full Blank Practice Form Preview Modal */}
       {previewDoc && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 printable-modal">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl h-[95vh] flex flex-col shadow-2xl overflow-hidden">
             
             {/* Modal Header */}

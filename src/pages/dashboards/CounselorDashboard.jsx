@@ -12,6 +12,9 @@ import { apiBillingService } from '../../services/api/apiBillingService';
 import { formatCurrency } from '../../utils/billingCalculations';
 import { useSettings } from '../../utils/settingsCache';
 
+import { useAuthStore } from '../../store/authStore';
+import { ROLES } from '../../constants/rolePermissions';
+
 export const CounselorDashboard = () => {
   const settings = useSettings();
   const [showSessionModal, setShowSessionModal] = useState(false);
@@ -21,14 +24,21 @@ export const CounselorDashboard = () => {
   const [counselorTotal, setCounselorTotal] = useState(1140.00);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { currentUser } = useAuthStore();
 
   const loadData = async () => {
     setLoading(true);
     try {
+      const filterObj = {};
+      const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST].includes(currentUser?.role);
+      if (!isFullAccess) {
+        filterObj.providerId = currentUser?.providerId || currentUser?.id || `prov-${currentUser?.name || 'unknown'}`;
+      }
+
       const [notesRes, casesRes, apptsRes] = await Promise.all([
-        apiClinicalNoteService.getNotes().catch(() => []),
-        apiCaseService.getCases().catch(() => []),
-        apiAppointmentService.getAllAppointments().catch(() => []),
+        apiClinicalNoteService.getNotes(filterObj).catch(() => []),
+        apiCaseService.getCases(filterObj).catch(() => []),
+        apiAppointmentService.getAllAppointments(filterObj).catch(() => []),
       ]);
 
       const noteList = Array.isArray(notesRes) ? notesRes : (notesRes?.value || []);

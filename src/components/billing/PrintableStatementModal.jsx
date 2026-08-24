@@ -49,7 +49,7 @@ export const PrintableStatementModal = ({ bill, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto printable-modal-backdrop">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm print:bg-transparent print:backdrop-blur-none flex items-center justify-center p-3 sm:p-6 overflow-y-auto printable-modal-backdrop">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto border border-slate-200 p-4 sm:p-6 space-y-6 text-slate-900 font-sans printable-modal">
         
         {/* Top Control Bar (Hidden during printing) */}

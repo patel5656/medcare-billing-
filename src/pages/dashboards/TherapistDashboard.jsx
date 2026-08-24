@@ -4,13 +4,23 @@ import { Activity, Award, PlusCircle, CheckCircle2, ChevronRight } from 'lucide-
 import { useNavigate } from 'react-router-dom';
 import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
 
+import { useAuthStore } from '../../store/authStore';
+import { ROLES } from '../../constants/rolePermissions';
+
 export const TherapistDashboard = () => {
   const [notes, setNotes] = useState([]);
   const navigate = useNavigate();
+  const { currentUser } = useAuthStore();
 
   useEffect(() => {
-    apiClinicalNoteService.getNotes().then(setNotes).catch(() => {});
-  }, []);
+    const filterObj = {};
+    const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST].includes(currentUser?.role);
+    if (!isFullAccess) {
+      filterObj.providerId = currentUser?.providerId || currentUser?.id || `prov-${currentUser?.name || 'unknown'}`;
+    }
+
+    apiClinicalNoteService.getNotes(filterObj).then(setNotes).catch(() => {});
+  }, [currentUser]);
 
   const eswtCount = notes.filter(n => n.providerId === 'prov-davs' || n.providerName?.toLowerCase().includes('dav')).length;
   const laserCount = notes.filter(n => n.providerId === 'prov-anik' || n.providerName?.toLowerCase().includes('anik') || n.providerName?.toLowerCase().includes('laser')).length;
