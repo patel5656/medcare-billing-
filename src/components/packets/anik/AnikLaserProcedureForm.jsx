@@ -11,7 +11,7 @@ const InlineInput = ({ defaultValue = '', readOnly = false, className = '' }) =>
       type="text"
       value={val}
       onChange={(e) => setVal(e.target.value)}
-      className={`bg-transparent hover:bg-amber-100/60 focus:bg-amber-100 focus:ring-1 focus:ring-teal-600 rounded px-1 outline-none text-slate-900 font-mono font-bold cursor-text transition ${className}`}
+      className={`bg-transparent hover:bg-amber-100/60 focus:bg-amber-100 focus:ring-1 focus:ring-teal-600 rounded px-1 outline-none text-slate-900 font-mono font-bold cursor-text transition print:border-none print:bg-transparent print:p-0 print:shadow-none print:text-black ${className}`}
     />
   );
 };
@@ -26,8 +26,8 @@ export const AnikLaserProcedureForm = ({ dos = '01/22/2026', readOnly = false, b
 
   return (
     <div
-      className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-4 print:border-none print:shadow-none"
-      style={{ width: '850px', height: '1100px', breakAfter: 'page', pageBreakAfter: 'always' }}
+      className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-4 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:shadow-none print:border-none"
+      style={{ width: '100%', maxWidth: '850px', minHeight: '1100px' }}
     >
       
       {/* Provider Heading & Title */}

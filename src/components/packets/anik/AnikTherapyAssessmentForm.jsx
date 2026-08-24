@@ -54,8 +54,8 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
 
   return (
     <div
-      className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-10 space-y-5 print:border-none print:shadow-none"
-      style={{ width: '850px', height: '1100px', breakAfter: 'page', pageBreakAfter: 'always' }}
+      className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-10 space-y-5 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none"
+      style={{ width: '100%', maxWidth: '850px', minHeight: '1100px' }}
     >
       
       {/* Provider Header matching PDF Page 7 */}

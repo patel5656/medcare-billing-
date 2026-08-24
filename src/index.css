@@ -115,91 +115,226 @@ button, a {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   Print Styles for Dashboards
-   ───────────────────────────────────────────────────────────────── */
-/* ─────────────────────────────────────────────────────────────────
-   Print Styles for Clinical Packets & Official Forms
+   Print Styles for Clinical Packets, Reports, Statements & Forms
    ───────────────────────────────────────────────────────────────── */
 @media print {
   @page {
     size: letter portrait;
-    margin: 0 !important;
+    margin: 6mm !important;
   }
 
-  /* Hide entire body elements by default */
-  body * {
-    visibility: hidden !important;
-  }
-
-  /* Make printable packet container and children visible */
-  #printable-packet,
-  #printable-packet * {
-    visibility: visible !important;
-  }
-
-  /* Force container to absolute top-left of physical page */
-  #printable-packet {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: white !important;
-    display: block !important;
-  }
-
+  /* Reset global layout for printing */
   html, body, #root, .app-shell, main {
     position: static !important;
     overflow: visible !important;
     height: auto !important;
-    min-height: auto !important;
+    min-height: 0 !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: white !important;
-    color: black !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
   }
 
+  /* Universal hide for non-printable navigation, sidebar, headers & buttons */
   .print\:hidden,
   header,
   nav,
   aside,
   button,
-  .no-print {
+  .no-print,
+  .sidebar,
+  .top-header,
+  .fixed:not(.printable-modal-backdrop),
+  [role="button"] {
     display: none !important;
     visibility: hidden !important;
   }
 
-  .print-page-sheet-wrapper {
-    transform: none !important;
-    margin-bottom: 0 !important;
-    min-height: auto !important;
-    width: 100% !important;
-    display: block !important;
+  /* Deep hide for buttons & non-printable bars inside printable elements */
+  #printable-cms-queue-report .print\:hidden,
+  #printable-cms-queue-report .no-print,
+  #printable-cms-queue-report button,
+  #printable-packet .print\:hidden,
+  #printable-packet .no-print,
+  #printable-packet button,
+  #printable-statement .print\:hidden,
+  #printable-statement .no-print,
+  #printable-statement button,
+  #printable-cms-claim .print\:hidden,
+  #printable-cms-claim .no-print,
+  #printable-cms-claim button,
+  #printable-report .print\:hidden,
+  #printable-report .no-print,
+  #printable-report button,
+  #printable-aging-report .print\:hidden,
+  #printable-aging-report .no-print,
+  #printable-aging-report button,
+  .printable-area .print\:hidden,
+  .printable-area .no-print,
+  .printable-area button,
+  .printable-modal .print\:hidden,
+  .printable-modal .no-print,
+  .printable-modal button {
+    display: none !important;
+    visibility: hidden !important;
   }
 
-  .print-page-sheet {
-    transform: none !important;
+  /* Target printable container sections */
+  #printable-cms-queue-report,
+  #printable-provider-bills-report,
+  #printable-patient-roster-report,
+  #printable-packet,
+  #printable-statement,
+  #printable-cms-claim,
+  #printable-report,
+  #printable-aging-report,
+  #printable-booking-receipt,
+  .printable-area {
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    display: block !important;
+    visibility: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  #printable-cms-queue-report *,
+  #printable-provider-bills-report *,
+  #printable-patient-roster-report *,
+  #printable-packet *,
+  #printable-statement *,
+  #printable-cms-claim *,
+  #printable-report *,
+  #printable-aging-report *,
+  #printable-booking-receipt *,
+  .printable-area * {
+    visibility: visible !important;
+  }
+
+  /* Reset overflow to prevent browser print engine from creating blank Page 1 */
+  .overflow-hidden,
+  .overflow-x-auto,
+  .overflow-y-auto {
+    overflow: visible !important;
+  }
+
+  /* Modal preview printing override */
+  .printable-modal {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
+
+  /* Sheet scaling & 850px container width reset to fit printable area */
+  .print-page-sheet-wrapper,
+  .print-page-sheet,
+  .cms-claim-page,
+  #printable-packet > div,
+  #printable-packet > div > div,
+  #printable-packet div[style*="850px"],
+  #printable-statement div[style*="850px"],
+  #printable-cms-claim div[style*="850px"],
+  .printable-area div[style*="850px"],
+  .printable-modal div[style*="850px"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
     margin-bottom: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    box-sizing: border-box !important;
+  }
+
+  .print-page-item,
+  .print-page-sheet {
     break-after: page !important;
     page-break-after: always !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    box-shadow: none !important;
-    border: none !important;
-    width: 100% !important;
-    max-width: 850px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-  }
-
-  .print-page-item {
-    break-after: page !important;
-    page-break-after: always !important;
     display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
+  /* Eliminate trailing extra blank page on last child elements */
+  .print-page-item:last-child,
+  .print-page-sheet:last-child,
+  .cms-claim-page:last-child,
+  #printable-packet > div:last-child,
+  #printable-statement > div:last-child,
+  #printable-cms-claim > div:last-child,
+  #printable-report > div:last-child,
+  #printable-aging-report > div:last-child,
+  #printable-booking-receipt > div:last-child,
+  .printable-area > div:last-child,
+  .printable-modal > div:last-child {
+    break-after: auto !important;
+    page-break-after: auto !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Form controls reset to clean data text values only */
+  input, select, textarea {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    padding: 0 !important;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: transparent !important;
+  }
+
+  /* Table paged-media breaking rules */
+  table {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tbody {
+    display: table-row-group !important;
+  }
+
+  tr, td, th, .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Exact color fidelity */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;

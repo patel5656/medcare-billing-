@@ -1,42 +1,30 @@
-// src/pages/cms/CmsClaimListPage.jsx
 import React, { useEffect, useState } from 'react';
-import { mockCms1500Service } from '../../services/mock/mockCms1500Service';
+import { apiCms1500Service } from '../../services/api/apiCms1500Service';
 import { apiBillingService } from '../../services/api/apiBillingService';
 import { apiCaseService } from '../../services/api/apiCaseService';
 import { formatCurrency } from '../../utils/billingCalculations';
-import { Search, Eye } from 'lucide-react';
+import { Search, Eye, Download, FileSpreadsheet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { ExportDataModal } from '../../components/common/ExportDataModal';
+import { exportToCSV, getTimestampedFilename } from '../../utils/exportUtils';
+import { useUIStore } from '../../store/uiStore';
 
 export const CmsClaimListPage = () => {
   const [allClaims, setAllClaims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [showExportModal, setShowExportModal] = useState(false);
+  const { addToast } = useUIStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    apiCaseService.getCases().then(async (cases) => {
-      const allResults = [];
-      const targetCases = cases && cases.length > 0 ? cases : [{ id: 'case-001', caseId: 'CASE-2025-1227' }];
-      for (const c of targetCases) {
-        try {
-          const caseBillsRes = await apiBillingService.getFourBillsByCase(c.id || c.caseId);
-          for (const bill of (caseBillsRes?.allBills || [])) {
-            const claims = await mockCms1500Service.getClaimsByBillId(bill.id);
-            allResults.push(...claims);
-          }
-        } catch {}
-      }
-
-      if (allResults.length > 0) {
-        setAllClaims(allResults);
-      } else {
-        const fallbackIds = ['bill-anik-001', 'bill-davs-001', 'bill-josmic-001'];
-        Promise.all(fallbackIds.map(id => mockCms1500Service.getClaimsByBillId(id))).then(res => {
-          setAllClaims(res.flat());
-        });
-      }
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    apiCms1500Service.getAllClaims()
+      .then(claims => setAllClaims(claims || []))
+      .catch(err => {
+        console.error('Failed to fetch claims queue:', err);
+        setAllClaims([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const filteredClaims = allClaims.filter(c => {
@@ -50,23 +38,43 @@ export const CmsClaimListPage = () => {
     );
   });
 
+  const claimExportColumns = [
+    { key: 'claimId', label: 'Claim ID' },
+    { key: 'dosDisplay', label: 'Date of Service (DOS)' },
+    { key: 'providerName', label: 'Billing Provider' },
+    { key: 'box2', label: 'Patient Name' },
+    { key: 'box17ReferringName', label: 'Box 17 Referring Provider' },
+    { key: 'box21Diagnoses', label: 'Box 21 Diagnoses', formatter: (v) => Array.isArray(v) ? v.join('; ') : String(v || '') },
+    { key: 'box28TotalCharge', label: 'Box 28 Total Billed ($)', formatter: (v) => formatCurrency(parseFloat(v) || 0) },
+    { key: 'status', label: 'Status' },
+  ];
+
   return (
     <div className="space-y-4">
-      {/* Simple Header */}
+      {/* Header & Search */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">CMS-1500 Claims</h1>
+          <h1 className="text-xl font-bold text-slate-900">CMS-1500 Claims Queue</h1>
           <p className="text-xs text-slate-500">Date-grouped health insurance claims generated from provider bills (Form 02/12)</p>
         </div>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search claims..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 text-slate-800"
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search claims..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 text-slate-800"
+            />
+          </div>
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer shrink-0"
+            title="Export Claims Queue to CSV / JSON"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-teal-600" /> Export
+          </button>
         </div>
       </div>
 
@@ -135,6 +143,17 @@ export const CmsClaimListPage = () => {
           </table>
         </div>
       </div>
+
+      {/* Export Claims Modal */}
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        title="Export CMS-1500 Claims Queue"
+        subtitle={`Exporting ${filteredClaims.length} validated health insurance claims`}
+        data={filteredClaims}
+        availableColumns={claimExportColumns}
+        defaultFilename="cms1500_claims_register"
+      />
     </div>
   );
 };

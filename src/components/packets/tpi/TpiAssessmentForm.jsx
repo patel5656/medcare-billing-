@@ -11,7 +11,7 @@ export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetD
   const patientNameVal = blankMode ? '' : (packetData ? packetData.patientName : 'SAMPLE PATIENT');
   
   return (
-    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300" style={{ width: '850px', minHeight: '1100px', padding: '48px 56px' }}>
+    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '48px 56px' }}>
       {/* Header */}
       <div className="border-b-2 border-slate-800 pb-4 mb-6 text-center">
         <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>TRIGGER POINT ASSESSMENT</h1>

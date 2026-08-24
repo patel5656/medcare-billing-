@@ -1,4 +1,4 @@
-﻿// src/pages/dashboards/DoctorDashboard.jsx
+// src/pages/dashboards/DoctorDashboard.jsx
 import React, { useEffect, useState } from 'react';
 import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
 import { Brain, FileCheck, Award, FileText, PlusCircle, Sparkles, ChevronRight, PenTool } from 'lucide-react';
@@ -84,32 +84,42 @@ export const DoctorDashboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
-              {notes.map((note) => (
-                <tr key={note.id} className="hover:bg-surface">
-                  <td className="p-3 font-mono text-on-surface-variant">{note.date}</td>
-                  <td className="p-3 font-bold text-secondary-container">{note.patientName}</td>
-                  <td className="p-3">
-                    <p className="font-semibold text-on-surface">{note.title}</p>
-                    <p className="text-[10px] text-on-surface-variant">{note.providerName}</p>
-                  </td>
-                  <td className="p-3 text-on-surface-variant">{note.author}</td>
-                  <td className="p-3">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                      note.status === 'SIGNED_LOCKED' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                    }`}>
-                      {note.status}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">
-                    <button
-                      onClick={() => navigate(`/clinical-notes/${note.id}/edit`)}
-                      className="px-3 py-1 bg-secondary-container hover:bg-secondary text-white rounded font-bold text-xs transition"
-                    >
-                      Review & Sign
-                    </button>
+              {notes.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="p-8 text-center text-on-surface-variant">
+                    <FileText className="w-10 h-10 mx-auto text-outline mb-2 opacity-50" />
+                    <p className="font-bold text-sm text-on-surface">No assigned clinical notes or patients yet.</p>
+                    <p className="text-xs text-on-surface-variant mt-1">When a Receptionist or Admin assigns a patient case or schedules an appointment for you, your clinical charts will appear here.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                notes.map((note) => (
+                  <tr key={note.id} className="hover:bg-surface">
+                    <td className="p-3 font-mono text-on-surface-variant">{note.date}</td>
+                    <td className="p-3 font-bold text-secondary-container">{note.patientName}</td>
+                    <td className="p-3">
+                      <p className="font-semibold text-on-surface">{note.title}</p>
+                      <p className="text-[10px] text-on-surface-variant">{note.providerName}</p>
+                    </td>
+                    <td className="p-3 text-on-surface-variant">{note.author}</td>
+                    <td className="p-3">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        note.status === 'SIGNED_LOCKED' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                      }`}>
+                        {note.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => navigate(`/clinical-notes/${note.id}/edit`)}
+                        className="px-3 py-1 bg-secondary-container hover:bg-secondary text-white rounded font-bold text-xs transition"
+                      >
+                        Review & Sign
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

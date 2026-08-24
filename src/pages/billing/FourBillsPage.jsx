@@ -7,8 +7,9 @@ import { apiProviderService } from '../../services/api/apiProviderService';
 import { formatCurrency } from '../../utils/billingCalculations';
 import { formatStatus } from '../../utils/formatters';
 import { useUIStore } from '../../store/uiStore';
-import { Receipt, PlusCircle, AlertTriangle, ChevronRight, User, Shield, FileText, Lock, ArrowLeft, Building, Stethoscope, DollarSign, Calendar, Layers, Edit3, Trash2 } from 'lucide-react';
+import { Receipt, PlusCircle, AlertTriangle, ChevronRight, User, Shield, FileText, Lock, ArrowLeft, Building, Stethoscope, DollarSign, Calendar, Layers, Edit3, Trash2, FileSpreadsheet } from 'lucide-react';
 import { CreateBillModal } from '../../components/modals/CreateBillModal';
+import { ExportDataModal } from '../../components/common/ExportDataModal';
 
 export const FourBillsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -18,10 +19,12 @@ export const FourBillsPage = () => {
   const [bills, setBills] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateBillModal, setShowCreateBillModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [editingBill, setEditingBill] = useState(null);
   const [editChargesAmount, setEditChargesAmount] = useState('');
   const { addToast } = useUIStore();
   const navigate = useNavigate();
+
 
   // 1. Initial Load: Fetch all cases from backend
   useEffect(() => {
@@ -187,6 +190,13 @@ export const FourBillsPage = () => {
             )}
           </select>
 
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+            title="Export Case Provider Bills to CSV / JSON"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-teal-600" /> Export Case Bills
+          </button>
           <button
             onClick={() => setShowCreateBillModal(true)}
             className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
@@ -392,6 +402,92 @@ export const FourBillsPage = () => {
           </form>
         </div>
       )}
+
+      {/* PRINT-ONLY PROVIDER BILLING SUMMARY REPORT */}
+      <div id="printable-provider-bills-report" className="hidden print:block printable-area space-y-4 bg-white text-slate-900 p-2">
+        <div className="border-b-2 border-slate-900 pb-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight">F&amp;M HEALTH &amp; WELLNESS</h1>
+              <h2 className="text-xs font-bold text-slate-700 uppercase mt-0.5">Four Practice Modality Provider Bills Ledger</h2>
+            </div>
+            <div className="text-right font-mono text-[10px] text-slate-600">
+              <p>Case ID: <strong>{caseData?.caseId || selectedCaseId}</strong></p>
+              <p>Patient: <strong>{caseData?.patientName || 'Patient Record'}</strong></p>
+              <p>Generated: <strong>{new Date().toLocaleString()}</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2 p-2 bg-slate-100 rounded text-xs font-mono border border-slate-300">
+          <div>Total Charges: <strong>{formatCurrency(grandCharges)}</strong></div>
+          <div>Payments: <strong>{formatCurrency(grandPayments)}</strong></div>
+          <div>Adjustments: <strong>{formatCurrency(grandAdjustments)}</strong></div>
+          <div>Balance Due: <strong className="text-emerald-800">{formatCurrency(grandBalanceDue)}</strong></div>
+        </div>
+
+        <table className="w-full text-left text-xs border-collapse border border-slate-300">
+          <thead className="bg-slate-200 text-slate-900 font-bold uppercase text-[9px] border-b border-slate-400">
+            <tr>
+              <th className="p-2 border-r border-slate-300">Practice Provider</th>
+              <th className="p-2 border-r border-slate-300">Statement #</th>
+              <th className="p-2 border-r border-slate-300">Statement Date</th>
+              <th className="p-2 text-right border-r border-slate-300">Total Billed</th>
+              <th className="p-2 text-right border-r border-slate-300">Payments</th>
+              <th className="p-2 text-right border-r border-slate-300">Adjustments</th>
+              <th className="p-2 text-right border-r border-slate-300">Balance Due</th>
+              <th className="p-2 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-300">
+            {bills.map((b) => (
+              <tr key={b.id || b.statementNumber} className="font-mono text-[11px] print-avoid-break">
+                <td className="p-2 border-r border-slate-200 font-bold">{b.providerName}</td>
+                <td className="p-2 border-r border-slate-200">{b.statementNumber}</td>
+                <td className="p-2 border-r border-slate-200">{b.statementDate}</td>
+                <td className="p-2 text-right border-r border-slate-200">{formatCurrency(b.totals?.totalCharges || 0)}</td>
+                <td className="p-2 text-right border-r border-slate-200">{formatCurrency(b.totals?.totalPayments || 0)}</td>
+                <td className="p-2 text-right border-r border-slate-200">{formatCurrency(b.totals?.totalAdjustments || 0)}</td>
+                <td className="p-2 text-right border-r border-slate-200 font-bold">{formatCurrency(b.totals?.balanceDue || 0)}</td>
+                <td className="p-2 text-center text-emerald-800 font-bold">{b.status || 'ISSUED'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Export Provider Bills Modal */}
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        title="Export Provider Billing Statements"
+        subtitle={`Exporting ${bills.length} provider bills for case ${caseData?.caseId || selectedCaseId}`}
+        data={bills.map(b => ({
+          providerName: b.providerName,
+          statementNumber: b.statementNumber,
+          statementDate: b.statementDate,
+          serviceCategory: b.serviceCategory || 'Clinical Practice Modality',
+          totalCharges: b.totals?.totalCharges || 0,
+          totalPayments: b.totals?.totalPayments || 0,
+          totalAdjustments: b.totals?.totalAdjustments || 0,
+          balanceDue: b.totals?.balanceDue || 0,
+          status: b.status || 'ISSUED',
+        }))}
+        availableColumns={[
+          { key: 'providerName', label: 'Practice Provider' },
+          { key: 'statementNumber', label: 'Statement Number' },
+          { key: 'statementDate', label: 'Statement Date' },
+          { key: 'serviceCategory', label: 'Modality Category' },
+          { key: 'totalCharges', label: 'Total Charges ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'totalPayments', label: 'Payments ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'totalAdjustments', label: 'Adjustments ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'balanceDue', label: 'Balance Due ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'status', label: 'Statement Status' },
+        ]}
+        defaultFilename={`case_bills_${caseData?.caseId || 'export'}`}
+        printableContainerId="printable-provider-bills-report"
+      />
     </div>
   );
 };
+
