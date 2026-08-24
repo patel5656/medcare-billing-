@@ -147,10 +147,16 @@ const ScheduleSessionModal = ({ onClose, onSuccess }) => {
     setSaving(true);
     try {
       const selCase = cases.find(c => c.caseId === form.caseId || c.id === form.caseId);
+      const activeUser = window.localStorage.getItem('medpractice_auth_session') ? JSON.parse(window.localStorage.getItem('medpractice_auth_session')) : null;
+      let finalProviderId = form.provider;
+      if (activeUser?.role === 'Doctor') finalProviderId = 'prov-josmic';
+      else if (activeUser?.role === 'Therapist') finalProviderId = 'prov-davs';
+      else if (activeUser?.role === 'Counselor') finalProviderId = 'prov-counselor';
+
       const payload = {
         patientId: selCase ? (selCase.patientId || selCase.id) : form.patientId,
         caseId: selCase ? selCase.id : form.caseId,
-        providerId: form.provider,
+        providerId: finalProviderId,
         appointmentType: form.sessionType,
         cptCode: form.cptCode,
         date: form.dos,
@@ -496,7 +502,15 @@ export const TreatmentSessionsPage = () => {
       const filterObj = {};
       const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
       if (!isFullAccess) {
-        filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+        if (currentUser?.role === ROLES.COUNSELOR) {
+          filterObj.providerId = 'prov-counselor';
+        } else if (currentUser?.role === ROLES.DOCTOR) {
+          filterObj.providerId = 'prov-josmic';
+        } else if (currentUser?.role === ROLES.THERAPIST) {
+          filterObj.providerId = 'prov-davs';
+        } else {
+          filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+        }
       }
 
       const [data, notesData] = await Promise.all([

@@ -136,12 +136,17 @@ export const CounselorSessionModal = ({ isOpen, onClose, onNoteSaved }) => {
 
     setIsLoading(true);
     try {
+      const activeUser = window.localStorage.getItem('medpractice_auth_session') ? JSON.parse(window.localStorage.getItem('medpractice_auth_session')) : null;
+      let finalProviderId = 'prov-counselor';
+      if (activeUser?.role === 'Doctor') finalProviderId = 'prov-josmic';
+      else if (activeUser?.role === 'Therapist') finalProviderId = 'prov-davs';
+      
       const created = await apiClinicalNoteService.createNote({
         patientId: selectedCase.patientId || selectedCase.patient?.id || 'pat-001',
         patientName: selectedCase.patientName || 'Accident Patient',
         caseId: selectedCase.id || selectedCase.caseId,
-        providerId: 'prov-counselor',
-        providerName: 'Counselor Practice (Hope Behavioral Health)',
+        providerId: finalProviderId,
+        providerName: activeUser?.name || 'Counselor Practice (Hope Behavioral Health)',
         type: 'COUNSELOR_GENERIC',
         noteType: 'COUNSELOR_GENERIC',
         title: `Counseling Progress Note (${formData.cptCode || '90791'}) — ${formData.sessionDate}`,

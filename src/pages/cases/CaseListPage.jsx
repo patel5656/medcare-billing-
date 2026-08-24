@@ -35,6 +35,10 @@ export const CaseListPage = () => {
     if (!isFullAccess) {
       if (currentUser?.role === ROLES.COUNSELOR) {
         filterObj.providerId = 'prov-counselor';
+      } else if (currentUser?.role === ROLES.DOCTOR) {
+        filterObj.providerId = 'prov-josmic';
+      } else if (currentUser?.role === ROLES.THERAPIST) {
+        filterObj.providerId = 'prov-davs';
       } else {
         filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
       }
