@@ -8,6 +8,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AddPatientModal } from '../../components/modals/AddPatientModal';
 import { PatientDetailsModal } from '../../components/modals/PatientDetailsModal';
 import { ExportDataModal } from '../../components/common/ExportDataModal';
+import { DeleteConfirmModal } from '../../components/modals/DeleteConfirmModal';
 import { exportToCSV, getTimestampedFilename } from '../../utils/exportUtils';
 
 export const PatientListPage = () => {
@@ -28,6 +29,8 @@ export const PatientListPage = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientToDelete, setPatientToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -88,17 +91,23 @@ export const PatientListPage = () => {
     return clean;
   };
 
-  const handleDeletePatient = async (pat) => {
-    const confirmText = `Are you sure you want to delete patient "${pat.firstName} ${pat.lastName}" (MRN: ${pat.patientId || pat.id})?\n\nThis will safely remove the patient profile and all associated cases, appointments, notes and files from the database cleanly.`;
-    if (!window.confirm(confirmText)) return;
+  const handleDeletePatient = (pat) => {
+    setPatientToDelete(pat);
+  };
 
+  const executeDelete = async () => {
+    if (!patientToDelete) return;
+    setIsDeleting(true);
     try {
-      await apiPatientService.deletePatient(pat.id);
-      addToast(`Patient ${pat.firstName} ${pat.lastName} deleted successfully!`, 'success');
+      await apiPatientService.deletePatient(patientToDelete.id);
+      addToast(`Patient ${patientToDelete.firstName} ${patientToDelete.lastName} deleted successfully!`, 'success');
       loadPatients();
     } catch (err) {
       console.error('Failed to delete patient:', err);
       addToast('Failed to delete patient. Please try again.', 'error');
+    } finally {
+      setIsDeleting(false);
+      setPatientToDelete(null);
     }
   };
 
@@ -451,6 +460,21 @@ export const PatientListPage = () => {
         defaultFilename="patient_registry_roster"
         printableContainerId="printable-patient-roster-report"
       />
+
+      {patientToDelete && (
+        <DeleteConfirmModal
+          isOpen={!!patientToDelete}
+          onClose={() => setPatientToDelete(null)}
+          onConfirm={executeDelete}
+          title="Delete Patient"
+          subtitle="Confirm patient deletion"
+          itemName={`${patientToDelete.firstName} ${patientToDelete.lastName} (MRN: ${patientToDelete.patientId || patientToDelete.id})`}
+          isDeleting={isDeleting}
+          buttonText="Delete Patient"
+          typeText="patient"
+          warningText="This will safely remove the patient profile and all associated cases, appointments, notes and files from the database cleanly."
+        />
+      )}
     </div>
   );
 };
