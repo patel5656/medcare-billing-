@@ -50,10 +50,10 @@ export const ScheduleAppointmentPage = () => {
   const getInitialServiceLinesForProvider = (providerKey, visitType = 'INITIAL') => {
     const config = INITIAL_PROVIDER_CONFIGS[providerKey];
     if (!config) return [];
-    
+
     let codes = [];
     if (providerKey === 'josmic') {
-      codes = visitType === 'INITIAL' 
+      codes = visitType === 'INITIAL'
         ? [{ code: '99204', desc: 'Initial Comprehensive Pain Management Consultation' }, { code: '97039', desc: 'High Intensity Laser Therapy (HILT)' }]
         : [{ code: '99214', desc: 'Office/Outpatient Visit Established Moderate (30-39 min)' }, { code: '97110', desc: 'Therapeutic Exercise (15 min)' }];
     } else if (providerKey === 'davs') {
@@ -229,16 +229,16 @@ export const ScheduleAppointmentPage = () => {
           <SectionHead Icon={Calendar} title="Appointment Details" />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div><label className={labelCls}>1. Select Practice Provider *</label>
-              <select 
-                className={inputCls} 
-                value={formData.providerId} 
+              <select
+                className={inputCls}
+                value={formData.providerId}
                 onChange={e => {
                   const pid = e.target.value;
                   const provKey = pid.replace('prov-', '');
                   const provConfig = INITIAL_PROVIDER_CONFIGS[provKey];
                   const firstService = provConfig?.providerServices?.find(s => s.enabled && s.configurationStatus === 'COMPLETE') || provConfig?.providerServices?.[0];
                   const provAddress = provConfig ? `${provConfig.address.street}, ${provConfig.address.suite}, ${provConfig.address.city} ${provConfig.address.state} ${provConfig.address.zipCode}` : '';
-                  
+
                   setFormData(p => ({
                     ...p,
                     providerId: pid,
@@ -268,7 +268,7 @@ export const ScheduleAppointmentPage = () => {
 
             <div>
               <label className={labelCls}>2. Appointment Encounter Type *</label>
-              <select 
+              <select
                 className={`${inputCls} font-bold ${formData.visitType === 'INITIAL' ? 'text-teal-700 bg-teal-50/40 border-teal-300' : 'text-blue-700 bg-blue-50/40 border-blue-300'}`}
                 value={formData.visitType}
                 onChange={e => {
@@ -290,7 +290,7 @@ export const ScheduleAppointmentPage = () => {
                 const provConfig = INITIAL_PROVIDER_CONFIGS[provKey];
                 const activeServices = provConfig?.providerServices?.filter(s => s.enabled && s.configurationStatus === 'COMPLETE') || [];
                 const pendingServices = provConfig?.providerServices?.filter(s => !s.enabled || s.configurationStatus !== 'COMPLETE') || [];
-                
+
                 if (provKey === 'counselor' || activeServices.length === 0) {
                   return (
                     <div className="p-2 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800 font-semibold">
@@ -300,9 +300,9 @@ export const ScheduleAppointmentPage = () => {
                 }
 
                 return (
-                  <select 
-                    className={inputCls} 
-                    value={formData.appointmentType} 
+                  <select
+                    className={inputCls}
+                    value={formData.appointmentType}
                     onChange={e => {
                       const selectedDesc = e.target.value;
                       const matched = provConfig.providerServices.find(s => s.billingDescription === selectedDesc);
@@ -373,11 +373,11 @@ export const ScheduleAppointmentPage = () => {
                       : 'Routine patient appointments are restricted on US Federal Holidays. Please choose an alternate business day or enable admin override.'}
                   </p>
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-950 pt-1">
-                    <input 
-                      type="checkbox" 
-                      checked={formData.holidayOverride || false} 
-                      onChange={e => set('holidayOverride', e.target.checked)} 
-                      className="rounded text-amber-600 focus:ring-amber-500" 
+                    <input
+                      type="checkbox"
+                      checked={formData.holidayOverride || false}
+                      onChange={e => set('holidayOverride', e.target.checked)}
+                      className="rounded text-amber-600 focus:ring-amber-500"
                     />
                     Admin Override: Authorize Visit on Weekend / Holiday
                   </label>

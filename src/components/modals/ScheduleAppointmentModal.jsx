@@ -66,13 +66,13 @@ export const ScheduleAppointmentModal = ({
             }));
           }
         }
-      }).catch(() => {});
+      }).catch(() => { });
 
       apiCaseService.getCases().then(res => {
         if (res && res.length > 0) {
           setCases(res);
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [isOpen, prefillPatientId, prefillPatientName, prefillPhone, prefillCaseId]);
 

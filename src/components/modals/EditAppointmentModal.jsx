@@ -135,7 +135,7 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
     try {
       const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === formData.providerId);
       const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseFloat(l.units) || 1) * (parseFloat(l.charge) || 0)), 0);
-      
+
       const updated = await mockAppointmentService.updateAppointment(appointment.id, {
         ...formData,
         serviceLines,
@@ -247,7 +247,7 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
       }
     >
       <form onSubmit={handleSave} className="space-y-4 text-xs">
-        
+
         {/* Patient Header Banner */}
         <div className="p-4 bg-slate-900 text-white rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
           <div>
@@ -273,22 +273,20 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
             <button
               type="button"
               onClick={() => handleEncounterTypeChange('INITIAL')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                formData.visitType === 'INITIAL'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${formData.visitType === 'INITIAL'
                   ? 'bg-teal-500 text-slate-950 font-extrabold shadow-sm'
                   : 'bg-slate-800 text-slate-300 hover:text-white'
-              }`}
+                }`}
             >
               Initial Visit
             </button>
             <button
               type="button"
               onClick={() => handleEncounterTypeChange('SUBSEQUENT')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                formData.visitType === 'SUBSEQUENT'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${formData.visitType === 'SUBSEQUENT'
                   ? 'bg-teal-500 text-slate-950 font-extrabold shadow-sm'
                   : 'bg-slate-800 text-slate-300 hover:text-white'
-              }`}
+                }`}
             >
               Subsequent Visit
             </button>

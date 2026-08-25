@@ -233,8 +233,8 @@ export const PatientSelfBookingPage = () => {
               <button
                 onClick={() => setMode('book')}
                 className={`px-4 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${mode === 'book'
-                    ? 'bg-teal-500 text-white shadow-md'
-                    : 'text-slate-300 hover:text-white'
+                  ? 'bg-teal-500 text-white shadow-md'
+                  : 'text-slate-300 hover:text-white'
                   }`}
               >
                 Book New Visit
@@ -242,8 +242,8 @@ export const PatientSelfBookingPage = () => {
               <button
                 onClick={() => setMode('lookup')}
                 className={`px-4 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 cursor-pointer ${mode === 'lookup'
-                    ? 'bg-teal-500 text-white shadow-md'
-                    : 'text-slate-300 hover:text-white'
+                  ? 'bg-teal-500 text-white shadow-md'
+                  : 'text-slate-300 hover:text-white'
                   }`}
               >
                 <Search className="w-3.5 h-3.5" /> Find My Bookings
@@ -336,8 +336,8 @@ export const PatientSelfBookingPage = () => {
                           </p>
                         </div>
                         <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold ${apt.status === 'SCHEDULED' ? 'bg-emerald-100 text-emerald-800' :
-                            apt.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
-                              'bg-red-100 text-red-800'
+                          apt.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
+                            'bg-red-100 text-red-800'
                           }`}>
                           {apt.status}
                         </span>
@@ -577,8 +577,8 @@ export const PatientSelfBookingPage = () => {
                         key={p.id}
                         onClick={() => setFormData({ ...formData, providerId: p.id })}
                         className={`p-4 rounded-2xl border cursor-pointer transition flex items-start gap-3 ${formData.providerId === p.id
-                            ? 'border-teal-600 bg-teal-50/50 ring-2 ring-teal-600/20 shadow-xs'
-                            : 'border-slate-200 hover:border-slate-300 bg-white'
+                          ? 'border-teal-600 bg-teal-50/50 ring-2 ring-teal-600/20 shadow-xs'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
                           }`}
                       >
                         <Building2 className={`w-5 h-5 mt-0.5 ${formData.providerId === p.id ? 'text-teal-600' : 'text-slate-400'}`} />
@@ -617,8 +617,8 @@ export const PatientSelfBookingPage = () => {
                         key={s.id}
                         onClick={() => handleToggleService(s.id)}
                         className={`p-4 rounded-2xl border cursor-pointer transition flex flex-col justify-between relative ${isSelected
-                            ? 'border-teal-600 bg-teal-50/50 ring-2 ring-teal-600/20 shadow-xs'
-                            : 'border-slate-200 hover:border-slate-300 bg-white opacity-80 hover:opacity-100'
+                          ? 'border-teal-600 bg-teal-50/50 ring-2 ring-teal-600/20 shadow-xs'
+                          : 'border-slate-200 hover:border-slate-300 bg-white opacity-80 hover:opacity-100'
                           }`}
                       >
                         <div>
@@ -768,8 +768,8 @@ export const PatientSelfBookingPage = () => {
                           disabled={!s.available}
                           onClick={() => setFormData({ ...formData, time: s.time })}
                           className={`p-3 rounded-xl text-xs font-bold border transition flex items-center justify-between cursor-pointer ${formData.time === s.time
-                              ? 'bg-teal-600 text-white border-teal-600 shadow-md ring-2 ring-teal-600/30'
-                              : 'bg-white text-slate-800 border-slate-200 hover:border-teal-600 hover:bg-teal-50/30 active:scale-98'
+                            ? 'bg-teal-600 text-white border-teal-600 shadow-md ring-2 ring-teal-600/30'
+                            : 'bg-white text-slate-800 border-slate-200 hover:border-teal-600 hover:bg-teal-50/30 active:scale-98'
                             }`}
                         >
                           <span>{s.time}</span>
@@ -792,8 +792,8 @@ export const PatientSelfBookingPage = () => {
                   disabled={isSubmitting || !formData.time || slotsState.isClosed}
                   onClick={handleAutoBookSubmit}
                   className={`inline-flex items-center gap-2 px-8 py-3.5 text-white font-extrabold text-xs rounded-xl shadow-lg transition cursor-pointer ${isSubmitting || !formData.time || slotsState.isClosed
-                      ? 'bg-slate-300 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 active:scale-95'
+                    ? 'bg-slate-300 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 active:scale-95'
                     }`}
                 >
                   {isSubmitting ? (
@@ -811,7 +811,7 @@ export const PatientSelfBookingPage = () => {
           {/* STEP 4: Success & Confirmation */}
           {step === 4 && confirmedBooking && (
             <div id="printable-booking-receipt" className="bg-white rounded-3xl border border-emerald-200 p-6 sm:p-10 shadow-lg space-y-6 text-center printable-area">
-              
+
               {/* Print-Only Receipt Header */}
               <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-3 text-left">
                 <h1 className="text-xl font-black text-slate-900 uppercase">MedPractice Healthcare &bull; Appointment Receipt</h1>
