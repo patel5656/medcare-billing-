@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { X, User, Mail, Briefcase, Camera, Check, Shield, Upload, Image as ImageIcon } from 'lucide-react';
+import { compressImageFile } from '../../utils/imageCompressor';
 
 const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120',
@@ -27,7 +28,7 @@ export const EditProfileModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -36,20 +37,14 @@ export const EditProfileModal = ({ isOpen, onClose }) => {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      addToast('File size must be under 5MB', 'error');
-      return;
+    try {
+      const compressedDataUrl = await compressImageFile(file, 400, 400, 0.85);
+      setAvatar(compressedDataUrl);
+      addToast('Photo loaded & compressed! Click Save to apply.', 'info');
+    } catch (err) {
+      console.error('Failed to compress image:', err);
+      addToast('Failed to process image file', 'error');
     }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result;
-      if (dataUrl) {
-        setAvatar(dataUrl);
-        addToast('Photo loaded! Click Save to apply.', 'info');
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleSave = async (e) => {

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { mockStaffService } from '../../services/mock/mockStaffService';
 import { Shield, PlusCircle, User, Plus, X, Save, Mail, UserCheck, Edit2, Trash2, Upload, Camera, Check } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
+import { compressImageFile } from '../../utils/imageCompressor';
 
 const inputCls = 'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none transition';
 const labelCls = 'block text-xs font-bold text-slate-800 mb-1';
@@ -44,7 +45,7 @@ export const StaffListPage = () => {
     loadStaff();
   }, []);
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -53,15 +54,14 @@ export const StaffListPage = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result;
-      if (dataUrl) {
-        setForm(prev => ({ ...prev, avatar: dataUrl }));
-        addToast('Photo loaded!', 'info');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedDataUrl = await compressImageFile(file, 400, 400, 0.85);
+      setForm(prev => ({ ...prev, avatar: compressedDataUrl }));
+      addToast('Photo loaded & compressed!', 'info');
+    } catch (err) {
+      console.error('Failed to compress image:', err);
+      addToast('Failed to process image file', 'error');
+    }
   };
 
   const handleOpenAdd = () => {
