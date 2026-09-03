@@ -502,15 +502,7 @@ export const TreatmentSessionsPage = () => {
       const filterObj = {};
       const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
       if (!isFullAccess) {
-        if (currentUser?.role === ROLES.COUNSELOR) {
-          filterObj.providerId = 'prov-counselor';
-        } else if (currentUser?.role === ROLES.DOCTOR) {
-          filterObj.providerId = 'prov-josmic';
-        } else if (currentUser?.role === ROLES.THERAPIST) {
-          filterObj.providerId = 'prov-davs';
-        } else {
-          filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
-        }
+        filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
       }
 
       const [data, notesData] = await Promise.all([
