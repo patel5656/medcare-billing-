@@ -67,6 +67,7 @@ export const CalendarPage = () => {
 
       const data = await apiAppointmentService.getAllAppointments(filterObj);
       const rawList = Array.isArray(data) ? data : (data?.appointments || []);
+      rawList.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       setAllApts(rawList);
 
       let filteredData = rawList;
