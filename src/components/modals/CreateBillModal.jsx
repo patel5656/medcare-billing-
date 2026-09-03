@@ -23,6 +23,11 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
     dos: new Date().toISOString().split('T')[0],
     cptCode: '90834',
     description: 'Individual Psychotherapy (45 Min)',
+    modifier1: '25',
+    modifier2: '',
+    modifier3: '',
+    modifier4: '',
+    diagPointer: 'A',
     charge: '180.00',
     diagnosisCodes: 'F43.10, F41.1, M54.50'
   });
@@ -57,13 +62,14 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
     let cpt = '99204';
     let desc = 'Initial Pain Management Consult';
     let fee = '1214.00';
-    if (pid === 'prov-counselor') { cpt = '90834'; desc = 'Individual Psychotherapy (45 Min)'; fee = '180.00'; }
-    if (pid === 'prov-davs') { cpt = '0101T'; desc = 'ESWT Shockwave Therapy Session'; fee = '1000.00'; }
-    if (pid === 'prov-anik') { cpt = '97039'; desc = 'Laser Therapy Session'; fee = '2000.00'; }
-    if (pid === 'srv-trigger-point' || pid === 'prov-tpi') { cpt = '20552'; desc = 'Trigger Point Injection (1-2 muscles)'; fee = '450.00'; }
-    if (pid === 'srv-tecar-therapy' || pid === 'prov-tecar') { cpt = '97014'; desc = 'TECAR Radiofrequency Therapy Session'; fee = '350.00'; }
+    let m1 = '25';
+    if (pid === 'prov-counselor') { cpt = '90834'; desc = 'Individual Psychotherapy (45 Min)'; fee = '180.00'; m1 = ''; }
+    if (pid === 'prov-davs') { cpt = '0101T'; desc = 'ESWT Shockwave Therapy Session'; fee = '1000.00'; m1 = 'RT'; }
+    if (pid === 'prov-anik') { cpt = '97039'; desc = 'Laser Therapy Session'; fee = '2000.00'; m1 = 'GP'; }
+    if (pid === 'srv-trigger-point' || pid === 'prov-tpi') { cpt = '20552'; desc = 'Trigger Point Injection (1-2 muscles)'; fee = '450.00'; m1 = '59'; }
+    if (pid === 'srv-tecar-therapy' || pid === 'prov-tecar') { cpt = '97014'; desc = 'TECAR Radiofrequency Therapy Session'; fee = '350.00'; m1 = 'GP'; }
 
-    setFormData(p => ({ ...p, providerId: pid, cptCode: cpt, description: desc, charge: fee }));
+    setFormData(p => ({ ...p, providerId: pid, cptCode: cpt, description: desc, charge: fee, modifier1: m1 }));
   };
 
   const handleSubmit = async (e) => {
@@ -88,6 +94,11 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
         dos: formData.dos,
         cptCode: formData.cptCode,
         description: formData.description,
+        modifier1: formData.modifier1,
+        modifier2: formData.modifier2,
+        modifier3: formData.modifier3,
+        modifier4: formData.modifier4,
+        diagPointer: formData.diagPointer,
         charge: parseFloat(formData.charge) || 180.00
       });
 
@@ -200,6 +211,30 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
           <div>
             <label className={labelCls}>Charge Amount ($) *</label>
             <input type="number" step="0.01" required className={inputCls} value={formData.charge} onChange={e => set('charge', e.target.value)} placeholder="0.00" />
+          </div>
+        </div>
+
+        {/* Modifiers 1-4 & Diagnosis Pointer */}
+        <div className="grid grid-cols-5 gap-2">
+          <div>
+            <label className={labelCls}>Mod 1</label>
+            <input className={inputCls} value={formData.modifier1} onChange={e => set('modifier1', e.target.value)} placeholder="25" />
+          </div>
+          <div>
+            <label className={labelCls}>Mod 2</label>
+            <input className={inputCls} value={formData.modifier2} onChange={e => set('modifier2', e.target.value)} placeholder="59" />
+          </div>
+          <div>
+            <label className={labelCls}>Mod 3</label>
+            <input className={inputCls} value={formData.modifier3} onChange={e => set('modifier3', e.target.value)} placeholder="RT" />
+          </div>
+          <div>
+            <label className={labelCls}>Mod 4</label>
+            <input className={inputCls} value={formData.modifier4} onChange={e => set('modifier4', e.target.value)} placeholder="GP" />
+          </div>
+          <div>
+            <label className={labelCls}>ICD Pointer</label>
+            <input className={inputCls} value={formData.diagPointer} onChange={e => set('diagPointer', e.target.value)} placeholder="A" />
           </div>
         </div>
 

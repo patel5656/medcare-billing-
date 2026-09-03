@@ -481,9 +481,13 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
                     <FieldInput defaultValue={hasData ? (line.emg || 'N') : ''} readOnly={readOnly} className="text-center" />
                   </div>
 
-                  {/* 24.D CPT & Modifiers */}
-                  <div className="col-span-3 border-r border-[#b91c1c]/20 flex items-center justify-center gap-1 text-[10px]">
-                    <FieldInput defaultValue={line.cpt || ''} readOnly={readOnly} className="font-mono font-black text-slate-950 text-center" />
+                  {/* 24.D CPT & Modifiers (1-4) */}
+                  <div className="col-span-3 border-r border-[#b91c1c]/20 flex items-center justify-between px-0.5 gap-0.5 text-[9px]">
+                    <FieldInput defaultValue={line.cpt || ''} readOnly={readOnly} placeholder="CPT" className="w-14 font-mono font-black text-slate-950 text-center" />
+                    <FieldInput defaultValue={line.mod1 || line.modifier1 || (line.modifiers && line.modifiers[0]) || (hasData ? (idx === 0 ? 'GP' : '59') : '')} readOnly={readOnly} placeholder="M1" className="w-5 text-center font-bold text-teal-800" />
+                    <FieldInput defaultValue={line.mod2 || line.modifier2 || (line.modifiers && line.modifiers[1]) || (hasData ? (idx === 0 ? 'RT' : '25') : '')} readOnly={readOnly} placeholder="M2" className="w-5 text-center font-bold text-teal-800" />
+                    <FieldInput defaultValue={line.mod3 || line.modifier3 || (line.modifiers && line.modifiers[2]) || ''} readOnly={readOnly} placeholder="M3" className="w-5 text-center font-bold text-teal-800" />
+                    <FieldInput defaultValue={line.mod4 || line.modifier4 || (line.modifiers && line.modifiers[3]) || ''} readOnly={readOnly} placeholder="M4" className="w-5 text-center font-bold text-teal-800" />
                   </div>
 
                   {/* 24.E Diagnosis Pointer (e.g. A, B, AB) */}

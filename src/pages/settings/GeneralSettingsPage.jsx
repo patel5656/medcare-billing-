@@ -1,9 +1,9 @@
-// src/pages/settings/GeneralSettingsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useUIStore } from '../../store/uiStore';
-import { Settings, Save, Globe, Bell, Building, Clock, Activity, Loader2 } from 'lucide-react';
+import { Settings, Save, Globe, Bell, Building, Clock, Activity, Loader2, Plus, Stethoscope, FileCode, Tag, Shield, Edit3, Trash2 } from 'lucide-react';
 import { getUSHolidaysForYear } from '../../constants/usHolidays';
 import { getGeneralSettings, updateGeneralSettings } from '../../services/api/apiSettingsService';
+import { apiProviderService } from '../../services/api/apiProviderService';
 import { refreshSettingsCache } from '../../utils/settingsCache';
 import { formatFeeString } from '../../utils/billingCalculations';
 import { API_BASE_URL } from '../../config/api';
@@ -108,6 +108,26 @@ export const GeneralSettingsPage = () => {
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
   const { addToast } = useUIStore();
 
+  const [providers, setProviders] = useState([]);
+  const [showAddProvModal, setShowAddProvModal] = useState(false);
+  const [newProv, setNewProv] = useState({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', city: 'Houston', state: 'TX', zipCode: '77036' });
+
+  const [showAddCptModal, setShowAddCptModal] = useState(false);
+  const [newCpt, setNewCpt] = useState({ code: '', description: '', defaultFee: '250.00', category: 'General', modifiers: '' });
+
+  const [showAddIcdModal, setShowAddIcdModal] = useState(false);
+  const [newIcd, setNewIcd] = useState({ code: '', description: '', category: 'Pain/Orthopedic' });
+
+  const [showAddModModal, setShowAddModModal] = useState(false);
+  const [newMod, setNewMod] = useState({ code: '', description: '' });
+
+  const loadProvidersList = async () => {
+    try {
+      const data = await apiProviderService.getProviders();
+      if (data) setProviders(Object.values(data));
+    } catch (e) {}
+  };
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -122,6 +142,7 @@ export const GeneralSettingsPage = () => {
       }
     };
     fetchSettings();
+    loadProvidersList();
   }, []);
 
   const set = (field, val) => {
@@ -196,13 +217,91 @@ export const GeneralSettingsPage = () => {
     ? settings.modalities
     : DEFAULT_MODALITIES;
 
-  const handleToggleModality = (idx) => {
-    const updated = [...modalitiesList];
-    updated[idx] = {
-      ...updated[idx],
-      enabled: !updated[idx].enabled
-    };
-    set('modalities', updated);
+  const handleAddProvider = async (e) => {
+    e?.preventDefault();
+    if (!newProv.name || !newProv.npi || !newProv.taxId) {
+      addToast('Provider Name, NPI, and Tax ID are required.', 'error');
+      return;
+    }
+    try {
+      await apiProviderService.addProvider({
+        ...newProv,
+        renderingName: newProv.name,
+        renderingCredentials: 'MD'
+      });
+      addToast(`Provider ${newProv.name} registered successfully!`, 'success');
+      setShowAddProvModal(false);
+      setNewProv({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', city: 'Houston', state: 'TX', zipCode: '77036' });
+      loadProvidersList();
+    } catch (err) {
+      addToast(err.message || 'Failed to add provider', 'error');
+    }
+  };
+
+  const handleAddCptCode = (e) => {
+    e?.preventDefault();
+    if (!newCpt.code || !newCpt.description) {
+      addToast('CPT Code and Description are required', 'error');
+      return;
+    }
+    const currentCatalog = Array.isArray(settings.cptCatalog) ? settings.cptCatalog : [
+      { code: '99204', description: 'Office/Outpatient Visit New (Complex)', fee: '$450.00', category: 'E&M', modifiers: '25, 59' },
+      { code: '99214', description: 'Office/Outpatient Visit Established (Moderate)', fee: '$275.00', category: 'E&M', modifiers: '25, 59' },
+      { code: '97039', description: 'Unlisted Physical Medicine (HILT Laser)', fee: '$2000.00', category: 'Therapy', modifiers: 'GP, RT' },
+      { code: '0101T', description: 'Extracorporeal Shock Wave Therapy (ESWT)', fee: '$1000.00', category: 'Therapy', modifiers: 'RT' },
+      { code: '20552', description: 'Trigger Point Injections (1-2 muscles)', fee: '$450.00', category: 'Injections', modifiers: '59' },
+      { code: '90834', description: 'Psychotherapy (45 Min)', fee: '$180.00', category: 'Mental Health', modifiers: '' }
+    ];
+
+    const updated = [...currentCatalog, { ...newCpt, fee: `$${parseFloat(newCpt.defaultFee || 0).toFixed(2)}` }];
+    set('cptCatalog', updated);
+    addToast(`CPT Code ${newCpt.code} added to practice catalog!`, 'success');
+    setShowAddCptModal(false);
+    setNewCpt({ code: '', description: '', defaultFee: '250.00', category: 'General', modifiers: '' });
+  };
+
+  const handleAddIcdCode = (e) => {
+    e?.preventDefault();
+    if (!newIcd.code || !newIcd.description) {
+      addToast('ICD Code and Description are required', 'error');
+      return;
+    }
+    const currentIcd = Array.isArray(settings.icdCatalog) ? settings.icdCatalog : [
+      { code: 'M54.50', description: 'Low back pain, unspecified', category: 'Orthopedic' },
+      { code: 'M54.2', description: 'Cervicalgia (Neck pain)', category: 'Orthopedic' },
+      { code: 'S13.4XXA', description: 'Sprain of ligaments of cervical spine, initial encounter', category: 'Trauma/MVA' },
+      { code: 'S39.012A', description: 'Strain of muscle/tendon of lower back, initial encounter', category: 'Trauma/MVA' },
+      { code: 'F43.10', description: 'Post-traumatic stress disorder, unspecified', category: 'Mental Health' },
+      { code: 'M25.572', description: 'Pain in left ankle and foot', category: 'Extremity' }
+    ];
+
+    const updated = [...currentIcd, newIcd];
+    set('icdCatalog', updated);
+    addToast(`ICD-10 Code ${newIcd.code} added to practice catalog!`, 'success');
+    setShowAddIcdModal(false);
+    setNewIcd({ code: '', description: '', category: 'Pain/Orthopedic' });
+  };
+
+  const handleAddModifier = (e) => {
+    e?.preventDefault();
+    if (!newMod.code || !newMod.description) {
+      addToast('Modifier Code and Description are required', 'error');
+      return;
+    }
+    const currentMods = Array.isArray(settings.modifiersCatalog) ? settings.modifiersCatalog : [
+      { code: '25', description: 'Significant, Separately Identifiable E&M Service on Same Day' },
+      { code: '59', description: 'Distinct Procedural Service' },
+      { code: 'RT', description: 'Right Side' },
+      { code: 'LT', description: 'Left Side' },
+      { code: 'GP', description: 'Services Delivered Under Physical Therapy Plan of Care' },
+      { code: 'TC', description: 'Technical Component' }
+    ];
+
+    const updated = [...currentMods, newMod];
+    set('modifiersCatalog', updated);
+    addToast(`Modifier ${newMod.code} added to practice catalog!`, 'success');
+    setShowAddModModal(false);
+    setNewMod({ code: '', description: '' });
   };
 
   return (
@@ -286,6 +385,220 @@ export const GeneralSettingsPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Healthcare Providers Management */}
+        <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-outline-variant pb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+                <Stethoscope className="w-4 h-4 text-teal-600" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-on-surface">Registered Healthcare Providers &amp; Organizations</h2>
+                <p className="text-[10px] text-on-surface-variant mt-0.5">Manage attending physicians, medical practices, NPIs and billing identifiers</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAddProvModal(true)}
+              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add New Provider
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                <tr>
+                  <th className="p-2.5 text-left">Provider / Practice Name</th>
+                  <th className="p-2.5 text-left">Service Category</th>
+                  <th className="p-2.5 text-center">NPI</th>
+                  <th className="p-2.5 text-center">Tax ID (EIN)</th>
+                  <th className="p-2.5 text-left">Contact Info</th>
+                  <th className="p-2.5 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                {providers.length > 0 ? (
+                  providers.map(p => (
+                    <tr key={p.id} className="hover:bg-slate-50 transition">
+                      <td className="p-2.5 font-bold text-slate-900">{p.name} <span className="text-[10px] text-slate-400 block font-normal">{p.businessName}</span></td>
+                      <td className="p-2.5 text-slate-600">{p.serviceCategory || 'General Medicine'}</td>
+                      <td className="p-2.5 text-center font-mono font-bold text-slate-700">{p.identifiers?.npi || p.npi || '1234567890'}</td>
+                      <td className="p-2.5 text-center font-mono font-bold text-slate-700">{p.identifiers?.taxId || p.taxId || '75-1234567'}</td>
+                      <td className="p-2.5 text-slate-600">{p.contact?.phone || p.phone || '713-555-0100'}</td>
+                      <td className="p-2.5 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">
+                          {p.status || 'ACTIVE'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="p-3 text-center text-slate-400 italic">No providers registered yet. Click "Add New Provider" to create one.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* CPT Codes & Procedure Pricing Catalog */}
+        <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-outline-variant pb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+                <FileCode className="w-4 h-4 text-teal-600" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-on-surface">CPT Procedure Codes &amp; Standard Fee Schedule</h2>
+                <p className="text-[10px] text-on-surface-variant mt-0.5">Manage CPT procedure codes, default fees and standard modifiers</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAddCptModal(true)}
+              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add CPT Code
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                <tr>
+                  <th className="p-2.5 text-center">CPT Code</th>
+                  <th className="p-2.5 text-left">Procedure Description</th>
+                  <th className="p-2.5 text-left">Category</th>
+                  <th className="p-2.5 text-right">Standard Fee ($)</th>
+                  <th className="p-2.5 text-center">Default Modifiers</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                {(Array.isArray(settings.cptCatalog) && settings.cptCatalog.length > 0 ? settings.cptCatalog : [
+                  { code: '99204', description: 'Office/Outpatient Visit New (Complex)', fee: '$450.00', category: 'E&M', modifiers: '25, 59' },
+                  { code: '99214', description: 'Office/Outpatient Visit Established (Moderate)', fee: '$275.00', category: 'E&M', modifiers: '25, 59' },
+                  { code: '97039', description: 'Unlisted Physical Medicine (HILT Laser)', fee: '$2000.00', category: 'Therapy', modifiers: 'GP, RT' },
+                  { code: '0101T', description: 'Extracorporeal Shock Wave Therapy (ESWT)', fee: '$1000.00', category: 'Therapy', modifiers: 'RT' },
+                  { code: '20552', description: 'Trigger Point Injections (1-2 muscles)', fee: '$450.00', category: 'Injections', modifiers: '59' },
+                  { code: '90834', description: 'Psychotherapy (45 Min)', fee: '$180.00', category: 'Mental Health', modifiers: '' }
+                ]).map((cpt, i) => (
+                  <tr key={cpt.code + i} className="hover:bg-slate-50 transition">
+                    <td className="p-2.5 text-center font-mono font-bold text-teal-800">{cpt.code}</td>
+                    <td className="p-2.5 font-bold text-slate-900">{cpt.description}</td>
+                    <td className="p-2.5 text-slate-600">{cpt.category || 'General'}</td>
+                    <td className="p-2.5 text-right font-mono font-bold text-slate-900">{cpt.fee}</td>
+                    <td className="p-2.5 text-center font-mono text-slate-600">{cpt.modifiers || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ICD-10 Diagnosis Codes & Billing Modifiers Dual Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* ICD-10 Catalog */}
+          <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-outline-variant pb-3 flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+                  <Tag className="w-4 h-4 text-teal-600" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-on-surface">ICD-10 Diagnosis Codes</h2>
+                  <p className="text-[10px] text-on-surface-variant mt-0.5">Manage diagnostic codes for CMS Box 21</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddIcdModal(true)}
+                className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3 h-3" /> Add ICD Code
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                  <tr>
+                    <th className="p-2 text-left">ICD Code</th>
+                    <th className="p-2 text-left">Diagnosis Description</th>
+                    <th className="p-2 text-left">Category</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-800">
+                  {(Array.isArray(settings.icdCatalog) && settings.icdCatalog.length > 0 ? settings.icdCatalog : [
+                    { code: 'M54.50', description: 'Low back pain, unspecified', category: 'Orthopedic' },
+                    { code: 'M54.2', description: 'Cervicalgia (Neck pain)', category: 'Orthopedic' },
+                    { code: 'S13.4XXA', description: 'Sprain of ligaments of cervical spine', category: 'Trauma/MVA' },
+                    { code: 'S39.012A', description: 'Strain of muscle/tendon of lower back', category: 'Trauma/MVA' },
+                    { code: 'F43.10', description: 'Post-traumatic stress disorder', category: 'Mental Health' },
+                    { code: 'M25.572', description: 'Pain in left ankle and foot', category: 'Extremity' }
+                  ]).map((icd, i) => (
+                    <tr key={icd.code + i} className="hover:bg-slate-50 transition">
+                      <td className="p-2 font-mono font-bold text-teal-800">{icd.code}</td>
+                      <td className="p-2 font-bold text-slate-900">{icd.description}</td>
+                      <td className="p-2 text-slate-600">{icd.category}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Billing Modifiers Catalog */}
+          <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-outline-variant pb-3 flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-4 h-4 text-teal-600" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-on-surface">Billing Modifiers Catalog</h2>
+                  <p className="text-[10px] text-on-surface-variant mt-0.5">Manage CPT modifiers for CMS Box 24.D</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddModModal(true)}
+                className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3 h-3" /> Add Modifier
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                  <tr>
+                    <th className="p-2 text-center">Modifier</th>
+                    <th className="p-2 text-left">Modifier Description &amp; Usage</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-800">
+                  {(Array.isArray(settings.modifiersCatalog) && settings.modifiersCatalog.length > 0 ? settings.modifiersCatalog : [
+                    { code: '25', description: 'Significant, Separately Identifiable E&M Service on Same Day' },
+                    { code: '59', description: 'Distinct Procedural Service' },
+                    { code: 'RT', description: 'Right Side' },
+                    { code: 'LT', description: 'Left Side' },
+                    { code: 'GP', description: 'Services Delivered Under Physical Therapy Plan of Care' },
+                    { code: 'TC', description: 'Technical Component' }
+                  ]).map((mod, i) => (
+                    <tr key={mod.code + i} className="hover:bg-slate-50 transition">
+                      <td className="p-2 text-center font-mono font-bold text-teal-800">{mod.code}</td>
+                      <td className="p-2 font-medium text-slate-900">{mod.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -520,6 +833,118 @@ export const GeneralSettingsPage = () => {
           </button>
         </div>
       </form>
+
+      {/* Modal: Add New Provider */}
+      {showAddProvModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4 text-xs animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Stethoscope className="w-4 h-4 text-teal-600" /> Register Healthcare Provider / Practice
+              </h3>
+              <button type="button" onClick={() => setShowAddProvModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+            </div>
+            <form onSubmit={handleAddProvider} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className={labelCls}>Provider Name *</label><input required className={inputCls} value={newProv.name} onChange={e => setNewProv(p => ({...p, name: e.target.value}))} placeholder="Dr. John Smith, MD" /></div>
+                <div><label className={labelCls}>Business/Practice Name *</label><input required className={inputCls} value={newProv.businessName} onChange={e => setNewProv(p => ({...p, businessName: e.target.value}))} placeholder="Smith Wellness LLC" /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div><label className={labelCls}>NPI (10 digits) *</label><input required className={inputCls} value={newProv.npi} onChange={e => setNewProv(p => ({...p, npi: e.target.value}))} placeholder="1234567890" /></div>
+                <div><label className={labelCls}>Tax ID (EIN) *</label><input required className={inputCls} value={newProv.taxId} onChange={e => setNewProv(p => ({...p, taxId: e.target.value}))} placeholder="75-1234567" /></div>
+                <div><label className={labelCls}>Category</label><input className={inputCls} value={newProv.serviceCategory} onChange={e => setNewProv(p => ({...p, serviceCategory: e.target.value}))} placeholder="Pain Mgmt" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className={labelCls}>Phone Number</label><input className={inputCls} value={newProv.phone} onChange={e => setNewProv(p => ({...p, phone: e.target.value}))} placeholder="713-555-0100" /></div>
+                <div><label className={labelCls}>Email Address</label><input type="email" className={inputCls} value={newProv.email} onChange={e => setNewProv(p => ({...p, email: e.target.value}))} placeholder="doctor@clinic.com" /></div>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="col-span-2"><label className={labelCls}>Street Address</label><input className={inputCls} value={newProv.street} onChange={e => setNewProv(p => ({...p, street: e.target.value}))} placeholder="10101 Harwin Dr" /></div>
+                <div><label className={labelCls}>City</label><input className={inputCls} value={newProv.city} onChange={e => setNewProv(p => ({...p, city: e.target.value}))} /></div>
+                <div><label className={labelCls}>State/Zip</label><input className={inputCls} value={`${newProv.state} ${newProv.zipCode}`} onChange={e => setNewProv(p => ({...p, state: e.target.value}))} /></div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={() => setShowAddProvModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">Save Provider</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add CPT Code */}
+      {showAddCptModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 text-xs animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <FileCode className="w-4 h-4 text-teal-600" /> Add CPT Procedure Code
+              </h3>
+              <button type="button" onClick={() => setShowAddCptModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+            </div>
+            <form onSubmit={handleAddCptCode} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className={labelCls}>CPT Code *</label><input required className={inputCls} value={newCpt.code} onChange={e => setNewCpt(p => ({...p, code: e.target.value}))} placeholder="e.g. 99204" /></div>
+                <div><label className={labelCls}>Default Fee ($)</label><input type="number" step="0.01" className={inputCls} value={newCpt.defaultFee} onChange={e => setNewCpt(p => ({...p, defaultFee: e.target.value}))} /></div>
+              </div>
+              <div><label className={labelCls}>Procedure Description *</label><input required className={inputCls} value={newCpt.description} onChange={e => setNewCpt(p => ({...p, description: e.target.value}))} placeholder="e.g. Comprehensive Pain Consult" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className={labelCls}>Category</label><input className={inputCls} value={newCpt.category} onChange={e => setNewCpt(p => ({...p, category: e.target.value}))} placeholder="e.g. E&M / Therapy" /></div>
+                <div><label className={labelCls}>Standard Modifiers</label><input className={inputCls} value={newCpt.modifiers} onChange={e => setNewCpt(p => ({...p, modifiers: e.target.value}))} placeholder="e.g. 25, 59" /></div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={() => setShowAddCptModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">Add CPT Code</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add ICD Code */}
+      {showAddIcdModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 text-xs animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Tag className="w-4 h-4 text-teal-600" /> Add ICD-10 Diagnosis Code
+              </h3>
+              <button type="button" onClick={() => setShowAddIcdModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+            </div>
+            <form onSubmit={handleAddIcdCode} className="space-y-3">
+              <div><label className={labelCls}>ICD-10 Code *</label><input required className={inputCls} value={newIcd.code} onChange={e => setNewIcd(p => ({...p, code: e.target.value}))} placeholder="e.g. M54.50" /></div>
+              <div><label className={labelCls}>Diagnosis Description *</label><input required className={inputCls} value={newIcd.description} onChange={e => setNewIcd(p => ({...p, description: e.target.value}))} placeholder="e.g. Low back pain, unspecified" /></div>
+              <div><label className={labelCls}>Category</label><input className={inputCls} value={newIcd.category} onChange={e => setNewIcd(p => ({...p, category: e.target.value}))} placeholder="e.g. Orthopedic / MVA" /></div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={() => setShowAddIcdModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">Add ICD Code</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add Modifier */}
+      {showAddModModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 text-xs animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Shield className="w-4 h-4 text-teal-600" /> Add Billing Modifier
+              </h3>
+              <button type="button" onClick={() => setShowAddModModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+            </div>
+            <form onSubmit={handleAddModifier} className="space-y-3">
+              <div><label className={labelCls}>Modifier Code *</label><input required className={inputCls} value={newMod.code} onChange={e => setNewMod(p => ({...p, code: e.target.value}))} placeholder="e.g. 25" /></div>
+              <div><label className={labelCls}>Modifier Description &amp; Usage *</label><input required className={inputCls} value={newMod.description} onChange={e => setNewMod(p => ({...p, description: e.target.value}))} placeholder="e.g. Significant, Separately Identifiable E&M Service" /></div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={() => setShowAddModModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">Add Modifier</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
