@@ -11,7 +11,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, Save, Bell, User, MapPin, FileText, Tag } from 'lucide-react';
 
 import { isClinicClosed } from '../../constants/usHolidays';
-
+import { useAuthStore } from '../../store/authStore';
 import { apiProviderService } from '../../services/api/apiProviderService';
 
 const inputCls = 'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none transition';
@@ -89,41 +89,45 @@ export const ScheduleAppointmentPage = () => {
   const initialProvConfig = INITIAL_PROVIDER_CONFIGS.josmic;
   const initialAddress = initialProvConfig ? `${initialProvConfig.address.street}, ${initialProvConfig.address.suite}, ${initialProvConfig.address.city} ${initialProvConfig.address.state} ${initialProvConfig.address.zipCode}` : '';
 
-  const [formData, setFormData] = useState({
-    patientId: '',
-    patientName: '',
-    patientPhone: '',
-    patientDob: '',
-    caseId: '',
-    caseRef: '',
-    providerId: 'prov-josmic',
-    visitType: 'INITIAL', // 'INITIAL' | 'SUBSEQUENT'
-    appointmentType: 'Pain Consult & Evaluation',
-    cptCode: '99204, 97039',
-    reasonForVisit: '',
-    date: getTodayDateString(),
-    startTime: '09:00 AM',
-    endTime: '10:00 AM',
-    duration: '60',
-    visitStatus: 'SCHEDULED',
-    location: initialProvConfig?.address?.suite || '',
-    locationAddress: initialAddress,
-    room: '',
-    telehealth: false,
-    telehealthLink: '',
-    reminderPreference: 'SMS',
-    reminderTiming: '24H',
-    sendConfirmation: true,
-    interpreterNeeded: false,
-    interpreterLanguage: '',
-    transportNeeded: false,
-    attendingProvider: initialProvConfig?.renderingProvider ? `${initialProvConfig.renderingProvider.name} ${initialProvConfig.renderingProvider.credentials || ''}`.trim() : '',
-    attendingProviderNpi: initialProvConfig?.renderingProvider?.npi || '',
-    authorizationNumber: '',
-    copayAmount: '0.00',
-    billToCase: true,
-    visitNotes: '',
-    holidayOverride: false,
+  const { currentUser } = useAuthStore();
+  const [formData, setFormData] = useState(() => {
+    const defaultProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+    return {
+      patientId: '',
+      patientName: '',
+      patientPhone: '',
+      patientDob: '',
+      caseId: '',
+      caseRef: '',
+      providerId: defaultProviderId,
+      visitType: 'INITIAL', // 'INITIAL' | 'SUBSEQUENT'
+      appointmentType: 'Pain Consult & Evaluation',
+      cptCode: '99204, 97039',
+      reasonForVisit: '',
+      date: getTodayDateString(),
+      startTime: '09:00 AM',
+      endTime: '10:00 AM',
+      duration: '60',
+      visitStatus: 'SCHEDULED',
+      location: initialProvConfig?.address?.suite || '',
+      locationAddress: initialAddress,
+      room: '',
+      telehealth: false,
+      telehealthLink: '',
+      reminderPreference: 'SMS',
+      reminderTiming: '24H',
+      sendConfirmation: true,
+      interpreterNeeded: false,
+      interpreterLanguage: '',
+      transportNeeded: false,
+      attendingProvider: initialProvConfig?.renderingProvider ? `${initialProvConfig.renderingProvider.name} ${initialProvConfig.renderingProvider.credentials || ''}`.trim() : '',
+      attendingProviderNpi: initialProvConfig?.renderingProvider?.npi || '',
+      authorizationNumber: '',
+      copayAmount: '0.00',
+      billToCase: true,
+      visitNotes: '',
+      holidayOverride: false,
+    };
   });
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useUIStore();

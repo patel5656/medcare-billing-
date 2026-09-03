@@ -4,6 +4,7 @@ import { apiCaseService as mockCaseService } from '../../services/api/apiCaseSer
 import { apiPatientService as mockPatientService } from '../../services/api/apiPatientService';
 import { DynamicDiagnosisPicker } from '../../components/common/DynamicDiagnosisPicker';
 import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, Save, FileText, Shield, User, MapPin, Stethoscope, 
@@ -73,7 +74,12 @@ const INITIAL_CASE_STATE = {
 };
 
 export const AddCasePage = () => {
-  const [formData, setFormData] = useState(INITIAL_CASE_STATE);
+  const { currentUser } = useAuthStore();
+  const [formData, setFormData] = useState(() => {
+    const currentProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+    const allProviders = [...new Set([...INITIAL_CASE_STATE.assignedProviderIds, currentProviderId])];
+    return { ...INITIAL_CASE_STATE, assignedProviderIds: allProviders };
+  });
   const [patients, setPatients] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});

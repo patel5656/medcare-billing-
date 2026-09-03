@@ -131,11 +131,11 @@ export const ClinicalNoteEditorPage = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      let providerId = 'prov-josmic';
       let type = 'JOSMIC_PAIN';
-      if (formData.providerName.includes("DAV'S")) { providerId = 'prov-davs'; type = 'DAVS_ESWT'; }
-      if (formData.providerName.includes("ANIK")) { providerId = 'prov-anik'; type = 'ANIK_LASER'; }
-      if (formData.providerName.includes("Counselor")) { providerId = 'prov-counselor'; type = 'COUNSELOR_GENERIC'; }
+      if (formData.providerName.includes("DAV'S")) { type = 'DAVS_ESWT'; }
+      if (formData.providerName.includes("ANIK")) { type = 'ANIK_LASER'; }
+      if (formData.providerName.includes("Counselor")) { type = 'COUNSELOR_GENERIC'; }
+      let providerId = currentUser?.providerId || currentUser?.id || 'prov-josmic';
 
       const newNoteData = {
         patientId: formData.patientId,

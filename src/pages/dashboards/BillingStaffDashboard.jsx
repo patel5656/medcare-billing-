@@ -110,10 +110,10 @@ export const BillingStaffDashboard = () => {
                 </div>
                 <p className="text-[11px] text-on-surface-variant mb-2">Statement #{bill.statementNumber}</p>
                 <div className="border-t border-outline-variant pt-2 space-y-1 text-xs">
-                  <div className="flex justify-between"><span className="text-on-surface-variant">Total Charges:</span><span className="font-bold text-on-surface font-tabular">{formatCurrency(bill.totals.totalCharges)}</span></div>
-                  <div className="flex justify-between"><span className="text-on-surface-variant">Payments:</span><span className="font-semibold text-emerald-600 font-tabular">{formatCurrency(bill.totals.totalPayments)}</span></div>
-                  <div className="flex justify-between"><span className="text-on-surface-variant">Adjustments:</span><span className="font-semibold text-amber-600 font-tabular">{formatCurrency(bill.totals.totalAdjustments)}</span></div>
-                  <div className="flex justify-between border-t border-outline-variant pt-1 font-bold"><span className="text-on-surface">Balance Due:</span><span className="text-secondary-container font-tabular">{formatCurrency(bill.totals.balanceDue)}</span></div>
+                  <div className="flex justify-between"><span className="text-on-surface-variant">Total Charges:</span><span className="font-bold text-on-surface font-tabular">{formatCurrency(bill?.totals?.totalCharges || 0)}</span></div>
+                  <div className="flex justify-between"><span className="text-on-surface-variant">Payments:</span><span className="font-semibold text-emerald-600 font-tabular">{formatCurrency(bill?.totals?.totalPayments || 0)}</span></div>
+                  <div className="flex justify-between"><span className="text-on-surface-variant">Adjustments:</span><span className="font-semibold text-amber-600 font-tabular">{formatCurrency(bill?.totals?.totalAdjustments || 0)}</span></div>
+                  <div className="flex justify-between border-t border-outline-variant pt-1 font-bold"><span className="text-on-surface">Balance Due:</span><span className="text-secondary-container font-tabular">{formatCurrency(bill?.totals?.balanceDue || 0)}</span></div>
                 </div>
               </div>
 

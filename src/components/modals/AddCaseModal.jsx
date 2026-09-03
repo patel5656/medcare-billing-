@@ -7,6 +7,7 @@ import { mockAttorneyService } from '../../services/mock/mockAttorneyService';
 import { DynamicDiagnosisPicker } from '../common/DynamicDiagnosisPicker';
 import { AddAttorneyModal } from './AddAttorneyModal';
 import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 import { 
   FileSpreadsheet, Save, Shield, User, Stethoscope, Scale, 
   PlusCircle, Calendar, AlertCircle, CheckCircle2, AlertTriangle, Clock, Lock, ChevronRight, ArrowLeft
@@ -64,12 +65,17 @@ const INITIAL_CASE_DATA = {
 
 export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = null }) => {
   const { addToast } = useUIStore();
+  const { currentUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState('ACCIDENT'); // ACCIDENT | LEGAL | CLINICAL
   const [isLoading, setIsLoading] = useState(false);
   const [patients, setPatients] = useState([]);
   const [errors, setErrors] = useState({});
 
-  const [formData, setFormData] = useState(INITIAL_CASE_DATA);
+  const [formData, setFormData] = useState(() => {
+    const currentProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+    const allProviders = [...new Set([...INITIAL_CASE_DATA.assignedProviderIds, currentProviderId])];
+    return { ...INITIAL_CASE_DATA, assignedProviderIds: allProviders };
+  });
   const [attorneys, setAttorneys] = useState([]);
   const [showAddAttorneyModal, setShowAddAttorneyModal] = useState(false);
 
@@ -96,7 +102,9 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
     if (initialPatient && isOpen) {
       applyPatientData(initialPatient);
     } else if (isOpen && !initialPatient) {
-      setFormData(INITIAL_CASE_DATA);
+      const currentProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+      const allProviders = [...new Set([...INITIAL_CASE_DATA.assignedProviderIds, currentProviderId])];
+      setFormData({ ...INITIAL_CASE_DATA, assignedProviderIds: allProviders });
       setErrors({});
     }
   }, [initialPatient, isOpen]);

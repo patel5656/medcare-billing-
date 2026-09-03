@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Modal } from './Modal';
 import { apiPatientService } from '../../services/api/apiPatientService';
 import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 import {
   User,
   Phone,
@@ -174,7 +175,12 @@ const INITIAL_FORM_DATA = {
 
 export const AddPatientModal = ({ isOpen, onClose, onPatientAdded }) => {
   const { addToast } = useUIStore();
-  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+  const { currentUser } = useAuthStore();
+  const [formData, setFormData] = useState(() => {
+    const currentProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+    const allProviders = [...new Set([...INITIAL_FORM_DATA.assignedProviderIds, currentProviderId])];
+    return { ...INITIAL_FORM_DATA, assignedProviderIds: allProviders };
+  });
   const [currentStep, setCurrentStep] = useState(1); // 1 | 2 | 3 | 4
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});

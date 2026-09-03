@@ -1,8 +1,9 @@
-﻿// src/pages/clinical/JosmicPainFormPage.jsx
+// src/pages/clinical/JosmicPainFormPage.jsx
 import React, { useState, useEffect } from 'react';
 import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
 import { apiPatientService } from '../../services/api/apiPatientService';
 import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, FileText, CheckSquare, PenTool } from 'lucide-react';
 
@@ -23,6 +24,7 @@ export const JosmicPainFormPage = () => {
   const [planText, setPlanText] = useState('Ordered MRI cervical/lumbar. Recommend ESWT and Laser therapy 3x weekly.');
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useUIStore();
+  const { currentUser } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -51,8 +53,8 @@ export const JosmicPainFormPage = () => {
         patientId: selectedPatientId || 'pat-001',
         patientName: patientNameToSave,
         caseId: 'case-001',
-        providerId: 'prov-josmic',
-        providerName: 'JOSMIC Wellness Center',
+        providerId: currentUser?.providerId || currentUser?.id || 'prov-josmic',
+        providerName: currentUser?.name || 'JOSMIC Wellness Center',
         type: 'JOSMIC_PAIN',
         title: 'JOSMIC Pain Management Report',
         author: 'Dr. Segun Adeoye',
