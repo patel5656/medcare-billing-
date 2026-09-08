@@ -69,7 +69,7 @@ export const DoctorDashboard = () => {
             <Users className="w-5 h-5 text-secondary-container" />
           </div>
           <p className="text-2xl font-bold text-on-surface font-tabular">{patientCount} Patients</p>
-          <p className="text-[11px] text-on-surface-variant">Active accident &amp; clinical cases</p>
+          <p className="text-[11px] text-on-surface-variant">Active clinical cases</p>
         </div>
       </div>
 

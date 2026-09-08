@@ -6,6 +6,7 @@ import { FolderOpen, Eye, X, Printer, Upload, Edit, FileText, CheckCircle2, Tras
 import { useNavigate } from 'react-router-dom';
 import { UnifiedPacketViewer } from '../../components/packets/UnifiedPacketViewer';
 import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 import { ExportDataModal } from '../../components/common/ExportDataModal';
 import { triggerPrint } from '../../utils/exportUtils';
 
@@ -16,6 +17,7 @@ export const DocumentListPage = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const { addToast } = useUIStore();
+  const { currentUser } = useAuthStore();
   const navigate = useNavigate();
 
   // Import form states
@@ -180,12 +182,14 @@ export const DocumentListPage = () => {
                     >
                       <Eye className="w-3.5 h-3.5 text-teal-600" /> Preview
                     </button>
-                    <button
-                      onClick={() => navigate(getEditPath(doc))}
-                      className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg inline-flex items-center gap-1 transition shadow-sm text-[11px]"
-                    >
-                      <Edit className="w-3.5 h-3.5" /> Fill / Edit
-                    </button>
+                    {!( (doc.type?.includes('Bill') || doc.type?.includes('Statement')) && currentUser?.role !== 'Super Admin' && currentUser?.role !== 'Billing Staff' ) && (
+                      <button
+                        onClick={() => navigate(getEditPath(doc))}
+                        className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg inline-flex items-center gap-1 transition shadow-sm text-[11px]"
+                      >
+                        <Edit className="w-3.5 h-3.5" /> Fill / Edit
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDeleteDoc(doc.id, doc.name)}
                       className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg inline-flex items-center gap-1 transition text-[11px]"

@@ -1,4 +1,4 @@
-﻿// src/components/layout/AppLayout.jsx
+// src/components/layout/AppLayout.jsx
 import React, { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { TopHeader } from './TopHeader';
@@ -19,9 +19,9 @@ export const AppLayout = () => {
   }, [location.pathname, setSidebarCollapsed]);
 
   return (
-    <div className="app-shell flex flex-col bg-slate-900 font-sans antialiased text-slate-900 print:h-auto print:overflow-visible">
+    <div className="app-shell flex flex-col bg-slate-50 font-sans antialiased text-slate-900 print:h-auto print:overflow-visible">
       {/* Top Header - 64px on mobile, 72px-80px on desktop */}
-      <header className="h-16 sm:h-20 shrink-0 border-b border-slate-800 bg-slate-900 z-30 print:hidden">
+      <header className="h-16 sm:h-20 shrink-0 border-b border-slate-200 bg-white z-30 print:hidden">
         <TopHeader />
       </header>
 
@@ -39,7 +39,7 @@ export const AppLayout = () => {
         {/* -- Sidebar -- */}
         <div
           className={`
-            shrink-0 overflow-y-auto overscroll-contain bg-slate-900 border-r border-slate-800 print:hidden
+            shrink-0 overflow-y-auto overscroll-contain bg-white border-r border-slate-200 print:hidden
             transition-all duration-300 ease-in-out
             fixed top-16 sm:top-20 left-0 bottom-0 z-50
             lg:static lg:top-auto lg:left-auto lg:bottom-auto lg:z-auto

@@ -43,7 +43,7 @@ export const CaseListPage = () => {
     setIsDeleting(true);
     try {
       await mockCaseService.deleteCase(caseToDelete.id || caseToDelete.caseId);
-      addToast('Accident Case deleted successfully', 'success');
+      addToast('Clinical Case deleted successfully', 'success');
       loadCases();
     } catch (err) {
       addToast('Failed to delete case', 'error');
@@ -56,7 +56,7 @@ export const CaseListPage = () => {
   const handleToggleCaseStatus = async (c, newStatus) => {
     try {
       await mockCaseService.updateCase(c.id || c.caseId, { status: newStatus });
-      addToast(`Accident Case ${c.caseId || ''} status updated to ${newStatus}`, 'success');
+      addToast(`Clinical Case ${c.caseId || ''} status updated to ${newStatus}`, 'success');
       loadCases();
     } catch (err) {
       console.error('Failed to update case status:', err);
@@ -78,8 +78,8 @@ export const CaseListPage = () => {
       {/* -- Top Header & Actions -- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">Accident &amp; Legal Cases</h1>
-          <p className="text-xs text-slate-500">Motor vehicle accidents, personal injury claims, law firm assignments &amp; 4-provider billing linkages</p>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">Clinical Cases</h1>
+          <p className="text-xs text-slate-500">Patient clinical episodes, treatments &amp; 4-provider billing linkages</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
           <button 
@@ -92,7 +92,7 @@ export const CaseListPage = () => {
             onClick={() => setShowAddModal(true)} 
             className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <PlusCircle className="w-4 h-4" /> Create Accident Case
+            <PlusCircle className="w-4 h-4" /> Create Clinical Case
           </button>
         </div>
       </div>
@@ -114,7 +114,7 @@ export const CaseListPage = () => {
         {filteredCases.length === 0 ? (
           <div className="p-8 text-center space-y-3">
             <FileSpreadsheet className="w-10 h-10 text-slate-300 mx-auto" />
-            <p className="text-sm font-bold text-slate-900">No Accident Cases Found</p>
+            <p className="text-sm font-bold text-slate-900">No Clinical Cases Found</p>
             <p className="text-xs text-slate-500">No records match your search criteria.</p>
           </div>
         ) : (
@@ -179,7 +179,7 @@ export const CaseListPage = () => {
                   <div className="space-y-1 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                     <p className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                      <span>Accident Date: <strong className="text-slate-800">{c.accidentDate}</strong></span>
+                      <span>Date of Incident: <strong className="text-slate-800">{c.accidentDate}</strong></span>
                     </p>
                     <p className="flex items-center gap-1.5">
                       <Scale className="w-3.5 h-3.5 text-teal-600 shrink-0" />
@@ -222,7 +222,7 @@ export const CaseListPage = () => {
                   <tr>
                     <th className="p-3.5">Case ID</th>
                     <th className="p-3.5">Patient</th>
-                    <th className="p-3.5">Accident Date &amp; Type</th>
+                    <th className="p-3.5">Incident Date &amp; Type</th>
                     <th className="p-3.5">Attorney &amp; Law Firm</th>
                     <th className="p-3.5">Assigned Providers</th>
                     <th className="p-3.5">Status</th>
@@ -359,7 +359,7 @@ export const CaseListPage = () => {
         <Modal
           isOpen={!!caseToDelete}
           onClose={() => setCaseToDelete(null)}
-          title="Delete Accident Case"
+          title="Delete Clinical Case"
           subtitle="Permanently remove case record & associated legal lien references"
           icon={AlertTriangle}
           iconColor="text-rose-600"

@@ -265,7 +265,9 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
 
           {/* Section Category Tabs - Horizontal Touch Scroll */}
           <div className="flex items-center gap-1 overflow-x-auto text-[11px] font-semibold text-slate-300 py-1 scrollbar-none">
-            {['ALL', 'COVER', 'BILLING', 'CMS-1500', 'ASSESSMENT', 'PROCEDURE', 'NARRATIVE'].map(tab => (
+            {['ALL', 'COVER', 'BILLING', 'CMS-1500', 'ASSESSMENT', 'PROCEDURE', 'NARRATIVE']
+              .filter(tab => tab === 'ALL' || new Set(manifest.pages.map(p => p.type)).has(tab))
+              .map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTabFilter(tab)}

@@ -93,7 +93,7 @@ export const TopHeader = () => {
   };
 
   return (
-    <div className="w-full h-full px-3 sm:px-6 flex items-center justify-between text-white select-none gap-4">
+    <div className="w-full h-full px-3 sm:px-6 flex items-center justify-between text-slate-900 select-none gap-4">
       {/* -- Left section: Sidebar Toggle & Full Branding Title -- */}
       <div className="flex items-center gap-3 sm:gap-4 shrink-0">
         {/* Toggle Button */}
@@ -103,7 +103,7 @@ export const TopHeader = () => {
             e.stopPropagation();
             toggleSidebar();
           }}
-          className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white transition flex items-center justify-center border border-slate-700 shadow-sm cursor-pointer shrink-0"
+          className="p-2 sm:p-2.5 rounded-xl bg-white hover:bg-slate-50 text-teal-600 hover:text-teal-700 transition flex items-center justify-center border border-slate-200 shadow-sm cursor-pointer shrink-0"
           title={sidebarCollapsed ? "Expand sidebar menu" : "Collapse sidebar menu"}
           aria-label="Toggle Navigation Sidebar"
         >
@@ -122,10 +122,10 @@ export const TopHeader = () => {
         >
           <FMLogo className="w-11 h-11 sm:w-14 sm:h-14 shrink-0" fit="contain" shape="rounded-xl" />
           <div className="flex flex-col justify-center">
-            <h1 className="text-sm sm:text-base md:text-lg font-serif font-black tracking-wide text-white leading-tight whitespace-nowrap">
+            <h1 className="text-sm sm:text-base md:text-lg font-serif font-black tracking-wide text-slate-900 leading-tight whitespace-nowrap">
               F&amp;M HEALTH &amp; WELLNESS
             </h1>
-            <p className="text-[10px] sm:text-[11px] text-amber-300 font-bold tracking-wider uppercase whitespace-nowrap leading-tight mt-1">
+            <p className="text-[10px] sm:text-[11px] text-teal-600 font-bold tracking-wider uppercase whitespace-nowrap leading-tight mt-1">
               Billing &amp; Clinical Platform
             </p>
           </div>
@@ -141,7 +141,7 @@ export const TopHeader = () => {
               <select
                 value={activeProviderFilter}
                 onChange={(e) => setProviderFilter(e.target.value)}
-                className="w-full bg-slate-800 text-white text-xs font-semibold rounded-xl px-3.5 py-2 border border-slate-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 appearance-none pr-8 cursor-pointer outline-none"
+                className="w-full bg-white text-slate-900 text-xs font-semibold rounded-xl px-3.5 py-2 border border-slate-200 shadow-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 appearance-none pr-8 cursor-pointer outline-none"
               >
                 <option value="ALL">All Practice Providers ({providersList.length} Modalities)</option>
                 {providersList.map((prov) => (
@@ -159,10 +159,10 @@ export const TopHeader = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search patients, MRN, accident cases, or attorneys..."
+              placeholder="Search patients, MRN, cases, or providers..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-800/90 text-white text-xs rounded-xl pl-9 pr-3 py-2 border border-slate-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 placeholder-slate-400 outline-none transition"
+              className="w-full bg-slate-50 text-slate-900 text-xs rounded-xl pl-9 pr-3 py-2 border border-slate-200 focus:bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 placeholder-slate-400 outline-none transition"
             />
           </form>
         </div>
@@ -171,8 +171,8 @@ export const TopHeader = () => {
       {/* -- Right Section: Role Pill + Notification Bell + User Profile -- */}
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         {/* Role Badge Pill */}
-        <div className="hidden md:flex items-center gap-1.5 bg-slate-800 border border-slate-700 text-xs font-semibold px-3 py-1.5 rounded-full text-teal-300 shrink-0">
-          <Shield className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+        <div className="hidden md:flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-xs font-semibold px-3 py-1.5 rounded-full text-teal-700 shrink-0 shadow-sm">
+          <Shield className="w-3.5 h-3.5 text-teal-600 shrink-0" />
           <span>Role: {currentUser?.role || 'Super Admin'}</span>
         </div>
 
@@ -185,7 +185,7 @@ export const TopHeader = () => {
               setUserMenuOpen(false);
             }}
             className={`relative p-2 rounded-xl transition cursor-pointer shrink-0 ${
-              notifMenuOpen ? 'bg-slate-800 text-teal-400' : 'hover:bg-slate-800 text-slate-400 hover:text-white'
+              notifMenuOpen ? 'bg-teal-50 text-teal-700' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'
             }`}
             title="Notifications & Alerts"
           >
@@ -292,7 +292,7 @@ export const TopHeader = () => {
         <div className="relative shrink-0">
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-800 transition cursor-pointer"
+            className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer"
           >
             <img
               src={currentUser?.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120'}
@@ -300,10 +300,10 @@ export const TopHeader = () => {
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-teal-500 shrink-0 shadow-xs"
             />
             <div className="hidden sm:block text-left">
-              <p className="text-xs font-bold text-white leading-tight">
+              <p className="text-xs font-bold text-slate-900 leading-tight">
                 {currentUser?.name || 'Sarah Connor'}
               </p>
-              <p className="text-[10px] text-teal-400 font-semibold">
+              <p className="text-[10px] text-teal-600 font-semibold">
                 {currentUser?.role || 'Super Admin'}
               </p>
             </div>

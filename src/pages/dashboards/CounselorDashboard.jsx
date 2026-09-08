@@ -80,7 +80,7 @@ export const CounselorDashboard = () => {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Counselor &amp; Behavioral Health Dashboard</h1>
-              <p className="text-xs text-slate-500">Post-accident psychological trauma intake, psychotherapy sessions &amp; billing statements</p>
+              <p className="text-xs text-slate-500">Psychological trauma intake, psychotherapy sessions &amp; billing statements</p>
             </div>
           </div>
         </div>
@@ -168,8 +168,8 @@ export const CounselorDashboard = () => {
             {displayCases.map((c) => (
               <div key={c.id || c.caseId} className="p-3.5 bg-slate-50 hover:bg-indigo-50/40 rounded-xl border border-slate-200 flex items-center justify-between transition">
                 <div>
-                  <strong className="text-slate-900 text-sm block">{c.patientName || 'Accident Patient'}</strong>
-                  <p className="text-slate-500">Case: {c.caseId || c.id} | DOA: {c.accidentDate || 'N/A'}</p>
+                  <strong className="text-slate-900 text-sm block">{c.patientName || 'Clinical Patient'}</strong>
+                  <p className="text-slate-500">Case: {c.caseId || c.id} | DOI: {c.accidentDate || 'N/A'}</p>
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded font-bold text-[10px]">
                       CPT 90834 (45 Min)

@@ -35,8 +35,7 @@ export const CreateBillPage = () => {
     billToAddress: '11711 Bedford St. Suite 01, Houston TX 77031',
     billToPhone: '713-555-0188',
     billToEmail: 'attorney@ojlawfirm.com',
-    serviceDateFrom: '2025-12-30',
-    serviceDateTo: '2026-01-26',
+    serviceDate: '2025-12-30',
     diagnosisCodes: 'M54.6, M54.50, S13.4',
     insuranceCompany: 'Example Auto Insurance Co.',
     insuranceClaimNumber: 'CLM-2025-88192',
@@ -179,9 +178,8 @@ export const CreateBillPage = () => {
         {/* Service Details & Multi-Line CPT */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
           <SectionHead Icon={Receipt} title="Service Dates & ICD-10 Diagnostics" />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div><label className={labelCls}>Service Date From</label><input type="date" className={inputCls} value={form.serviceDateFrom} onChange={e => set('serviceDateFrom', e.target.value)} /></div>
-            <div><label className={labelCls}>Service Date To</label><input type="date" className={inputCls} value={form.serviceDateTo} onChange={e => set('serviceDateTo', e.target.value)} /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><label className={labelCls}>Service Date</label><input type="date" className={inputCls} value={form.serviceDate} onChange={e => set('serviceDate', e.target.value)} /></div>
             <div><label className={labelCls}>ICD-10 Diagnosis Codes</label><input className={inputCls} value={form.diagnosisCodes} onChange={e => set('diagnosisCodes', e.target.value)} placeholder="M54.6, M54.50" /></div>
           </div>
 

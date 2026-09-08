@@ -155,7 +155,7 @@ export const FourBillsPage = () => {
           onClick={() => navigate('/cases')} 
           className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer hidden sm:inline-block"
         >
-          Accident Cases
+          Clinical Cases
         </button>
 
         <button 
@@ -170,7 +170,7 @@ export const FourBillsPage = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">Provider Bills Ledger</h1>
-          <p className="text-xs text-slate-500">Connected practice provider statements &amp; itemized clinical ledgers tied to patient accident cases</p>
+          <p className="text-xs text-slate-500">Connected practice provider statements &amp; itemized clinical ledgers tied to patient clinical cases</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           {/* Dynamic Backend Case Dropdown */}
@@ -182,7 +182,7 @@ export const FourBillsPage = () => {
             {casesList.length > 0 ? (
               casesList.map((c) => (
                 <option key={c.id || c.caseId} value={c.id || c.caseId}>
-                  {c.caseId || c.id} — {c.patientName || 'Accident Patient'}
+                  {c.caseId || c.id} — {c.patientName || 'Clinical Patient'}
                 </option>
               ))
             ) : (
@@ -217,11 +217,11 @@ export const FourBillsPage = () => {
                   {caseData.caseId || caseData.id}
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                  {caseData.accidentType || 'AUTO_ACCIDENT'}
+                  {caseData.accidentType || 'CLINICAL_VISIT'}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Accident Date: <strong className="text-white font-mono">{caseData.accidentDate || 'N/A'}</strong>
+                Incident Date: <strong className="text-white font-mono">{caseData.accidentDate || 'N/A'}</strong>
                 {caseData.initialDate && <> • Admission: <strong className="text-white font-mono">{caseData.initialDate}</strong></>}
               </p>
             </div>

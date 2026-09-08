@@ -35,7 +35,7 @@ export const CaseDetailsPage = () => {
             </span>
           </div>
           <p className="text-xs text-on-surface-variant mt-1">
-            Patient: <strong className="text-secondary-container font-bold cursor-pointer" onClick={() => navigate(`/patients/${caseData.patientId}/profile`)}>{caseData.patientName}</strong> | Accident Date: <strong className="text-on-surface">{caseData.accidentDate}</strong>
+            Patient: <strong className="text-secondary-container font-bold cursor-pointer" onClick={() => navigate(`/patients/${caseData.patientId}/profile`)}>{caseData.patientName}</strong> | Incident Date: <strong className="text-on-surface">{caseData.accidentDate}</strong>
           </p>
         </div>
 
@@ -48,12 +48,12 @@ export const CaseDetailsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant shadow-sm space-y-3">
           <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-2 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-secondary-container" /> Accident Information
+            <FileText className="w-4 h-4 text-secondary-container" /> Incident Information
           </h2>
           <div className="space-y-1.5 text-xs">
-            <div className="flex justify-between"><span className="text-on-surface-variant">Accident Type:</span><span className="font-semibold">{caseData.accidentType}</span></div>
+            <div className="flex justify-between"><span className="text-on-surface-variant">Incident Type:</span><span className="font-semibold">{caseData.accidentType}</span></div>
             <div className="flex justify-between"><span className="text-on-surface-variant">Mechanism of Injury:</span><span className="font-semibold">{caseData.mechanismOfInjury}</span></div>
-            <div className="flex justify-between"><span className="text-on-surface-variant">Accident State:</span><span className="font-semibold">{caseData.accidentState}</span></div>
+            <div className="flex justify-between"><span className="text-on-surface-variant">Incident State:</span><span className="font-semibold">{caseData.accidentState}</span></div>
             <div className="flex justify-between"><span className="text-on-surface-variant">Referring Provider:</span><span className="font-semibold">{caseData.referringProviderName}</span></div>
           </div>
         </div>

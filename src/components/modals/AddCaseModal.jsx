@@ -35,11 +35,11 @@ const INITIAL_CASE_DATA = {
   accidentDate: '',
   initialDate: todayStr, // Default admission/initial treatment date to today
   dischargeDate: '',
-  accidentType: 'AUTO_ACCIDENT',
+  accidentType: 'CLINICAL_VISIT',
   accidentState: 'TX',
   accidentCity: 'Houston',
   accidentLocation: 'Houston, TX Metro Area',
-  mechanismOfInjury: 'Motor Vehicle Collision with deceleration impact',
+  mechanismOfInjury: 'General illness or localized pain',
   policeReportNumber: '',
   emergencyTransport: 'NONE',
   chiefComplaint: '',
@@ -313,14 +313,14 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
       };
 
       const created = await apiCaseService.createCase(payload);
-      addToast(`Accident Case ${created.caseId || 'CASE-2026'} created & saved to database!`, 'success');
+      addToast(`Clinical Case ${created.caseId || 'CASE-2026'} created & saved to database!`, 'success');
       if (onCaseAdded) onCaseAdded(created);
       onClose();
       setFormData(INITIAL_CASE_DATA);
       setErrors({});
     } catch (err) {
       console.error('Failed to create case:', err);
-      addToast(err.message || 'Failed to create accident case in database', 'error');
+      addToast(err.message || 'Failed to create clinical case in database', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -357,8 +357,8 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Create New Accident &amp; Legal Case"
-      subtitle="Register incident details, verify accident timeline &amp; link 4-provider legal ledgers"
+      title="Create New Clinical Case"
+      subtitle="Register incident details, verify timeline &amp; link 4-provider legal ledgers"
       icon={FileSpreadsheet}
       size="2xl"
       iconColor="text-teal-600"
@@ -418,7 +418,7 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
                 disabled={isLoading || (timelineCheck && timelineCheck.isInvalid)}
                 className="px-5 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer"
               >
-                <Save className="w-4 h-4" /> {isLoading ? 'Creating Case...' : 'Create Accident Case'}
+                <Save className="w-4 h-4" /> {isLoading ? 'Creating Case...' : 'Create Clinical Case'}
               </button>
             </>
           )}
@@ -435,7 +435,7 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
               activeTab === 'ACCIDENT' ? 'border-teal-600 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            <Shield className="w-3.5 h-3.5" /> 1. Accident &amp; Timeline
+            <Shield className="w-3.5 h-3.5" /> 1. Incident &amp; Timeline
             {isTab1Complete ? (
               <span className="w-4 h-4 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-[10px]">✓</span>
             ) : (
@@ -541,17 +541,17 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
             <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-teal-600" /> Accident Timeline &amp; Admission Dates
+                  <Clock className="w-4 h-4 text-teal-600" /> Incident Timeline &amp; Admission Dates
                 </span>
                 <span className="text-[10px] text-slate-500 font-semibold">
-                  Rule: Accident Date &le; Admission Date &le; Today
+                  Rule: Incident Date &le; Admission Date &le; Today
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className={labelCls}>
-                    Date of Accident (DOA) *
+                    Date of Incident (DOI) *
                   </label>
                   <input
                     type="date"
@@ -616,9 +616,9 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
-                  <label className={labelCls}>Accident Type</label>
+                  <label className={labelCls}>Incident Type</label>
                   <select className={inputCls()} value={formData.accidentType} onChange={e => set('accidentType', e.target.value)}>
-                    <option value="AUTO_ACCIDENT">Auto Accident (Motor Vehicle Collision)</option>
+                    <option value="CLINICAL_VISIT">Clinical Visit (General Healthcare)</option>
                     <option value="SLIP_AND_FALL">Slip &amp; Fall / Premise Liability</option>
                     <option value="WORKERS_COMP">Worker's Compensation</option>
                     <option value="OTHER">Other Personal Injury</option>
@@ -637,7 +637,7 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className={labelCls}>Accident Location / Street / City</label>
+                  <label className={labelCls}>Incident Location / Street / City</label>
                   <input
                     className={inputCls()}
                     value={formData.accidentLocation}

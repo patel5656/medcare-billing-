@@ -69,7 +69,7 @@ const PostPaymentModal = ({ onClose, onSuccess }) => {
     setForm(prev => ({
       ...prev,
       caseId: matched.id || matched.caseId,
-      patientName: matched.patientName || `${matched.patient?.firstName || ''} ${matched.patient?.lastName || ''}`.trim() || 'Accident Patient',
+      patientName: matched.patientName || `${matched.patient?.firstName || ''} ${matched.patient?.lastName || ''}`.trim() || 'Clinical Patient',
       patientId: matched.patientId || matched.patient?.patientId || 'PAT-100',
       insuranceCompany: matched.insuranceCompany || 'Auto Insurance Carrier',
       claimNumber: matched.insuranceClaimNumber || 'CLM-PENDING',
@@ -198,7 +198,7 @@ const PostPaymentModal = ({ onClose, onSuccess }) => {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>Patient Accident Case *</label>
+                <label className={labelCls}>Patient Clinical Case *</label>
                 <select
                   value={form.caseId}
                   onChange={(e) => handleCaseSelect(e.target.value)}
@@ -206,7 +206,7 @@ const PostPaymentModal = ({ onClose, onSuccess }) => {
                 >
                   {casesList.map(c => (
                     <option key={c.id || c.caseId} value={c.id || c.caseId}>
-                      {c.caseId || c.id} - {c.patientName || 'Accident Patient'}
+                      {c.caseId || c.id} - {c.patientName || 'Clinical Patient'}
                     </option>
                   ))}
                 </select>
@@ -484,11 +484,11 @@ const PostAdjustmentModal = ({ onClose, onSuccess }) => {
 
         <form onSubmit={handleSave} className="p-6 space-y-4">
           <div>
-            <label className={labelCls}>Patient Accident Case *</label>
+            <label className={labelCls}>Patient Clinical Case *</label>
             <select value={form.caseId} onChange={e => handleCaseSelect(e.target.value)} className={inputCls}>
               {casesList.map(c => (
                 <option key={c.id || c.caseId} value={c.id || c.caseId}>
-                  {c.caseId || c.id} — {c.patientName || 'Accident Patient'}
+                  {c.caseId || c.id} — {c.patientName || 'Clinical Patient'}
                 </option>
               ))}
             </select>

@@ -117,6 +117,16 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
   const c = (v) => blankMode ? '' : (v || '');
   const chk = (cond) => (!blankMode && cond) ? 'X' : '';
 
+  const formatDos = (dosString) => {
+    if (!dosString) return { mm: '', dd: '', yy: '' };
+    const parts = String(dosString).split(/[-/]/);
+    if (parts.length < 3) return { mm: '', dd: '', yy: '' };
+    if (parts[0].length === 4) {
+      return { mm: parts[1], dd: parts[2], yy: parts[0].slice(-2) };
+    }
+    return { mm: parts[0], dd: parts[1], yy: parts[2].length === 4 ? parts[2].slice(-2) : parts[2] };
+  };
+
   const padLines = (lines = [], targetLen = 6) => {
     const res = [...lines];
     while (res.length < targetLen) {
@@ -197,7 +207,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
         <div className="flex-1 p-1">
           <span>1a. INSURED'S I.D. NUMBER (For Program in Item 1)</span>
           <div className="mt-1">
-            <FieldInput defaultValue={c(claim.box1a || 'PAT-141849159')} readOnly={readOnly} className="text-xs font-mono font-bold tracking-widest" />
+            <FieldInput defaultValue={c(claim.box1a )} readOnly={readOnly} className="text-xs font-mono font-bold tracking-widest" />
           </div>
         </div>
       </div>
@@ -207,7 +217,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
         <div className="w-[300px] p-1 border-r border-[#b91c1c]">
           <span>2. PATIENT'S NAME (Last Name, First Name, Middle Initial)</span>
           <div className="mt-1">
-            <FieldInput defaultValue={c(claim.box2 || claim.patientName || 'SAMPLE TESTING')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+            <FieldInput defaultValue={c(claim.box2 || claim.patientName )} readOnly={readOnly} className="text-xs font-mono font-bold" />
           </div>
         </div>
 
@@ -225,7 +235,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
         <div className="flex-1 p-1">
           <span>4. INSURED'S NAME (Last Name, First Name, Middle Initial)</span>
           <div className="mt-1">
-            <FieldInput defaultValue={c(claim.box4 || claim.box2 || 'SAMPLE TESTING')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+            <FieldInput defaultValue={c(claim.box4 || claim.box2 )} readOnly={readOnly} className="text-xs font-mono font-bold" />
           </div>
         </div>
       </div>
@@ -235,12 +245,12 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
         <div className="w-[300px] p-1 border-r border-[#b91c1c]">
           <span>5. PATIENT'S ADDRESS (No., Street)</span>
           <div className="mt-0.5">
-            <FieldInput defaultValue={c(claim.box5Address || '10101 Harwin Dr. Suite 774')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+            <FieldInput defaultValue={c(claim.box5Address )} readOnly={readOnly} className="text-xs font-mono font-bold" />
           </div>
           <div className="flex justify-between font-mono text-xs text-slate-900 mt-1 uppercase">
-            <span>CITY: <FieldInput defaultValue={c(claim.box5City || 'HOUSTON')} readOnly={readOnly} className="w-20 inline-block text-xs" /></span>
-            <span>STATE: <FieldInput defaultValue={c(claim.box5State || 'TX')} readOnly={readOnly} className="w-8 inline-block text-xs" /></span>
-            <span>ZIP: <FieldInput defaultValue={c(claim.box5Zip || '77036')} readOnly={readOnly} className="w-16 inline-block text-xs" /></span>
+            <span>CITY: <FieldInput defaultValue={c(claim.box5City )} readOnly={readOnly} className="w-20 inline-block text-xs" /></span>
+            <span>STATE: <FieldInput defaultValue={c(claim.box5State )} readOnly={readOnly} className="w-8 inline-block text-xs" /></span>
+            <span>ZIP: <FieldInput defaultValue={c(claim.box5Zip )} readOnly={readOnly} className="w-16 inline-block text-xs" /></span>
           </div>
         </div>
 
@@ -257,42 +267,117 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
         <div className="flex-1 p-1">
           <span>7. INSURED'S ADDRESS (No., Street)</span>
           <div className="mt-0.5">
-            <FieldInput defaultValue={c(claim.box7Address || claim.box5Address || '10101 Harwin Dr. Suite 774')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+            <FieldInput defaultValue={c(claim.box7Address || claim.box5Address )} readOnly={readOnly} className="text-xs font-mono font-bold" />
           </div>
           <div className="flex justify-between font-mono text-xs text-slate-900 mt-1 uppercase">
-            <span>CITY: <FieldInput defaultValue={c(claim.box7City || claim.box5City || 'HOUSTON')} readOnly={readOnly} className="w-20 inline-block text-xs" /></span>
-            <span>STATE: <FieldInput defaultValue={c(claim.box7State || claim.box5State || 'TX')} readOnly={readOnly} className="w-8 inline-block text-xs" /></span>
-            <span>ZIP: <FieldInput defaultValue={c(claim.box7Zip || claim.box5Zip || '77036')} readOnly={readOnly} className="w-16 inline-block text-xs" /></span>
+            <span>CITY: <FieldInput defaultValue={c(claim.box7City || claim.box5City )} readOnly={readOnly} className="w-20 inline-block text-xs" /></span>
+            <span>STATE: <FieldInput defaultValue={c(claim.box7State || claim.box5State )} readOnly={readOnly} className="w-8 inline-block text-xs" /></span>
+            <span>ZIP: <FieldInput defaultValue={c(claim.box7Zip || claim.box5Zip )} readOnly={readOnly} className="w-16 inline-block text-xs" /></span>
           </div>
         </div>
       </div>
 
-      {/* 🔴 ROW 4: BOXES 8 - 11 */}
+      {/* 🔴 ROW 4: BOXES 9 - 11 */}
       <div className="flex border-b border-[#b91c1c] text-[8px] font-bold text-[#991b1b]">
-        <div className="w-[300px] p-1 border-r border-[#b91c1c]">
-          <span>8. RESERVED FOR NUCC USE</span>
-          <p className="font-mono text-xs font-bold text-slate-400 mt-1">N/A</p>
+        {/* BOX 9 */}
+        <div className="w-[300px] border-r border-[#b91c1c]">
+          <div className="p-1 border-b border-[#b91c1c]">
+            <span>9. OTHER INSURED'S NAME (Last Name, First Name, Middle Initial)</span>
+            <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+          </div>
+          <div className="p-1 border-b border-[#b91c1c]">
+            <span>a. OTHER INSURED'S POLICY OR GROUP NUMBER</span>
+            <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9a)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+          </div>
+          <div className="flex border-b border-[#b91c1c]">
+            <div className="w-1/2 p-1 border-r border-[#b91c1c]">
+              <span>b. OTHER INSURED'S DATE OF BIRTH</span>
+              <div className="flex gap-1 mt-0.5">
+                <FieldInput defaultValue={c(claim.box9bDob?.mm)} readOnly={readOnly} className="w-6 text-xs text-center" placeholder="MM" /> 
+                <FieldInput defaultValue={c(claim.box9bDob?.dd)} readOnly={readOnly} className="w-6 text-xs text-center" placeholder="DD" /> 
+                <FieldInput defaultValue={c(claim.box9bDob?.yy)} readOnly={readOnly} className="w-10 text-xs text-center" placeholder="YY" />
+              </div>
+            </div>
+            <div className="w-1/2 p-1">
+              <span>SEX</span>
+              <div className="flex gap-2 mt-0.5 font-mono text-slate-900">
+                <span className="text-[8px]">M <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box9bSex === 'M')}</span></span>
+                <span className="text-[8px]">F <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box9bSex === 'F')}</span></span>
+              </div>
+            </div>
+          </div>
+          <div className="p-1 border-b border-[#b91c1c]">
+            <span>c. EMPLOYER'S NAME OR SCHOOL NAME</span>
+            <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9c)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+          </div>
+          <div className="p-1">
+            <span>d. INSURANCE PLAN NAME OR PROGRAM NAME</span>
+            <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9d)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+          </div>
         </div>
 
-        <div className="w-[190px] p-1 border-r-2 border-[#b91c1c]">
-          <span>9. OTHER INSURED'S NAME</span>
-          <p className="font-mono text-xs font-bold text-slate-400 mt-1">N/A</p>
+        {/* BOX 10 */}
+        <div className="w-[190px] border-r-2 border-[#b91c1c]">
+          <div className="p-1 h-full flex flex-col">
+            <span>10. IS PATIENT'S CONDITION RELATED TO:</span>
+            <div className="space-y-1 mt-1 font-mono text-[9px] text-slate-900 flex-1">
+              <div className="flex justify-between">
+                <span>a. EMPLOYMENT?</span>
+                <div className="flex gap-2"><span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c]"></span></span><span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(true)}</span></span></div>
+              </div>
+              <div className="flex justify-between">
+                <span>b. AUTO ACCIDENT?</span>
+                <div className="flex gap-2"><span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold text-teal-900">{chk(true)}</span></span><span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c]"></span></span></div>
+              </div>
+              <div className="text-right"><span className="ml-1 font-bold text-[8px]">PLACE (State) <FieldInput defaultValue={c(claim.box10State )} readOnly={readOnly} className="w-6 inline-block text-center" /></span></div>
+              <div className="flex justify-between">
+                <span>c. OTHER ACCIDENT?</span>
+                <div className="flex gap-2"><span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c]"></span></span><span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(true)}</span></span></div>
+              </div>
+            </div>
+            <div className="mt-auto border-t border-[#b91c1c] pt-1 pb-0">
+              <span>10d. CLAIM CODES (Designated by NUCC)</span>
+              <div className="mt-0.5"><FieldInput defaultValue={c(claim.box10d)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+            </div>
+          </div>
         </div>
 
-        <div className="flex-1 p-1">
-          <span>10. IS PATIENT'S CONDITION RELATED TO:</span>
-          <div className="space-y-1 mt-1 font-mono text-[9px] text-slate-900">
-            <div className="flex justify-between">
-              <span>a. EMPLOYMENT?</span>
-              <div className="flex gap-2"><span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c]"></span></span><span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(true)}</span></span></div>
+        {/* BOX 11 */}
+        <div className="flex-1">
+          <div className="p-1 border-b border-[#b91c1c]">
+            <span>11. INSURED'S POLICY GROUP OR FECA NUMBER</span>
+            <div className="mt-0.5"><FieldInput defaultValue={c(claim.box11)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+          </div>
+          <div className="flex border-b border-[#b91c1c]">
+            <div className="w-1/2 p-1 border-r border-[#b91c1c]">
+              <span>a. INSURED'S DATE OF BIRTH</span>
+              <div className="flex gap-1 mt-0.5">
+                <FieldInput defaultValue={c(claim.box11InsuredDob?.mm || '05')} readOnly={readOnly} className="w-6 text-xs text-center" placeholder="MM" /> 
+                <FieldInput defaultValue={c(claim.box11InsuredDob?.dd || '15')} readOnly={readOnly} className="w-6 text-xs text-center" placeholder="DD" /> 
+                <FieldInput defaultValue={c(claim.box11InsuredDob?.yy || '1985')} readOnly={readOnly} className="w-10 text-xs text-center" placeholder="YY" />
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>b. AUTO ACCIDENT?</span>
-              <div className="flex gap-2"><span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold text-teal-900">{chk(true)}</span></span><span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c]"></span></span><span className="ml-1 font-bold">STATE: {c(claim.box10State || 'TX')}</span></div>
+            <div className="w-1/2 p-1">
+              <span>SEX</span>
+              <div className="flex gap-2 mt-0.5 font-mono text-slate-900">
+                <span className="text-[8px]">M <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box11InsuredSex !== 'F')}</span></span>
+                <span className="text-[8px]">F <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box11InsuredSex === 'F')}</span></span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>c. OTHER ACCIDENT?</span>
-              <div className="flex gap-2"><span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c]"></span></span><span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(true)}</span></span></div>
+          </div>
+          <div className="p-1 border-b border-[#b91c1c]">
+            <span>b. OTHER CLAIM ID (Designated by NUCC)</span>
+            <div className="mt-0.5"><FieldInput defaultValue={c(claim.box11b)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+          </div>
+          <div className="p-1 border-b border-[#b91c1c]">
+            <span>c. INSURANCE PLAN NAME OR PROGRAM NAME</span>
+            <div className="mt-0.5"><FieldInput defaultValue={c(claim.box11c)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+          </div>
+          <div className="p-1">
+            <span>d. IS THERE ANOTHER HEALTH BENEFIT PLAN?</span>
+            <div className="flex gap-2 mt-0.5 font-mono text-[9px] text-slate-900">
+              <span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box11d === 'YES')}</span></span>
+              <span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box11d !== 'YES')}</span></span>
             </div>
           </div>
         </div>
@@ -309,7 +394,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             </div>
             <div>
               <span className="text-[8px] text-[#991b1b] block font-sans">DATE:</span>
-              <span className="font-bold">{c(claim.dos || claim.box12Date || '08/04/2026')}</span>
+              <span className="font-bold">{c(claim.dos || claim.box12Date )}</span>
             </div>
           </div>
         </div>
@@ -323,100 +408,206 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
         </div>
       </div>
 
-      {/* 🔴 ROW 6: BOXES 14 - 20 (LINKED TO APPOINTMENT / MVA DATE) */}
+      {/* 🔴 ROW 6: BOXES 14 - 16 */}
       <div className="flex border-b border-[#b91c1c] text-[8px] font-bold text-[#991b1b]">
-        <div className="w-[245px] p-1 border-r border-[#b91c1c]">
-          <span>14. DATE OF CURRENT ILLNESS, INJURY (MVA Date)</span>
-          <div className="mt-1">
-            <FieldInput defaultValue={blankMode ? '' : `${claim.box14IllnessDate?.mm || '12'} / ${claim.box14IllnessDate?.dd || '27'} / ${claim.box14IllnessDate?.yy || '2025'}`} readOnly={readOnly} className="text-xs font-mono font-bold" />
+        <div className="w-[300px] p-1 border-r border-[#b91c1c]">
+          <span className="leading-tight block">14. DATE OF CURRENT ILLNESS, INJURY, or PREGNANCY (LMP)</span>
+          <div className="flex gap-2 mt-1">
+            <div className="flex gap-1">
+              <span className="text-[7px] mt-1">QUAL.</span> <FieldInput defaultValue="" readOnly={readOnly} className="w-8 text-xs text-center" />
+            </div>
+            <div className="flex gap-1 font-mono text-slate-900 ml-2">
+              <FieldInput defaultValue={blankMode ? '' : (claim.box14IllnessDate?.mm || '12')} readOnly={readOnly} className="w-6 text-xs text-center font-bold" placeholder="MM" />
+              <FieldInput defaultValue={blankMode ? '' : (claim.box14IllnessDate?.dd || '27')} readOnly={readOnly} className="w-6 text-xs text-center font-bold" placeholder="DD" />
+              <FieldInput defaultValue={blankMode ? '' : (claim.box14IllnessDate?.yy || '2025')} readOnly={readOnly} className="w-10 text-xs text-center font-bold" placeholder="YY" />
+            </div>
           </div>
         </div>
 
-        <div className="w-[245px] p-1 border-r-2 border-[#b91c1c]">
-          <span>17. NAME OF REFERRING PROVIDER OR OTHER SOURCE</span>
-          <div className="mt-1">
-            <FieldInput defaultValue={c(claim.box17ReferringName || 'Dr. Segun Adeoye')} readOnly={readOnly} className="text-xs font-mono font-bold uppercase" />
+        <div className="w-[190px] p-1 border-r-2 border-[#b91c1c]">
+          <span className="leading-tight block">15. OTHER DATE</span>
+          <div className="flex gap-2 mt-1">
+            <div className="flex gap-1">
+              <span className="text-[7px] mt-1">QUAL.</span> <FieldInput defaultValue="" readOnly={readOnly} className="w-6 text-xs text-center" />
+            </div>
+            <div className="flex gap-1 font-mono text-slate-900 ml-1">
+              <FieldInput defaultValue={c(claim.box15Date?.mm)} readOnly={readOnly} className="w-6 text-xs text-center font-bold" placeholder="MM" />
+              <FieldInput defaultValue={c(claim.box15Date?.dd)} readOnly={readOnly} className="w-6 text-xs text-center font-bold" placeholder="DD" />
+              <FieldInput defaultValue={c(claim.box15Date?.yy)} readOnly={readOnly} className="w-10 text-xs text-center font-bold" placeholder="YY" />
+            </div>
           </div>
         </div>
 
         <div className="flex-1 p-1">
-          <span>20. OUTSIDE LAB? &bull; $ CHARGES</span>
-          <div className="flex justify-between items-center mt-1 font-mono text-[9px] text-slate-900">
-            <span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(true)}</span></span>
-            <FieldInput defaultValue={blankMode ? '' : '$ 0.00'} readOnly={readOnly} className="w-16 text-right font-mono font-bold" />
+          <span className="leading-tight block">16. DATES PATIENT UNABLE TO WORK IN CURRENT OCCUPATION</span>
+          <div className="flex justify-between mt-1 px-4 font-mono text-slate-900">
+            <div className="flex gap-1">
+              <span className="text-[7px] font-sans text-[#991b1b] mt-1 mr-1">FROM</span>
+              <FieldInput defaultValue={c(claim.box16From?.mm)} readOnly={readOnly} className="w-6 text-xs text-center font-bold" placeholder="MM" />
+              <FieldInput defaultValue={c(claim.box16From?.dd)} readOnly={readOnly} className="w-6 text-xs text-center font-bold" placeholder="DD" />
+              <FieldInput defaultValue={c(claim.box16From?.yy)} readOnly={readOnly} className="w-10 text-xs text-center font-bold" placeholder="YY" />
+            </div>
+            <div className="flex gap-1">
+              <span className="text-[7px] font-sans text-[#991b1b] mt-1 mr-1">TO</span>
+              <FieldInput defaultValue={c(claim.box16To?.mm)} readOnly={readOnly} className="w-6 text-xs text-center font-bold" placeholder="MM" />
+              <FieldInput defaultValue={c(claim.box16To?.dd)} readOnly={readOnly} className="w-6 text-xs text-center font-bold" placeholder="DD" />
+              <FieldInput defaultValue={c(claim.box16To?.yy)} readOnly={readOnly} className="w-10 text-xs text-center font-bold" placeholder="YY" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 🔴 ROW 7: BOX 21 DIAGNOSIS CODES (BOX 21 A THROUGH L) */}
-      <div className="border-b-2 border-[#b91c1c] p-1.5 text-[8px] font-bold text-[#991b1b]">
-        <div className="flex justify-between items-center">
-          <span>21. DIAGNOSIS OR NATURE OF ILLNESS OR INJURY (ICD-10-CM Pointers A - L)</span>
-          <span className="text-[8px] font-mono font-black text-slate-800">ICD Ind: 0</span>
+      {/* 🔴 ROW 6B: BOXES 17 - 20 */}
+      <div className="flex border-b border-[#b91c1c] text-[8px] font-bold text-[#991b1b]">
+        {/* Box 17 */}
+        <div className="w-[300px] border-r border-[#b91c1c]">
+          <div className="p-1 border-b border-[#b91c1c] h-[34px]">
+            <span>17. NAME OF REFERRING PROVIDER OR OTHER SOURCE</span>
+            <div className="mt-0.5 flex gap-2">
+              <FieldInput defaultValue={c(claim.box17ReferringName )} readOnly={readOnly} className="text-xs font-mono font-bold uppercase flex-1" />
+              <div className="flex items-center gap-1">
+                <span className="text-[7px]">QUAL.</span><FieldInput defaultValue="" readOnly={readOnly} className="w-6 text-xs text-center border-b border-slate-300" />
+              </div>
+            </div>
+          </div>
+          <div className="flex border-b border-[#b91c1c]">
+            <div className="w-[15%] p-1 border-r border-[#b91c1c] text-center">17a.</div>
+            <div className="flex-1 p-1"><FieldInput defaultValue={c(claim.box17a)} readOnly={readOnly} className="text-xs font-mono font-bold bg-transparent" /></div>
+          </div>
+          <div className="flex">
+            <div className="w-[15%] p-1 border-r border-[#b91c1c] text-center">17b. <span className="text-[7px]">NPI</span></div>
+            <div className="flex-1 p-1"><FieldInput defaultValue={c(claim.box17Npi )} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+          </div>
+        </div>
+
+        {/* Box 18, 19, 20 */}
+        <div className="flex-1 flex flex-col">
+          <div className="flex border-b border-[#b91c1c] h-[34px]">
+            <div className="w-[60%] p-1 border-r border-[#b91c1c]">
+              <span className="leading-tight block">18. HOSPITALIZATION DATES RELATED TO CURRENT SERVICES</span>
+              <div className="flex justify-between mt-1 px-2 font-mono text-slate-900">
+                <div className="flex gap-1">
+                  <span className="text-[7px] font-sans text-[#991b1b] mt-1 mr-1">FROM</span>
+                  <FieldInput defaultValue={c(claim.box18From?.mm)} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="MM" />
+                  <FieldInput defaultValue={c(claim.box18From?.dd)} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="DD" />
+                  <FieldInput defaultValue={c(claim.box18From?.yy)} readOnly={readOnly} className="w-8 text-xs text-center font-bold" placeholder="YY" />
+                </div>
+                <div className="flex gap-1">
+                  <span className="text-[7px] font-sans text-[#991b1b] mt-1 mr-1">TO</span>
+                  <FieldInput defaultValue={c(claim.box18To?.mm)} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="MM" />
+                  <FieldInput defaultValue={c(claim.box18To?.dd)} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="DD" />
+                  <FieldInput defaultValue={c(claim.box18To?.yy)} readOnly={readOnly} className="w-8 text-xs text-center font-bold" placeholder="YY" />
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 p-1">
+              <span>20. OUTSIDE LAB? &bull; $ CHARGES</span>
+              <div className="flex justify-between items-center mt-1 font-mono text-[9px] text-slate-900">
+                <div className="flex gap-2">
+                  <span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c]"></span></span>
+                  <span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(true)}</span></span>
+                </div>
+                <FieldInput defaultValue={blankMode ? '' : ''} readOnly={readOnly} className="w-16 text-right font-mono font-bold" />
+              </div>
+            </div>
+          </div>
+          <div className="p-1 flex-1">
+            <span>19. ADDITIONAL CLAIM INFORMATION (Designated by NUCC)</span>
+            <div className="mt-1"><FieldInput defaultValue={c(claim.box19)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+          </div>
+        </div>
+      </div>
+
+      {/* 🔴 ROW 7: BOX 21 - 23 */}
+      <div className="flex border-b-2 border-[#b91c1c] text-[8px] font-bold text-[#991b1b]">
+        <div className="w-[65%] p-1.5 border-r border-[#b91c1c]">
+          <div className="flex justify-between items-center pr-2">
+            <span>21. DIAGNOSIS OR NATURE OF ILLNESS OR INJURY (ICD-10-CM Pointers A - L)</span>
+            <span className="text-[8px] font-mono font-black text-slate-800">ICD Ind: 0</span>
+          </div>
+          
+          <div className="grid grid-cols-4 gap-2 mt-1 font-mono text-xs text-slate-900 pr-2">
+            {/* Column 1: A, B, C */}
+            <div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
+                <span className="text-[#991b1b] font-bold">A.</span>
+                <FieldInput defaultValue={c(claim.box21Diagnoses?.[0] )} readOnly={readOnly} className="font-bold" />
+              </div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
+                <span className="text-[#991b1b] font-bold">B.</span>
+                <FieldInput defaultValue={c(claim.box21Diagnoses?.[1] )} readOnly={readOnly} className="font-bold" />
+              </div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
+                <span className="text-[#991b1b] font-bold">C.</span>
+                <FieldInput defaultValue={c(claim.box21Diagnoses?.[2] )} readOnly={readOnly} className="font-bold" />
+              </div>
+            </div>
+
+            {/* Column 2: D, E, F */}
+            <div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
+                <span className="text-[#991b1b] font-bold">D.</span>
+                <FieldInput defaultValue={c(claim.box21Diagnoses?.[3] )} readOnly={readOnly} className="font-bold" />
+              </div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
+                <span className="text-[#991b1b] font-bold">E.</span>
+                <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
+              </div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
+                <span className="text-[#991b1b] font-bold">F.</span>
+                <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
+              </div>
+            </div>
+
+            {/* Column 3: G, H, I */}
+            <div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
+                <span className="text-[#991b1b] font-bold">G.</span>
+                <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
+              </div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
+                <span className="text-[#991b1b] font-bold">H.</span>
+                <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
+              </div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
+                <span className="text-[#991b1b] font-bold">I.</span>
+                <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
+              </div>
+            </div>
+
+            {/* Column 4: J, K, L */}
+            <div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
+                <span className="text-[#991b1b] font-bold">J.</span>
+                <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
+              </div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
+                <span className="text-[#991b1b] font-bold">K.</span>
+                <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
+              </div>
+              <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
+                <span className="text-[#991b1b] font-bold">L.</span>
+                <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
+              </div>
+            </div>
+          </div>
         </div>
         
-        <div className="grid grid-cols-4 gap-2 mt-1 font-mono text-xs text-slate-900">
-          {/* Column 1: A, B, C */}
-          <div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
-              <span className="text-[#991b1b] font-bold">A.</span>
-              <FieldInput defaultValue={c(claim.box21Diagnoses?.[0] || 'M54.50')} readOnly={readOnly} className="font-bold" />
+        <div className="flex-1 flex flex-col">
+          <div className="p-1 border-b border-[#b91c1c] h-[45px]">
+            <div className="flex justify-between">
+              <span>22. RESUBMISSION CODE</span>
+              <span className="mr-8">ORIGINAL REF. NO.</span>
             </div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
-              <span className="text-[#991b1b] font-bold">B.</span>
-              <FieldInput defaultValue={c(claim.box21Diagnoses?.[1] || 'M54.2')} readOnly={readOnly} className="font-bold" />
-            </div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
-              <span className="text-[#991b1b] font-bold">C.</span>
-              <FieldInput defaultValue={c(claim.box21Diagnoses?.[2] || 'S13.4XXA')} readOnly={readOnly} className="font-bold" />
+            <div className="flex gap-2 mt-1">
+              <FieldInput defaultValue={c(claim.box22Code)} readOnly={readOnly} className="w-[30%] text-xs font-mono font-bold" />
+              <FieldInput defaultValue={c(claim.box22Ref)} readOnly={readOnly} className="flex-1 text-xs font-mono font-bold" />
             </div>
           </div>
-
-          {/* Column 2: D, E, F */}
-          <div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
-              <span className="text-[#991b1b] font-bold">D.</span>
-              <FieldInput defaultValue={c(claim.box21Diagnoses?.[3] || 'S39.012A')} readOnly={readOnly} className="font-bold" />
-            </div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
-              <span className="text-[#991b1b] font-bold">E.</span>
-              <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
-            </div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
-              <span className="text-[#991b1b] font-bold">F.</span>
-              <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
-            </div>
-          </div>
-
-          {/* Column 3: G, H, I */}
-          <div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
-              <span className="text-[#991b1b] font-bold">G.</span>
-              <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
-            </div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
-              <span className="text-[#991b1b] font-bold">H.</span>
-              <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
-            </div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
-              <span className="text-[#991b1b] font-bold">I.</span>
-              <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
-            </div>
-          </div>
-
-          {/* Column 4: J, K, L */}
-          <div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
-              <span className="text-[#991b1b] font-bold">J.</span>
-              <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
-            </div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
-              <span className="text-[#991b1b] font-bold">K.</span>
-              <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
-            </div>
-            <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5 mt-1">
-              <span className="text-[#991b1b] font-bold">L.</span>
-              <FieldInput defaultValue="" readOnly={readOnly} placeholder="________" className="text-slate-400" />
+          <div className="p-1 flex-1">
+            <span>23. PRIOR AUTHORIZATION NUMBER</span>
+            <div className="mt-1">
+              <FieldInput defaultValue={c(claim.box23)} readOnly={readOnly} className="text-xs font-mono font-bold" />
             </div>
           </div>
         </div>
@@ -467,18 +658,27 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
                 )}
                 <div className="grid grid-cols-12 text-center items-center font-bold">
                   {/* 24.A Dates of Service */}
-                  <div className="col-span-3 text-[9px] border-r border-[#b91c1c]/20">
-                    <FieldInput defaultValue={hasData ? `${line.fromDos || claim.dos || '08/04/26'} - ${line.toDos || claim.dos || '08/04/26'}` : ''} readOnly={readOnly} className="text-[9px]" />
+                  <div className="col-span-3 text-[9px] border-r border-[#b91c1c]/20 flex">
+                    <div className="w-1/2 flex px-0.5 border-r border-slate-300">
+                      <FieldInput defaultValue={hasData ? formatDos(line.fromDos || line.dos || claim.dos).mm : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                      <FieldInput defaultValue={hasData ? formatDos(line.fromDos || line.dos || claim.dos).dd : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                      <FieldInput defaultValue={hasData ? formatDos(line.fromDos || line.dos || claim.dos).yy : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                    </div>
+                    <div className="w-1/2 flex px-0.5">
+                      <FieldInput defaultValue={hasData ? formatDos(line.toDos || line.fromDos || line.dos || claim.dos).mm : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                      <FieldInput defaultValue={hasData ? formatDos(line.toDos || line.fromDos || line.dos || claim.dos).dd : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                      <FieldInput defaultValue={hasData ? formatDos(line.toDos || line.fromDos || line.dos || claim.dos).yy : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                    </div>
                   </div>
                   
                   {/* 24.B Place of Service */}
                   <div className="col-span-1 border-r border-[#b91c1c]/20">
-                    <FieldInput defaultValue={hasData ? (line.pos || '11') : ''} readOnly={readOnly} className="text-center" />
+                    <FieldInput defaultValue={hasData ? (line.pos ) : ''} readOnly={readOnly} className="text-center" />
                   </div>
 
                   {/* 24.C EMG */}
                   <div className="col-span-1 border-r border-[#b91c1c]/20">
-                    <FieldInput defaultValue={hasData ? (line.emg || 'N') : ''} readOnly={readOnly} className="text-center" />
+                    <FieldInput defaultValue={hasData ? (line.emg ) : ''} readOnly={readOnly} className="text-center" />
                   </div>
 
                   {/* 24.D CPT & Modifiers (1-4) */}
@@ -507,7 +707,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
 
                   {/* 24.J Rendering NPI */}
                   <div className="col-span-1 text-[9px] font-mono">
-                    <FieldInput defaultValue={hasData ? (line.renderingId || '1234567890') : ''} readOnly={readOnly} className="text-center text-[8px]" />
+                    <FieldInput defaultValue={hasData ? (line.renderingId ) : ''} readOnly={readOnly} className="text-center text-[8px]" />
                   </div>
                 </div>
               </div>
@@ -521,7 +721,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
         <div className="col-span-3 p-1 border-r border-[#b91c1c]">
           <span>25. FEDERAL TAX I.D. NUMBER</span>
           <div className="flex items-center gap-2 mt-1 font-mono text-xs text-slate-900">
-            <FieldInput defaultValue={c(claim.box25TaxId || '75-1234567')} readOnly={readOnly} className="font-bold" />
+            <FieldInput defaultValue={c(claim.box25TaxId )} readOnly={readOnly} className="font-bold" />
             <span className="text-[8px]">EIN <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(true)}</span></span>
           </div>
         </div>
@@ -560,8 +760,8 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
       <div className="grid grid-cols-12 text-[8px] font-bold text-[#991b1b] p-1 font-mono">
         <div className="col-span-4 border-r border-[#b91c1c] pr-2">
           <span>31. SIGNATURE OF PHYSICIAN OR SUPPLIER</span>
-          <FieldInput defaultValue={c(claim.box31ProviderSignature || 'Adeoye, Segun, MD')} readOnly={readOnly} className="font-bold text-xs mt-1" />
-          <FieldInput defaultValue={blankMode ? '' : `SIGNED ${claim.dos || claim.box31Date || '08/04/2026'} DATE`} readOnly={readOnly} className="text-[9px] text-slate-600 mt-1" />
+          <FieldInput defaultValue={c(claim.box31ProviderSignature )} readOnly={readOnly} className="font-bold text-xs mt-1" />
+          <FieldInput defaultValue={blankMode ? '' : `SIGNED ${claim.dos || claim.box31Date } DATE`} readOnly={readOnly} className="text-[9px] text-slate-600 mt-1" />
         </div>
 
         <div className="col-span-4 border-r border-[#b91c1c] px-2">
@@ -573,7 +773,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
           <span>33. BILLING PROVIDER INFO &amp; PH #</span>
           <FieldInput defaultValue={c(claim.box33BillingProvider || `${claim.providerName || 'ANIK Laser Therapy'}\n10101 HARWIN DR, SUITE 774\nHOUSTON, TX 77036`)} readOnly={readOnly} className="font-bold text-[10px] mt-0.5" />
           <FieldInput defaultValue={blankMode ? '' : `PH# ${claim.box33Phone || '(713) 555-0100'}`} readOnly={readOnly} className="font-bold text-[10px] mt-0.5" />
-          <FieldInput defaultValue={blankMode ? '' : `NPI: ${claim.box33Npi || '1234567890'}`} readOnly={readOnly} className="text-[9px] text-slate-800 font-bold" />
+          <FieldInput defaultValue={blankMode ? '' : `NPI: ${claim.box33Npi }`} readOnly={readOnly} className="text-[9px] text-slate-800 font-bold" />
         </div>
       </div>
 

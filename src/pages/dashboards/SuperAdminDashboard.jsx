@@ -133,7 +133,7 @@ export const SuperAdminDashboard = () => {
           </div>
           <p className="text-2xl font-bold text-slate-900 font-tabular">{patientCount} Patients / {caseCount} Cases</p>
           <p className="text-[11px] text-slate-500 flex items-center justify-between font-medium">
-            <span>Active clinical accident charts</span>
+            <span>Active clinical charts</span>
             <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
           </p>
         </div>

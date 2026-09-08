@@ -62,7 +62,7 @@ export const ClinicAdminDashboard = () => {
 
         <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-on-surface-variant">Active Accident Cases</span>
+            <span className="text-xs font-bold text-on-surface-variant">Active Patient Cases</span>
             <Users className="w-5 h-5 text-blue-600" />
           </div>
           <p className="text-2xl font-bold text-on-surface font-tabular">1 Case</p>

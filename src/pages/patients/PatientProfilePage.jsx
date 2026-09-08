@@ -120,7 +120,7 @@ export const PatientProfilePage = () => {
             onClick={() => setShowAddCaseModal(true)}
             className="px-3.5 py-2 bg-teal-600 text-white text-xs font-bold rounded-xl shadow-xs hover:bg-teal-700 flex items-center gap-1.5 cursor-pointer transition active:scale-95"
           >
-            <PlusCircle className="w-4 h-4" /> Add Accident Case
+            <PlusCircle className="w-4 h-4" /> Add Clinical Case
           </button>
           <button
             onClick={() => navigate(`/appointments/new?patientId=${patient.id}`)}
@@ -149,7 +149,7 @@ export const PatientProfilePage = () => {
           onClick={() => setActiveTab('CASES')}
           className={`pb-3 flex items-center gap-2 cursor-pointer transition whitespace-nowrap ${activeTab === 'CASES' ? 'border-b-2 border-teal-600 text-teal-600' : 'hover:text-slate-800'}`}
         >
-          <FileSpreadsheet className="w-4 h-4" /> 2. Accident Cases ({cases.length})
+          <FileSpreadsheet className="w-4 h-4" /> 2. Clinical Cases ({cases.length})
         </button>
         <button
           onClick={() => setActiveTab('NOTES')}
@@ -273,14 +273,14 @@ export const PatientProfilePage = () => {
         <div className="space-y-4 animate-in fade-in-50 duration-150">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Accident &amp; Legal Cases Registry</h2>
-              <p className="text-xs text-slate-500">Active injury cases linking attorney liens, insurance claims &amp; 4-provider billing ledgers</p>
+              <h2 className="text-base font-bold text-slate-900">Clinical Cases Registry</h2>
+              <p className="text-xs text-slate-500">Active clinical cases linking treatments, claims &amp; 4-provider billing ledgers</p>
             </div>
             <button
               onClick={() => setShowAddCaseModal(true)}
               className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-sm transition"
             >
-              <PlusCircle className="w-4 h-4" /> Add New Accident Case
+              <PlusCircle className="w-4 h-4" /> Add New Clinical Case
             </button>
           </div>
 
@@ -305,12 +305,12 @@ export const PatientProfilePage = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <div>
-                      <span className="text-slate-400 block text-[11px]">Accident Date (DOA)</span>
+                      <span className="text-slate-400 block text-[11px]">Date of Incident (DOI)</span>
                       <strong className="text-slate-900">{c.accidentDate || '12/27/2025'}</strong>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[11px]">Accident Type</span>
-                      <strong className="text-slate-900">{c.accidentType || 'AUTO_ACCIDENT'}</strong>
+                      <span className="text-slate-400 block text-[11px]">Incident Type</span>
+                      <strong className="text-slate-900">{c.accidentType || 'CLINICAL_VISIT'}</strong>
                     </div>
                     <div>
                       <span className="text-slate-400 block text-[11px]">Mechanism of Injury</span>
@@ -339,15 +339,15 @@ export const PatientProfilePage = () => {
           ) : (
             <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center space-y-3">
               <FileSpreadsheet className="w-8 h-8 text-slate-400 mx-auto" />
-              <h3 className="text-sm font-bold text-slate-800">No Accident Cases Created Yet</h3>
+              <h3 className="text-sm font-bold text-slate-800">No Clinical Cases Created Yet</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Register an accident or personal injury case to link this patient's treatment to attorney liens &amp; billing ledgers.
+                Register a clinical case to link this patient's treatment to billing ledgers.
               </p>
               <button
                 onClick={() => setShowAddCaseModal(true)}
                 className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
               >
-                + Create First Accident Case
+                + Create First Clinical Case
               </button>
             </div>
           )}
