@@ -1,5 +1,5 @@
 // src/components/layout/TopHeader.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { apiProviderService as mockProviderService } from '../../services/api/apiProviderService';
@@ -25,6 +25,18 @@ export const TopHeader = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
   const navigate = useNavigate();
+  const navRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (navRef.current && !navRef.current.contains(event.target)) {
+        setNotifMenuOpen(false);
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const loadProviders = () => {
     mockProviderService.getProviders().then(data => {
@@ -37,8 +49,15 @@ export const TopHeader = () => {
       setLoadingNotifs(true);
       const data = await apiNotificationService.getLiveNotifications();
       if (data) {
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
+        let notifs = data.notifications || [];
+        
+        // Option 2 Flow: Filter out Billing/Ledger notifications for Clinical/Front-desk roles
+        if (currentUser?.role !== 'Super Admin' && currentUser?.role !== 'Billing Staff') {
+          notifs = notifs.filter(n => n.type !== 'BILLING' && !(n.link && n.link.includes('billing')));
+        }
+        
+        setNotifications(notifs);
+        setUnreadCount(notifs.filter(n => !n.read).length);
       }
     } catch (err) {
       console.error('Failed to load notifications:', err);
@@ -169,7 +188,7 @@ export const TopHeader = () => {
       </div>
 
       {/* -- Right Section: Role Pill + Notification Bell + User Profile -- */}
-      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+      <div ref={navRef} className="flex items-center gap-2 sm:gap-4 shrink-0">
         {/* Role Badge Pill */}
         <div className="hidden md:flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-xs font-semibold px-3 py-1.5 rounded-full text-teal-700 shrink-0 shadow-sm">
           <Shield className="w-3.5 h-3.5 text-teal-600 shrink-0" />

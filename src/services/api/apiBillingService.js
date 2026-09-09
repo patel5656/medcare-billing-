@@ -83,8 +83,11 @@ export const apiBillingService = {
     return res.json();
   },
 
-  async getAgingSummary() {
-    const res = await fetch(`${API_BASE}/billing/aging`);
+  async getAgingSummary(providerId) {
+    const url = providerId && providerId !== 'ALL'
+      ? `${API_BASE}/billing/aging?providerId=${encodeURIComponent(providerId)}`
+      : `${API_BASE}/billing/aging`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to retrieve aging summary.');
     return res.json();
   },

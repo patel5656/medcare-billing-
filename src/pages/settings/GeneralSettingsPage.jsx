@@ -304,6 +304,16 @@ export const GeneralSettingsPage = () => {
     setNewMod({ code: '', description: '' });
   };
 
+  const handleToggleModality = (idx) => {
+    const currentModalities = Array.isArray(settings.modalities) && settings.modalities.length > 0
+      ? settings.modalities
+      : DEFAULT_MODALITIES;
+    const updated = [...currentModalities];
+    updated[idx] = { ...updated[idx], enabled: !updated[idx].enabled };
+    set('modalities', updated);
+    addToast(`${updated[idx].name} has been ${updated[idx].enabled ? 'enabled' : 'disabled'}!`, 'info');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

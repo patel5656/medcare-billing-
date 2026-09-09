@@ -31,7 +31,7 @@ export const SuperAdminDashboard = () => {
   const { activeProviderFilter } = useUIStore();
 
   const loadData = () => {
-    apiBillingService.getAgingSummary().then(res => {
+    apiBillingService.getAgingSummary(activeProviderFilter).then(res => {
       if (res && res.agingBuckets) {
         setAging({
           grandTotal: res.agingBuckets.grandTotal || 0,
@@ -45,11 +45,13 @@ export const SuperAdminDashboard = () => {
       }
     }).catch(() => setAging({ grandTotal: 0, past90: 0 }));
 
-    apiPatientService.getPatients().then(pts => {
+    const filterObj = activeProviderFilter !== 'ALL' ? { providerId: activeProviderFilter } : {};
+
+    apiPatientService.getPatients(filterObj).then(pts => {
       setPatientCount(Array.isArray(pts) ? pts.length : 0);
     }).catch(() => setPatientCount(0));
 
-    apiCaseService.getCases().then(cs => {
+    apiCaseService.getCases(filterObj).then(cs => {
       setCaseCount(Array.isArray(cs) ? cs.length : 0);
     }).catch(() => setCaseCount(0));
 
