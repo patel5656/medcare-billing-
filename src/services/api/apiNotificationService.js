@@ -4,9 +4,11 @@ const API_URL = API_BASE_URL;
 
 
 export const apiNotificationService = {
-  getLiveNotifications: async () => {
+  getLiveNotifications: async (params = {}) => {
     try {
-      const response = await fetch(`${API_URL}/notifications/live`);
+      const query = new URLSearchParams(params).toString();
+      const url = query ? `${API_URL}/notifications/live?${query}` : `${API_URL}/notifications/live`;
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch notifications');
       }

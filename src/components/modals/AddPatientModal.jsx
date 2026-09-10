@@ -173,7 +173,7 @@ const INITIAL_FORM_DATA = {
   hipaaConsentSigned: false
 };
 
-export const AddPatientModal = ({ isOpen, onClose, onPatientAdded }) => {
+export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit = null }) => {
   const { addToast } = useUIStore();
   const { currentUser } = useAuthStore();
   const [formData, setFormData] = useState(() => {
@@ -184,6 +184,71 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded }) => {
   const [currentStep, setCurrentStep] = useState(1); // 1 | 2 | 3 | 4
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  React.useEffect(() => {
+    if (isOpen) {
+      if (patientToEdit) {
+        setFormData({
+          firstName: patientToEdit.firstName || '',
+          middleName: patientToEdit.middleName || '',
+          lastName: patientToEdit.lastName || '',
+          suffix: patientToEdit.suffix || '',
+          dob: patientToEdit.dob || '',
+          sex: patientToEdit.sex || 'M',
+          maritalStatus: patientToEdit.maritalStatus || 'SINGLE',
+          ssn: patientToEdit.ssn || '',
+          driversLicense: patientToEdit.driversLicense || '',
+          driversLicenseState: patientToEdit.driversLicenseState || 'TX',
+          phone: patientToEdit.phone || '',
+          alternatePhone: patientToEdit.alternatePhone || '',
+          email: patientToEdit.email || '',
+          communicationPref: patientToEdit.communicationPref || 'SMS',
+          address: {
+            street: patientToEdit.address?.street || patientToEdit.street || '',
+            suite: patientToEdit.address?.suite || patientToEdit.suite || '',
+            city: patientToEdit.address?.city || patientToEdit.city || '',
+            state: patientToEdit.address?.state || patientToEdit.state || 'TX',
+            zipCode: patientToEdit.address?.zipCode || patientToEdit.zipCode || ''
+          },
+          emergencyContactName: patientToEdit.emergencyContactName || '',
+          emergencyContactRelation: patientToEdit.emergencyContactRelation || '',
+          emergencyContactPhone: patientToEdit.emergencyContactPhone || '',
+          insuranceType: patientToEdit.insuranceType || 'Auto Accident / Third-Party PIP',
+          primaryInsuranceCompany: patientToEdit.primaryInsuranceCompany || '',
+          primaryPolicyNumber: patientToEdit.primaryPolicyNumber || '',
+          primaryGroupNumber: patientToEdit.primaryGroupNumber || '',
+          primaryInsuranceMemberId: patientToEdit.primaryInsuranceMemberId || '',
+          policyHolderName: patientToEdit.policyHolderName || '',
+          policyHolderDob: patientToEdit.policyHolderDob || '',
+          insuranceAdjusterName: patientToEdit.insuranceAdjusterName || '',
+          insuranceAdjusterPhone: patientToEdit.insuranceAdjusterPhone || '',
+          secondaryInsuranceCompany: patientToEdit.secondaryInsuranceCompany || '',
+          secondaryPolicyNumber: patientToEdit.secondaryPolicyNumber || '',
+          assignedProviderIds: Array.isArray(patientToEdit.assignedProviderIds) ? patientToEdit.assignedProviderIds : ['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor'],
+          referringAttorney: patientToEdit.referringAttorney || '',
+          attorneyCaseManager: patientToEdit.attorneyCaseManager || '',
+          referringProvider: patientToEdit.referringProvider || '',
+          referringProviderNpi: patientToEdit.referringProviderNpi || '',
+          primaryCareProvider: patientToEdit.primaryCareProvider || '',
+          knownAllergies: patientToEdit.knownAllergies || '',
+          allergyReactionSeverity: patientToEdit.allergyReactionSeverity || '',
+          currentMedications: patientToEdit.currentMedications || '',
+          pastMedicalHistory: patientToEdit.pastMedicalHistory || '',
+          selectedInjuryAreas: Array.isArray(patientToEdit.selectedInjuryAreas) ? patientToEdit.selectedInjuryAreas : [],
+          accidentDate: patientToEdit.accidentDate || '',
+          mechanismOfInjury: patientToEdit.mechanismOfInjury || '',
+          patientNotes: patientToEdit.patientNotes || '',
+          hipaaConsentSigned: patientToEdit.hipaaConsentSigned ?? true
+        });
+      } else {
+        const currentProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+        const allProviders = [...new Set([...INITIAL_FORM_DATA.assignedProviderIds, currentProviderId])];
+        setFormData({ ...INITIAL_FORM_DATA, assignedProviderIds: allProviders });
+      }
+      setCurrentStep(1);
+      setErrors({});
+    }
+  }, [isOpen, patientToEdit]);
 
   const set = (field, val) => {
     setFormData(p => ({ ...p, [field]: val }));
@@ -342,15 +407,21 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded }) => {
 
     setIsLoading(true);
     try {
-      const created = await apiPatientService.createPatient(formData);
-      addToast(`Patient ${created.firstName} ${created.lastName} registered successfully in database!`, 'success');
-      if (onPatientAdded) onPatientAdded(created);
+      let result;
+      if (patientToEdit) {
+        result = await apiPatientService.updatePatient(patientToEdit.id, formData);
+        addToast(`Patient ${result.firstName || formData.firstName} ${result.lastName || formData.lastName} updated successfully!`, 'success');
+      } else {
+        result = await apiPatientService.createPatient(formData);
+        addToast(`Patient ${result.firstName} ${result.lastName} registered successfully in database!`, 'success');
+      }
+      if (onPatientAdded) onPatientAdded(result);
       onClose();
       setFormData(INITIAL_FORM_DATA);
       setCurrentStep(1);
     } catch (err) {
-      console.error('Registration failed:', err);
-      addToast('Failed to register patient. Please check data and retry.', 'error');
+      console.error('Save failed:', err);
+      addToast(`Failed to ${patientToEdit ? 'update' : 'register'} patient. Please check data and retry.`, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -367,9 +438,9 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add New Patient Intake"
-      subtitle="Complete 4-Step Registration: Demographics, Contact, Insurance, 4-Provider Assignment & Clinical History"
-      icon={UserPlus}
+      title={patientToEdit ? `Edit Patient Profile: ${patientToEdit.firstName || ''} ${patientToEdit.lastName || ''}`.trim() : "Add New Patient Intake"}
+      subtitle={patientToEdit ? "Update patient demographics, contact info, insurance details, and clinic assignments" : "Complete 4-Step Registration: Demographics, Contact, Insurance, 4-Provider Assignment & Clinical History"}
+      icon={patientToEdit ? Save : UserPlus}
       size="2xl"
       iconColor="text-teal-600"
       iconBg="bg-teal-50"
@@ -414,7 +485,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded }) => {
                 disabled={isLoading}
                 className="px-5 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
               >
-                <Save className="w-4 h-4" /> {isLoading ? 'Registering Patient...' : 'Save & Register Patient'}
+                <Save className="w-4 h-4" /> {isLoading ? 'Saving Changes...' : (patientToEdit ? 'Save Patient Updates' : 'Save & Register Patient')}
               </button>
             )}
           </div>

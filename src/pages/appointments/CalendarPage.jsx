@@ -62,7 +62,8 @@ export const CalendarPage = () => {
       const filterObj = {};
       const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
       if (!isFullAccess) {
-        filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+        const defaultProv = currentUser?.role === ROLES.DOCTOR ? 'prov-josmic' : (currentUser?.role === ROLES.THERAPIST ? 'prov-davs' : (currentUser?.role === ROLES.COUNSELOR ? 'prov-counselor' : null));
+        filterObj.providerId = currentUser?.providerId || defaultProv;
       }
 
       const data = await apiAppointmentService.getAllAppointments(filterObj);

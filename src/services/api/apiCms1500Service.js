@@ -3,6 +3,38 @@ import { apiCaseService } from './apiCaseService';
 import { mapBillToCms1500Claims } from '../../utils/cmsMapper';
 
 /**
+ * Helper to sort claims array by newest created timestamp / generated date first
+ */
+export const sortClaimsNewestFirst = (claimsArray = []) => {
+  return [...claimsArray].sort((a, b) => {
+    const parseTime = (item) => {
+      const candidates = [
+        item.createdAt, item.created_at, item.createdAtTimestamp,
+        item.updatedAt, item.updated_at, item.dos, item.dosDisplay, item.box12Date
+      ];
+      for (const cand of candidates) {
+        if (cand) {
+          const t = new Date(cand).getTime();
+          if (!isNaN(t) && t > 0) return t;
+        }
+      }
+      return 0;
+    };
+
+    const timeA = parseTime(a);
+    const timeB = parseTime(b);
+
+    if (timeA !== timeB && timeA > 0 && timeB > 0) {
+      return timeB - timeA; // Newest timestamp first
+    }
+
+    const idA = String(a.claimId || a.billId || '');
+    const idB = String(b.claimId || b.billId || '');
+    return idB.localeCompare(idA, undefined, { numeric: true, sensitivity: 'base' });
+  });
+};
+
+/**
  * Real API Service for fetching CMS-1500 Claims mapped directly from MySQL Database records via Backend endpoints.
  */
 export const apiCms1500Service = {
@@ -26,7 +58,7 @@ export const apiCms1500Service = {
           uniqueMap.set(key, claim);
         }
       }
-        return Array.from(uniqueMap.values());
+        return sortClaimsNewestFirst(Array.from(uniqueMap.values()));
       }
     } catch (e) {
       // Remote server does not have the new /v1/billing/cms-claims endpoint deployed yet
@@ -42,15 +74,16 @@ export const apiCms1500Service = {
       );
 
       const rawClaims = [];
-      for (const caseRes of billResults) {
+      targetCases.forEach((c, idx) => {
+        const caseRes = billResults[idx];
         for (const bill of (caseRes?.allBills || [])) {
-          const claims = mapBillToCms1500Claims(bill, null, {
+          const claims = mapBillToCms1500Claims(bill, c, {
             id: bill.providerId,
             identifiers: { taxId: bill.identifiers?.taxId || '993723387' }
           });
           rawClaims.push(...claims);
         }
-      }
+      });
 
       // Deduplicate by Patient Name + Provider + DOS + Total Charge
       const uniqueMap = new Map();
@@ -61,7 +94,7 @@ export const apiCms1500Service = {
         }
       }
 
-      return Array.from(uniqueMap.values());
+      return sortClaimsNewestFirst(Array.from(uniqueMap.values()));
     } catch (err) {
       console.error('Failed to fetch backend claims:', err);
       return [];

@@ -16,7 +16,7 @@ export const DoctorDashboard = () => {
     const filterObj = {};
     const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST].includes(currentUser?.role);
     if (!isFullAccess) {
-      filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+      filterObj.providerId = currentUser?.providerId || 'prov-josmic';
     }
 
     apiClinicalNoteService.getNotes(filterObj).then(setNotes).catch(console.error);

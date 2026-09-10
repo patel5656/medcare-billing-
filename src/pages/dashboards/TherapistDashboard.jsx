@@ -16,7 +16,7 @@ export const TherapistDashboard = () => {
     const filterObj = {};
     const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST].includes(currentUser?.role);
     if (!isFullAccess) {
-      filterObj.providerId = currentUser?.providerId || currentUser?.id || `prov-${currentUser?.name || 'unknown'}`;
+      filterObj.providerId = currentUser?.providerId || 'prov-davs';
     }
 
     apiClinicalNoteService.getNotes(filterObj).then(setNotes).catch(() => {});

@@ -33,6 +33,7 @@ export const DEMO_ACCOUNTS = [
     name: 'Dr. Segun Adeoye',
     role: ROLES.DOCTOR,
     title: 'Attending Physician',
+    providerId: 'prov-josmic',
     avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=120',
   },
   {
@@ -41,6 +42,7 @@ export const DEMO_ACCOUNTS = [
     name: 'Alex Rivera',
     role: ROLES.THERAPIST,
     title: 'Lead ESWT & Laser Therapist',
+    providerId: 'prov-davs',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
   },
   {

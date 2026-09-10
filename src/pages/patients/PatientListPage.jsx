@@ -3,7 +3,7 @@ import { apiPatientService as mockPatientService, apiPatientService } from '../.
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { ROLES } from '../../constants/rolePermissions';
-import { Search, PlusCircle, User, Phone, Mail, ChevronRight, Filter, Eye, MapPin, Trash2, Download, FileSpreadsheet } from 'lucide-react';
+import { Search, PlusCircle, User, Phone, Mail, ChevronRight, Filter, Eye, MapPin, Trash2, Download, FileSpreadsheet, Edit3 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AddPatientModal } from '../../components/modals/AddPatientModal';
 import { PatientDetailsModal } from '../../components/modals/PatientDetailsModal';
@@ -29,8 +29,14 @@ export const PatientListPage = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientToEdit, setPatientToEdit] = useState(null);
   const [patientToDelete, setPatientToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleEditPatient = (pat) => {
+    setPatientToEdit(pat);
+    setShowAddModal(true);
+  };
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -45,7 +51,8 @@ export const PatientListPage = () => {
     const filterObj = { search, status: statusFilter };
     const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST, ROLES.BILLING_STAFF].includes(currentUser?.role);
     if (!isFullAccess) {
-      filterObj.providerId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+      const defaultProv = currentUser?.role === ROLES.DOCTOR ? 'prov-josmic' : (currentUser?.role === ROLES.THERAPIST ? 'prov-davs' : (currentUser?.role === ROLES.COUNSELOR ? 'prov-counselor' : null));
+      filterObj.providerId = currentUser?.providerId || defaultProv;
     }
 
     mockPatientService.getPatients(filterObj).then(res => {
@@ -271,13 +278,24 @@ export const PatientListPage = () => {
                     >
                       Open Chart <ChevronRight className="w-3.5 h-3.5" />
                     </button>
-                    <button
-                      onClick={() => handleDeletePatient(pat)}
-                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer"
-                      title="Delete Patient Record"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {canTogglePatientStatus && (
+                      <button
+                        onClick={() => handleEditPatient(pat)}
+                        className="p-1.5 text-amber-700 hover:bg-amber-50 rounded-xl transition cursor-pointer"
+                        title="Edit Patient Record"
+                      >
+                        <Edit3 className="w-4 h-4 text-amber-600" />
+                      </button>
+                    )}
+                    {canTogglePatientStatus && (
+                      <button
+                        onClick={() => handleDeletePatient(pat)}
+                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer"
+                        title="Delete Patient Record"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -367,13 +385,24 @@ export const PatientListPage = () => {
                           >
                             Open Chart <ChevronRight className="w-3 h-3" />
                           </button>
-                          <button
-                            onClick={() => handleDeletePatient(pat)}
-                            className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer border border-rose-200"
-                            title="Delete Patient Record"
-                          >
-                            <Trash2 className="w-3 h-3 text-rose-600" /> Delete
-                          </button>
+                          {canTogglePatientStatus && (
+                            <button
+                              onClick={() => handleEditPatient(pat)}
+                              className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer border border-amber-200"
+                              title="Edit Patient Record"
+                            >
+                              <Edit3 className="w-3 h-3 text-amber-600" /> Edit
+                            </button>
+                          )}
+                          {canTogglePatientStatus && (
+                            <button
+                              onClick={() => handleDeletePatient(pat)}
+                              className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer border border-rose-200"
+                              title="Delete Patient Record"
+                            >
+                              <Trash2 className="w-3 h-3 text-rose-600" /> Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -388,8 +417,15 @@ export const PatientListPage = () => {
       {/* -- Modals -- */}
       <AddPatientModal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onPatientAdded={() => loadPatients()}
+        patientToEdit={patientToEdit}
+        onClose={() => {
+          setShowAddModal(false);
+          setPatientToEdit(null);
+        }}
+        onPatientAdded={() => {
+          loadPatients();
+          setPatientToEdit(null);
+        }}
       />
 
       {selectedPatient && (

@@ -60,6 +60,14 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
 
     const isJosmic = providerConfig?.id === 'prov-josmic' || bill.providerId === 'prov-josmic';
 
+    const rawDiag = bill.diagnosisCodes || bill.diagnoses || bill.box21Diagnoses || patientCase?.diagnosisCodes || patientCase?.diagnoses || [];
+    let parsedDiagnoses = [];
+    if (Array.isArray(rawDiag)) {
+      parsedDiagnoses = rawDiag.map(d => String(d).trim()).filter(Boolean);
+    } else if (typeof rawDiag === 'string') {
+      parsedDiagnoses = rawDiag.split(/[,;\n]+/).map(d => d.trim()).filter(Boolean);
+    }
+
     return {
       claimId: `cms-${bill.id}-${idx}`,
       billId: bill.id,
@@ -67,6 +75,7 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       providerName: bill.providerName ,
       dos: dosKey,
       dosDisplay: dosKey,
+      createdAt: bill.createdAt || bill.created_at || bill.createdAtTimestamp || bill.updatedAt || bill.updated_at || bill.statementDate || bill.date || new Date().toISOString(),
       status: 'Generated & Validated',
       formVersion: '02/12',
       box1: 'OTHER',
@@ -112,7 +121,7 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box18From: { mm: '', dd: '', yy: '' },
       box18To: { mm: '', dd: '', yy: '' },
       box19: '',
-      box21Diagnoses: patientCase?.diagnosisCodes?.length ? patientCase.diagnosisCodes : [],
+      box21Diagnoses: parsedDiagnoses,
       box22Code: '',
       box22Ref: '',
       box23: '',

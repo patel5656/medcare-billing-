@@ -32,7 +32,7 @@ export const CounselorDashboard = () => {
       const filterObj = {};
       const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST].includes(currentUser?.role);
       if (!isFullAccess) {
-        filterObj.providerId = currentUser?.providerId || currentUser?.id || `prov-${currentUser?.name || 'unknown'}`;
+        filterObj.providerId = currentUser?.providerId || 'prov-counselor';
       }
 
       const [notesRes, casesRes, apptsRes] = await Promise.all([
