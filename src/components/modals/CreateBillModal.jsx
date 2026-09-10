@@ -83,6 +83,7 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
           id: targetBillId,
           caseId: formData.caseId,
           providerId: formData.providerId,
+          diagnosisCodes: formData.diagnosisCodes,
           billToName: 'OJ LAW FIRM & ASSOCIATES',
           billToAddress: '11711 Bedford St. Suite 01, Houston TX 77031'
         });

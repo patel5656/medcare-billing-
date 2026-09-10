@@ -101,3 +101,49 @@ export const getTimestampedFilename = (prefix, extension = 'csv') => {
   const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
   return `${prefix}_${dateStr}_${timeStr}.${extension}`;
 };
+
+/**
+ * Client-side automatic PDF generator for CMS-1500 forms using html2pdf.js.
+ * Produces a clean 1-page US Letter portrait PDF matching exact visual layout and colors.
+ * @param {string|HTMLElement} elementOrId - Element or ID of element to convert
+ * @param {string} filename - Target PDF filename
+ */
+export const exportToPDF = async (elementOrId, filename = 'cms1500_claim.pdf') => {
+  try {
+    const html2pdf = (await import('html2pdf.js')).default;
+    const rootEl = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
+    
+    if (!rootEl) {
+      throw new Error('Target element for PDF generation not found');
+    }
+
+    // Locate inner .cms-claim-page or fallback to rootEl
+    const targetEl = rootEl.querySelector?.('.cms-claim-page') || rootEl;
+
+    const opt = {
+      margin: 0,
+      filename: filename.endsWith('.pdf') ? filename : `${filename}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        scrollY: 0,
+        scrollX: 0,
+        windowWidth: 816
+      },
+      jsPDF: {
+        unit: 'in',
+        format: 'letter',
+        orientation: 'portrait'
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+
+    return await html2pdf().set(opt).from(targetEl).save();
+  } catch (err) {
+    console.error('Failed to generate PDF:', err);
+    throw err;
+  }
+};
+

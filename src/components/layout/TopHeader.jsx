@@ -44,10 +44,44 @@ export const TopHeader = () => {
     }).catch(() => {});
   };
 
+  const getReadNotifKey = (user) => {
+    if (!user) return 'medcare_read_notifs_guest';
+    return `medcare_read_notifs_${user.id || user.email || 'user'}`;
+  };
+
+  const getStoredReadIds = (user) => {
+    try {
+      const key = getReadNotifKey(user);
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveReadIds = (user, ids) => {
+    try {
+      const key = getReadNotifKey(user);
+      const current = getStoredReadIds(user);
+      const set = new Set([...current, ...ids]);
+      localStorage.setItem(key, JSON.stringify(Array.from(set)));
+    } catch (e) {
+      console.warn('Failed to save read notification state:', e);
+    }
+  };
+
   const loadNotifications = async () => {
     try {
       setLoadingNotifs(true);
-      const data = await apiNotificationService.getLiveNotifications();
+      const params = {};
+      const isFullAccess = ['Super Admin', 'Receptionist', 'Billing Staff'].includes(currentUser?.role);
+      if (!isFullAccess) {
+        const defaultProv = currentUser?.role === 'Doctor' ? 'prov-josmic' : (currentUser?.role === 'Therapist' ? 'prov-davs' : (currentUser?.role === 'Counselor' ? 'prov-counselor' : null));
+        const pId = currentUser?.providerId || defaultProv;
+        if (pId) params.providerId = pId;
+        if (currentUser?.role) params.role = currentUser.role;
+      }
+      const data = await apiNotificationService.getLiveNotifications(params);
       if (data) {
         let notifs = data.notifications || [];
         
@@ -56,6 +90,13 @@ export const TopHeader = () => {
           notifs = notifs.filter(n => n.type !== 'BILLING' && !(n.link && n.link.includes('billing')));
         }
         
+        // Merge persisted read state for currentUser
+        const readIds = new Set(getStoredReadIds(currentUser));
+        notifs = notifs.map(n => ({
+          ...n,
+          read: n.read || readIds.has(n.id)
+        }));
+
         setNotifications(notifs);
         setUnreadCount(notifs.filter(n => !n.read).length);
       }
@@ -83,7 +124,7 @@ export const TopHeader = () => {
       window.removeEventListener('bill-updated', loadNotifications);
       clearInterval(timer);
     };
-  }, []);
+  }, [currentUser]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -93,11 +134,14 @@ export const TopHeader = () => {
   };
 
   const handleMarkAllRead = () => {
+    const allIds = notifications.map(n => n.id);
+    saveReadIds(currentUser, allIds);
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     setUnreadCount(0);
   };
 
   const handleNotificationClick = (notif) => {
+    saveReadIds(currentUser, [notif.id]);
     setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
     setUnreadCount(prev => Math.max(0, prev - 1));
     setNotifMenuOpen(false);

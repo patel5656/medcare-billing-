@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { apiCms1500Service } from '../../services/api/apiCms1500Service';
+import { apiCms1500Service, sortClaimsNewestFirst } from '../../services/api/apiCms1500Service';
 import { apiBillingService } from '../../services/api/apiBillingService';
 import { apiCaseService } from '../../services/api/apiCaseService';
 import { formatCurrency } from '../../utils/billingCalculations';
@@ -14,12 +14,12 @@ export const CmsClaimListPage = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showExportModal, setShowExportModal] = useState(false);
-  const { addToast } = useUIStore();
+  const { addToast, activeProviderFilter } = useUIStore();
   const navigate = useNavigate();
 
   useEffect(() => {
     apiCms1500Service.getAllClaims()
-      .then(claims => setAllClaims(claims || []))
+      .then(claims => setAllClaims(sortClaimsNewestFirst(claims || [])))
       .catch(err => {
         console.error('Failed to fetch claims queue:', err);
         setAllClaims([]);
@@ -28,7 +28,29 @@ export const CmsClaimListPage = () => {
   }, []);
 
   const filteredClaims = allClaims.filter(c => {
+    // 1. Global Navbar Provider/Modality Filter
+    if (activeProviderFilter && activeProviderFilter !== 'ALL') {
+      const claimProvId = (c.providerId || '').toLowerCase();
+      const claimProvName = (c.providerName || '').toLowerCase();
+      const filterId = activeProviderFilter.toLowerCase();
+
+      const isExactMatch = claimProvId === filterId;
+      const isAliasMatch = 
+        (filterId.includes('josmic') && claimProvName.includes('josmic')) ||
+        (filterId.includes('dav') && (claimProvName.includes('dav') || claimProvName.includes('anatomy'))) ||
+        (filterId.includes('anik') && claimProvName.includes('anik')) ||
+        (filterId.includes('counselor') && (claimProvName.includes('counselor') || claimProvName.includes('behavioral') || claimProvName.includes('hope'))) ||
+        (filterId.includes('tpi') && (claimProvName.includes('trigger') || claimProvName.includes('tpi'))) ||
+        (filterId.includes('tecar') && (claimProvName.includes('tecar') || claimProvName.includes('physio')));
+
+      if (!isExactMatch && !isAliasMatch) {
+        return false;
+      }
+    }
+
+    // 2. Search Query Filter
     const q = search.toLowerCase();
+    if (!q) return true;
     return (
       (c.box2 || '').toLowerCase().includes(q) ||
       (c.providerName || '').toLowerCase().includes(q) ||

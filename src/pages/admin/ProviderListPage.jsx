@@ -10,7 +10,28 @@ export const ProviderListPage = () => {
   const [showSensitive, setShowSensitive] = useState({});
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editProviderId, setEditProviderId] = useState(null);
-  const { addToast } = useUIStore();
+  const { addToast, activeProviderFilter } = useUIStore();
+
+  const filteredProvidersList = Object.values(providers).filter(prov => {
+    if (!activeProviderFilter || activeProviderFilter === 'ALL') {
+      return true;
+    }
+    const pId = (prov.id || '').toLowerCase();
+    const pName = (prov.name || '').toLowerCase();
+    const pCat = (prov.serviceCategory || '').toLowerCase();
+    const filterId = activeProviderFilter.toLowerCase();
+
+    const isExactMatch = pId === filterId;
+    const isAliasMatch = 
+      (filterId.includes('josmic') && (pName.includes('josmic') || pCat.includes('pain'))) ||
+      (filterId.includes('dav') && (pName.includes('dav') || pName.includes('anatomy') || pCat.includes('shockwave') || pCat.includes('eswt'))) ||
+      (filterId.includes('anik') && (pName.includes('anik') || pCat.includes('laser'))) ||
+      (filterId.includes('counselor') && (pName.includes('counselor') || pName.includes('behavioral') || pName.includes('hope') || pCat.includes('counseling') || pCat.includes('mental'))) ||
+      (filterId.includes('tpi') && (pName.includes('trigger') || pName.includes('tpi') || pCat.includes('injection'))) ||
+      (filterId.includes('tecar') && (pName.includes('tecar') || pName.includes('physio') || pCat.includes('radiofrequency')));
+
+    return isExactMatch || isAliasMatch;
+  });
 
   // Form states for adding provider
   const [name, setName] = useState('');
@@ -179,69 +200,76 @@ export const ProviderListPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {Object.values(providers).map((prov) => {
-          const isVisible = showSensitive[prov.id];
-          const isCounselor = prov.id === 'prov-counselor';
+        {filteredProvidersList.length === 0 ? (
+          <div className="col-span-full py-12 text-center bg-white rounded-2xl border border-slate-200 p-8 space-y-2">
+            <p className="text-sm font-bold text-slate-700">No provider profiles match the selected filter.</p>
+            <p className="text-xs text-slate-500">Select "All Practice Providers" in the top navbar dropdown to view all provider configurations.</p>
+          </div>
+        ) : (
+          filteredProvidersList.map((prov) => {
+            const isVisible = showSensitive[prov.id];
+            const isCounselor = prov.id === 'prov-counselor';
 
-          return (
-            <div key={prov.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 flex flex-col justify-between medical-card-hover">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-teal-700 uppercase tracking-wider">{prov.serviceCategory}</span>
-                  <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
-                    prov.isPlaceholder ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-teal-50 text-teal-700 border border-teal-200'
-                  }`}>
-                    {prov.isPlaceholder ? 'Configuration Pending' : 'Active'}
-                  </span>
+            return (
+              <div key={prov.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 flex flex-col justify-between medical-card-hover">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-teal-700 uppercase tracking-wider">{prov.serviceCategory}</span>
+                    <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
+                      prov.isPlaceholder ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-teal-50 text-teal-700 border border-teal-200'
+                    }`}>
+                      {prov.isPlaceholder ? 'Configuration Pending' : 'Active'}
+                    </span>
+                  </div>
+
+                  <h3 className="text-lg font-bold text-slate-900">{prov.name}</h3>
+
+                  {/* Masked Identifiers */}
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Federal Tax ID (EIN):</span>
+                      <span className="font-mono font-bold text-slate-900">{maskTaxId(prov.identifiers?.taxId || 'XX-XXXXXXX', isVisible)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Rendering NPI:</span>
+                      <span className="font-mono font-bold text-slate-900">{maskNpi(prov.identifiers?.npi || 'XXXXXXXXXX', isVisible)}</span>
+                    </div>
+                  </div>
+
+
                 </div>
 
-                <h3 className="text-lg font-bold text-slate-900">{prov.name}</h3>
-
-                {/* Masked Identifiers */}
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Federal Tax ID (EIN):</span>
-                    <span className="font-mono font-bold text-slate-900">{maskTaxId(prov.identifiers?.taxId || 'XX-XXXXXXX', isVisible)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Rendering NPI:</span>
-                    <span className="font-mono font-bold text-slate-900">{maskNpi(prov.identifiers?.npi || 'XXXXXXXXXX', isVisible)}</span>
-                  </div>
-                </div>
-
-
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => toggleShowSensitive(prov.id)}
-                  className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-teal-600 cursor-pointer"
-                >
-                  {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  {isVisible ? 'Hide Identifiers' : 'Show Masked Identifiers'}
-                </button>
-
-                <div className="flex gap-2">
+                <div className="flex items-center justify-between pt-3 border-t border-slate-200">
                   <button
                     type="button"
-                    onClick={() => handleEditClick(prov)}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl flex items-center gap-1 transition cursor-pointer"
+                    onClick={() => toggleShowSensitive(prov.id)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-teal-600 cursor-pointer"
                   >
-                    <Edit3 className="w-3.5 h-3.5" /> Edit Profile
+                    {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {isVisible ? 'Hide Identifiers' : 'Show Masked Identifiers'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteClick(prov.id)}
-                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl flex items-center gap-1 transition cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
-                  </button>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleEditClick(prov)}
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" /> Edit Profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteClick(prov.id)}
+                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       {/* 🔴 ADD NEW PROVIDER DIALOG MODAL */}

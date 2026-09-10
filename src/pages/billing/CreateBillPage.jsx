@@ -71,6 +71,7 @@ export const CreateBillPage = () => {
         providerName: selectedProv?.name || 'JOSMIC Wellness Center',
         statementNumber,
         statementDate: form.statementDate,
+        diagnosisCodes: form.diagnosisCodes,
         billToName: form.billToName,
         billToAddress: form.billToAddress,
         serviceLines,
