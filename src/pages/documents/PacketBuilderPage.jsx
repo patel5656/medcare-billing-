@@ -13,7 +13,14 @@ export const PacketBuilderPage = () => {
   const queryCaseId = searchParams.get('caseId') || 'case-001';
   const queryPatientId = searchParams.get('patientId');
 
-  const [docs, setDocs] = useState([]);
+  const DEFAULT_DOCS = [
+    { id: 'doc-001', name: 'JOSMIC Pain Evaluation - Initial', providerName: 'JOSMIC Wellness Center', type: 'Clinical Note', size: '2.4 MB' },
+    { id: 'doc-002', name: 'ANIK Laser Procedure Form', providerName: 'ANIK Laser Therapy', type: 'Procedure Record', size: '1.1 MB' },
+    { id: 'doc-003', name: 'DAV\'S ESWT Therapy Record', providerName: 'DAV\'S Anatomy', type: 'Treatment Note', size: '3.2 MB' },
+    { id: 'doc-004', name: 'Behavioral Health Progress Note', providerName: 'Counselor Practice (Hope Behavioral Health)', type: 'Therapy Note', size: '1.5 MB' },
+  ];
+
+  const [docs, setDocs] = useState(DEFAULT_DOCS);
   const [cases, setCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState(queryCaseId);
   const [selectedIds, setSelectedIds] = useState(['doc-001', 'doc-002', 'doc-003', 'doc-004']);
@@ -27,7 +34,7 @@ export const PacketBuilderPage = () => {
 
   useEffect(() => {
     apiDocumentService.getDocuments().then(res => {
-      if (Array.isArray(res)) setDocs(res);
+      if (Array.isArray(res) && res.length > 0) setDocs(res);
     }).catch(() => {});
 
     apiCaseService.getCases().then(res => {

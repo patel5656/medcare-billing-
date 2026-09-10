@@ -13,7 +13,7 @@ import { useUIStore } from '../../store/uiStore';
 
 const riskBadge = (risk) => {
   if (risk === 'high') return <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-red-100 text-red-700 border border-red-200">HIGH RISK</span>;
-  if (risk === 'low') return <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-amber-100 text-amber-700 border border-amber-200">REVIEW</span>;
+  if (risk === 'low') return <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-amber-100 text-amber-700 border border-amber-200">LOW RISK</span>;
   return <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">N/A</span>;
 };
 
