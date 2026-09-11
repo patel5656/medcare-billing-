@@ -68,8 +68,8 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
     box12Date: '01/22/2026',
     box13Signature: 'SIGNATURE ON FILE',
     box14IllnessDate: { mm: '12', dd: '27', yy: '25' },
-    box17ReferringName: 'SEGUN ADEOYE',
-    box17Npi: '1234567890',
+    box17ReferringName: '',
+    box17Npi: '',
     box21Diagnoses: ['M5450', 'M542', 'M25572', ''],
     box24Lines: [
       {
@@ -206,6 +206,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
         epsdt: '',
         qual: '',
         renderingId: '',
+        renderingNpi: '',
         note: ''
       });
     }
@@ -577,12 +578,12 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div className="p-0.5 border-b border-[#b91c1c] h-[24px]">
               <span>17. NAME OF REFERRING PROVIDER OR OTHER SOURCE</span>
               <div className="mt-0.5 flex gap-1">
-                <FieldInput defaultValue={c(claim.box17ReferringName || 'SEGUN ADEOYE')} readOnly={readOnly} className="text-xs font-mono font-bold uppercase flex-1" />
+                <FieldInput defaultValue="" readOnly={readOnly} className="text-xs font-mono font-bold uppercase flex-1" />
               </div>
             </div>
             <div className="flex border-b border-[#b91c1c]">
               <div className="w-[12%] p-0.5 border-r border-[#b91c1c] text-center">17a.</div>
-              <div className="flex-1 p-0.5"><FieldInput defaultValue={c(claim.box17a)} readOnly={readOnly} className="text-xs font-mono font-bold bg-transparent" /></div>
+              <div className="flex-1 p-0.5"><FieldInput defaultValue={c(claim.box17a || claim.box17ReferringName)} readOnly={readOnly} className="text-xs font-mono font-bold bg-transparent uppercase" /></div>
             </div>
             <div className="flex">
               <div className="w-[12%] p-0.5 border-r border-[#b91c1c] text-center">17b. <span className="text-[6.5px]">NPI</span></div>
@@ -737,13 +738,17 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
                     {idx + 1}
                   </span>
 
-                  {/* Top Sub-line: Note / Rendering NPI legacy number */}
-                  <div className="flex justify-between items-center text-[7px] font-bold leading-none h-[9px]">
-                    <div className="text-slate-700 uppercase tracking-tight overflow-hidden text-ellipsis whitespace-nowrap pl-1">
+                  {/* Top Sub-line: Note / Rendering Provider ID (Upper 24J) */}
+                  <div className="grid grid-cols-12 items-center text-[7px] font-bold leading-none h-[9px]">
+                    <div className="col-span-11 text-slate-700 uppercase tracking-tight overflow-hidden text-ellipsis whitespace-nowrap pl-1">
                       {line.note && <span>Note: {line.note}</span>}
                     </div>
-                    <div className="w-[10%] text-right font-mono text-[7px] text-slate-800 pr-1">
-                      {line.renderingId && <span>{line.renderingId}</span>}
+                    <div className="col-span-1 flex text-[7.5px] font-mono h-full items-center">
+                      <div className="flex-1"></div>
+                      <div className="flex-1"></div>
+                      <div className="flex-[2] h-full flex items-center justify-center">
+                        <FieldInput defaultValue={hasData ? (line.renderingId || '') : ''} readOnly={readOnly} className="w-full text-center text-[7.5px]" />
+                      </div>
                     </div>
                   </div>
 
@@ -784,7 +789,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
 
                     {/* 24.E Diagnosis Pointer */}
                     <div className="col-span-1 border-r border-[#b91c1c]/20 font-black">
-                      <FieldInput defaultValue={line.diagPtr || (hasData ? '123' : '')} readOnly={readOnly} className="text-center" />
+                      <FieldInput defaultValue={line.diagPtr || ''} readOnly={readOnly} className="text-center" />
                     </div>
 
                     {/* 24.F Charges */}
@@ -806,7 +811,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
                         <FieldInput defaultValue={hasData ? 'NPI' : ''} readOnly={readOnly} className="w-full text-center text-[5.5px]" />
                       </div>
                       <div className="flex-[2] h-full flex items-center justify-center">
-                        <FieldInput defaultValue={hasData ? (line.renderingId || 'NPI') : ''} readOnly={readOnly} className="w-full text-center text-[7.5px]" />
+                        <FieldInput defaultValue={hasData ? (line.renderingNpi || claim.box33Npi || '') : ''} readOnly={readOnly} className="w-full text-center text-[6px] px-0 tracking-tighter" />
                       </div>
                     </div>
                   </div>
@@ -895,7 +900,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <FieldInput defaultValue={c(claim.box33BillingProvider || 'ANIK LASER THERAPY\n10101 HARWIN DR,STE.274\nHOUSTON, TX 77036')} readOnly={readOnly} multiline={true} className="font-bold text-[8.5px] mt-0.5 leading-tight" />
             </div>
             <div className="flex justify-between text-[6.5px] mt-0.5 border-t border-[#b91c1c]/40 pt-0.5 absolute bottom-0 left-0 right-0 px-1">
-              <span>a.</span>
+              <span>a. <span className="font-mono text-slate-900 text-[7.5px]">{c(claim.box33Npi)}</span></span>
               <span>b.</span>
             </div>
           </div>

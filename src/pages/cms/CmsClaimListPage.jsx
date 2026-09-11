@@ -35,7 +35,7 @@ export const CmsClaimListPage = () => {
       const filterId = activeProviderFilter.toLowerCase();
 
       const isExactMatch = claimProvId === filterId;
-      const isAliasMatch = 
+      const isAliasMatch =
         (filterId.includes('josmic') && claimProvName.includes('josmic')) ||
         (filterId.includes('dav') && (claimProvName.includes('dav') || claimProvName.includes('anatomy'))) ||
         (filterId.includes('anik') && claimProvName.includes('anik')) ||

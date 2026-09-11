@@ -1,4 +1,4 @@
-﻿// src/constants/cmsReferenceFixtures.js
+// src/constants/cmsReferenceFixtures.js
 
 /**
  * Exact QA Reference Fixtures matching sample PDF pages:
@@ -45,7 +45,8 @@ export const CMS_REFERENCE_FIXTURES = {
       box13Signature: 'SIGNED SIGNATURE ON FILE',
       box14IllnessDate: { mm: '12', dd: '27', yy: '25' },
       box17ReferringName: 'SEGUN ADEOYE',
-      box17Npi: '',
+      box17a: 'SEGUN ADEOYE',
+      box17Npi: '1891726435',
       box21Diagnoses: ['M5450', 'M542', 'M25572'],
       box24Lines: [
         { note: '1ST SESSION LASER THERAPY', fromDos: '01 22 26', toDos: '01 22 26', pos: '11', cpt: '97039', mod: '', diagPtr: '123', charge: '2000.00', units: '1', renderingId: 'R7637' },

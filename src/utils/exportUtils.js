@@ -130,7 +130,37 @@ export const exportToPDF = async (elementOrId, filename = 'cms1500_claim.pdf') =
         logging: false,
         scrollY: 0,
         scrollX: 0,
-        windowWidth: 816
+        windowWidth: 816,
+        onclone: (clonedDoc, element) => {
+          const origInputs = targetEl.querySelectorAll('input, textarea, select');
+          const clonedInputs = element.querySelectorAll('input, textarea, select');
+          origInputs.forEach((inp, i) => {
+            const clonedInp = clonedInputs[i];
+            if (clonedInp) {
+              const val = inp.value || inp.getAttribute('value') || '';
+              const span = clonedDoc.createElement('span');
+              span.className = clonedInp.className;
+              
+              const isRight = clonedInp.classList.contains('text-right');
+              const isLeft = clonedInp.classList.contains('text-left');
+              const justifyVal = isRight ? 'flex-end' : isLeft ? 'flex-start' : 'center';
+
+              span.style.display = 'inline-flex';
+              span.style.alignItems = 'center';
+              span.style.justifyContent = justifyVal;
+              span.style.width = '100%';
+              span.style.height = '100%';
+              span.style.lineHeight = '1';
+              span.style.whiteSpace = 'pre-wrap';
+              span.style.overflow = 'hidden';
+              span.textContent = val;
+
+              if (clonedInp.parentNode) {
+                clonedInp.parentNode.replaceChild(span, clonedInp);
+              }
+            }
+          });
+        }
       },
       jsPDF: {
         unit: 'in',

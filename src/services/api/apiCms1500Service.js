@@ -35,6 +35,20 @@ export const sortClaimsNewestFirst = (claimsArray = []) => {
 };
 
 /**
+ * Build a provider config object from the real bill data returned by the backend.
+ * The backend formatBill() now returns all provider JSON fields (identifiers,
+ * renderingProvider, serviceFacility, billingProvider, address components).
+ */
+const buildProviderConfigFromBill = (bill) => ({
+  id: bill.providerId || '',
+  identifiers: bill.identifiers || { taxId: bill.providerTaxId || '', npi: bill.providerNpi || '', ssnOrEin: bill.providerSsnOrEin || 'EIN' },
+  renderingProvider: bill.renderingProvider || {},
+  serviceFacility: bill.serviceFacility || {},
+  billingProvider: bill.billingProvider || {},
+  defaultPlaceOfService: '11',
+});
+
+/**
  * Real API Service for fetching CMS-1500 Claims mapped directly from MySQL Database records via Backend endpoints.
  */
 export const apiCms1500Service = {
@@ -46,18 +60,15 @@ export const apiCms1500Service = {
     try {
       const res = await apiBillingService.getAllCmsClaims();
       if (res && res.bills) {
-        const rawClaims = res.bills.flatMap(bill => mapBillToCms1500Claims(bill, null, {
-          id: bill.providerId,
-          identifiers: { taxId: bill.identifiers?.taxId || '993723387' }
-        }));
-      // Deduplicate claims by unique Patient Name + Provider + DOS + Total Charge
-      const uniqueMap = new Map();
-      for (const claim of rawClaims) {
-        const key = `${(claim.box2 || '').trim().toLowerCase()}_${(claim.providerName || '').trim().toLowerCase()}_${(claim.dosDisplay || '').trim()}_${claim.box28TotalCharge || ''}`;
-        if (!uniqueMap.has(key)) {
-          uniqueMap.set(key, claim);
+        const rawClaims = res.bills.flatMap(bill => mapBillToCms1500Claims(bill, null, buildProviderConfigFromBill(bill)));
+        // Deduplicate claims by unique Patient Name + Provider + DOS + Total Charge
+        const uniqueMap = new Map();
+        for (const claim of rawClaims) {
+          const key = `${(claim.box2 || '').trim().toLowerCase()}_${(claim.providerName || '').trim().toLowerCase()}_${(claim.dosDisplay || '').trim()}_${claim.box28TotalCharge || ''}`;
+          if (!uniqueMap.has(key)) {
+            uniqueMap.set(key, claim);
+          }
         }
-      }
         return sortClaimsNewestFirst(Array.from(uniqueMap.values()));
       }
     } catch (e) {
@@ -77,10 +88,7 @@ export const apiCms1500Service = {
       targetCases.forEach((c, idx) => {
         const caseRes = billResults[idx];
         for (const bill of (caseRes?.allBills || [])) {
-          const claims = mapBillToCms1500Claims(bill, c, {
-            id: bill.providerId,
-            identifiers: { taxId: bill.identifiers?.taxId || '993723387' }
-          });
+          const claims = mapBillToCms1500Claims(bill, c, buildProviderConfigFromBill(bill));
           rawClaims.push(...claims);
         }
       });
@@ -109,10 +117,7 @@ export const apiCms1500Service = {
     try {
       const bill = await apiBillingService.getBillById(billId);
       if (!bill) return [];
-      return mapBillToCms1500Claims(bill, null, {
-        id: bill.providerId,
-        identifiers: { taxId: bill.identifiers?.taxId || '993723387' }
-      });
+      return mapBillToCms1500Claims(bill, null, buildProviderConfigFromBill(bill));
     } catch (err) {
       console.error(`Error retrieving bill ${billId} from backend:`, err);
       return [];

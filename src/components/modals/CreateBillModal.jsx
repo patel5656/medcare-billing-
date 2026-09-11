@@ -11,7 +11,7 @@ const inputCls = 'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg
 const labelCls = 'block text-xs font-bold text-slate-800 mb-1';
 
 export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated }) => {
-  const { addToast } = useUIStore();
+  const { addToast, activeProviderFilter } = useUIStore();
   const [isLoading, setIsLoading] = useState(false);
   const [casesList, setCasesList] = useState([]);
   const [providersList, setProvidersList] = useState([]);
@@ -35,6 +35,9 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
   // Load cases and providers from backend
   useEffect(() => {
     if (isOpen) {
+      const activeProv = (activeProviderFilter && activeProviderFilter !== 'ALL') ? activeProviderFilter : 'prov-davs';
+      handleProviderChange(activeProv);
+
       apiCaseService.getCases().then(res => {
         if (res && res.length > 0) {
           setCasesList(res);
@@ -53,7 +56,7 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
         }
       }).catch(() => { });
     }
-  }, [isOpen, selectedCaseId]);
+  }, [isOpen, selectedCaseId, activeProviderFilter]);
 
   const set = (field, val) => setFormData(p => ({ ...p, [field]: val }));
 
@@ -66,8 +69,8 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
     if (pid === 'prov-counselor') { cpt = '90834'; desc = 'Individual Psychotherapy (45 Min)'; fee = '180.00'; m1 = ''; }
     if (pid === 'prov-davs') { cpt = '0101T'; desc = 'ESWT Shockwave Therapy Session'; fee = '1000.00'; m1 = 'RT'; }
     if (pid === 'prov-anik') { cpt = '97039'; desc = 'Laser Therapy Session'; fee = '2000.00'; m1 = 'GP'; }
-    if (pid === 'srv-trigger-point' || pid === 'prov-tpi') { cpt = '20552'; desc = 'Trigger Point Injection (1-2 muscles)'; fee = '450.00'; m1 = '59'; }
-    if (pid === 'srv-tecar-therapy' || pid === 'prov-tecar') { cpt = '97014'; desc = 'TECAR Radiofrequency Therapy Session'; fee = '350.00'; m1 = 'GP'; }
+    if (pid === 'prov-tpi') { cpt = '20552'; desc = 'Trigger Point Injection (1-2 muscles)'; fee = '450.00'; m1 = '59'; }
+    if (pid === 'prov-tecar') { cpt = '97014'; desc = 'TECAR Radiofrequency Therapy Session'; fee = '350.00'; m1 = 'GP'; }
 
     setFormData(p => ({ ...p, providerId: pid, cptCode: cpt, description: desc, charge: fee, modifier1: m1 }));
   };
@@ -159,14 +162,8 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
             <option value="prov-davs">DAV'S Anatomy (Shockwave Therapy ESWT)</option>
             <option value="prov-anik">ANIK Laser Therapy (Laser Therapy)</option>
             <option value="prov-counselor">Counselor Practice (Hope Behavioral Health)</option>
-            <option value="srv-trigger-point">Trigger Point Injection (TPI)</option>
-            <option value="srv-tecar-therapy">TECAR Radiofrequency Therapy</option>
-            {providersList
-              .filter(p => !['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor'].includes(p.id))
-              .map(p => (
-                <option key={p.id} value={p.id}>{p.name} ({p.serviceCategory || 'Modality'})</option>
-              ))
-            }
+            <option value="prov-tpi">Trigger Point Injection Practice (Trigger Point Injection TPI)</option>
+            <option value="prov-tecar">TECAR Radiofrequency Practice (TECAR Radiofrequency Therapy)</option>
           </select>
         </div>
 
