@@ -5,16 +5,23 @@ import { Calendar, Clock, User, Phone, MapPin, CheckCircle2, AlertCircle, Edit3,
 import { useUIStore } from '../../store/uiStore';
 import { formatCurrency } from '../../utils/billingCalculations';
 import { formatStatus } from '../../utils/formatters';
+import { apiAppointmentService } from '../../services/api/apiAppointmentService';
 
 export const AppointmentDetailsModal = ({ isOpen, onClose, appointment, onStatusUpdated, onEditAppointment }) => {
   const { addToast } = useUIStore();
 
   if (!appointment) return null;
 
-  const handleUpdateStatus = (newStatus) => {
-    addToast(`Appointment status updated to ${newStatus}!`, 'success');
-    if (onStatusUpdated) onStatusUpdated({ ...appointment, status: newStatus });
-    onClose();
+  const handleUpdateStatus = async (newStatus) => {
+    try {
+      await apiAppointmentService.updateStatus(appointment.id, newStatus);
+      addToast(`Appointment status updated to ${newStatus}!`, 'success');
+      if (onStatusUpdated) onStatusUpdated({ ...appointment, status: newStatus });
+      onClose();
+    } catch (err) {
+      console.error('Failed to update status:', err);
+      addToast('Failed to update appointment status.', 'error');
+    }
   };
 
   const isInitial = appointment.visitType === 'INITIAL' || (!appointment.visitType && appointment.cptCode?.includes('99204'));
