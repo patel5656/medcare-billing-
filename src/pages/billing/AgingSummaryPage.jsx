@@ -44,7 +44,7 @@ const ActivityIcon = ({ type }) => {
 
 export const AgingSummaryPage = () => {
   const settings = useSettings();
-  const { addToast } = useUIStore();
+  const { addToast, activeProviderFilter } = useUIStore();
   const [loading, setLoading] = useState(true);
   const [showExportModal, setShowExportModal] = useState(false);
   const [aging, setAging] = useState({
@@ -60,8 +60,9 @@ export const AgingSummaryPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([
-      apiBillingService.getAgingSummary(),
+      apiBillingService.getAgingSummary(activeProviderFilter),
       apiBillingService.getPaymentsList()
     ]).then(([agingRes, paymentsRes]) => {
       if (agingRes) {
@@ -83,7 +84,7 @@ export const AgingSummaryPage = () => {
     }).finally(() => {
       setLoading(false);
     });
-  }, []);
+  }, [activeProviderFilter]);
 
   const total = aging.grandTotal || (aging.current + aging.past30 + aging.past60 + aging.past90) || 1;
   const pct = (val) => ((val / total) * 100).toFixed(1);
