@@ -6,9 +6,9 @@ export const calculateLineItemBalance = (item) => {
   const insPay = Number(item?.insurancePayment) || 0;
   const patPay = Number(item?.patientPayment) || 0;
   const othPay = Number(item?.otherPayment) || 0;
-  const adj = Number(item?.adjustment) || 0;
+  const adj = Number(item?.adjustment) || Number(item?.adjustments) || 0;
   
-  const balance = charge - (insPay + patPay + othPay + adj);
+  const balance = Math.max(0, charge - (insPay + patPay + othPay + adj));
   return Number(balance.toFixed(2));
 };
 
@@ -25,12 +25,12 @@ export const calculateBillLedgerTotals = (serviceLines = []) => {
       totalInsurancePayments += Number(line.insurancePayment) || 0;
       totalPatientPayments += Number(line.patientPayment) || 0;
       totalOtherPayments += Number(line.otherPayment) || 0;
-      totalAdjustments += Number(line.adjustment) || 0;
+      totalAdjustments += Number(line.adjustment) || Number(line.adjustments) || 0;
     }
   });
 
   const totalPayments = totalInsurancePayments + totalPatientPayments + totalOtherPayments;
-  const balanceDue = totalCharges - (totalPayments + totalAdjustments);
+  const balanceDue = Math.max(0, totalCharges - (totalPayments + totalAdjustments));
 
   return {
     totalCharges: Number(totalCharges.toFixed(2)),

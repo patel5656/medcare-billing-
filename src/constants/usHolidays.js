@@ -1,4 +1,4 @@
-﻿// src/constants/usHolidays.js
+// src/constants/usHolidays.js
 
 export const US_FEDERAL_HOLIDAYS = [
   { id: 'hol-new-year', name: "New Year's Day", month: 1, day: 1, type: 'FIXED' },

@@ -577,9 +577,6 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
           <div className="w-[310px] border-r border-[#b91c1c]">
             <div className="p-0.5 border-b border-[#b91c1c] h-[24px]">
               <span>17. NAME OF REFERRING PROVIDER OR OTHER SOURCE</span>
-              <div className="mt-0.5 flex gap-1">
-                <FieldInput defaultValue={c(claim.box17ReferringName || claim.box17)} readOnly={readOnly} className="text-xs font-mono font-bold uppercase flex-1" />
-              </div>
             </div>
             <div className="flex border-b border-[#b91c1c]">
               <div className="w-[12%] p-0.5 border-r border-[#b91c1c] text-center">17a.</div>

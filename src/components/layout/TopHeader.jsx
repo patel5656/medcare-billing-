@@ -390,13 +390,15 @@ export const TopHeader = () => {
                 Edit My Profile &amp; Avatar
               </button>
 
-              <button
-                onClick={() => { setUserMenuOpen(false); navigate('/settings/general'); }}
-                className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium transition"
-              >
-                <User className="w-4 h-4 text-slate-400" />
-                Clinic Settings &amp; Profile
-              </button>
+              {(currentUser?.role === 'Super Admin' || !currentUser?.role) && (
+                <button
+                  onClick={() => { setUserMenuOpen(false); navigate('/settings/general'); }}
+                  className="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium transition"
+                >
+                  <User className="w-4 h-4 text-slate-400" />
+                  Clinic Settings &amp; Profile
+                </button>
+              )}
               <div className="border-t border-slate-100 my-1"></div>
               <button
                 onClick={handleLogout}
