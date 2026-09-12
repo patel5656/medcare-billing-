@@ -88,6 +88,7 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   // --- Totals from real bill data ---
   const billTotals = bill.totals || {};
   const totalPayments = bill.totalPayments || billTotals.totalPayments || 0;
+  const totalAdjustments = bill.totalAdjustments || billTotals.totalAdjustments || 0;
 
   // --- Accident / Illness date from case ---
   const accidentDate = bill.accidentDate || patientCase?.accidentDate || '';
@@ -141,7 +142,8 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
 
     const claimTotalCharge = totalCharge > 0 ? totalCharge : 0;
     const claimAmountPaid = Number(totalPayments) || 0;
-    const claimBalanceDue = claimTotalCharge - claimAmountPaid;
+    const claimTotalAdjustments = Number(totalAdjustments) || 0;
+    const claimBalanceDue = claimTotalCharge - claimAmountPaid - claimTotalAdjustments;
 
     return {
       claimId: `cms-${bill.id}-${idx}`,

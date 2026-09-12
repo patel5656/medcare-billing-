@@ -1,6 +1,6 @@
 // src/pages/billing/PaymentsAndAdjustmentsPage.jsx
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Plus, Search, CheckCircle, XCircle, Clock, X, Save, DollarSign, FileText, AlertCircle, Building2, User, Shield } from 'lucide-react';
+import { CreditCard, Plus, Search, CheckCircle, XCircle, Clock, X, Save, DollarSign, FileText, AlertCircle, Building2, User, Shield, ChevronDown } from 'lucide-react';
 import { formatCurrency } from '../../utils/billingCalculations';
 import { apiBillingService } from '../../services/api/apiBillingService';
 import { apiCaseService } from '../../services/api/apiCaseService';
@@ -9,6 +9,42 @@ import { useUIStore } from '../../store/uiStore';
 
 const inputCls = 'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none transition';
 const labelCls = 'block text-xs font-bold text-slate-800 mb-1';
+
+const CustomSelect = ({ value, onChange, options, placeholder }) => {
+  const [open, setOpen] = useState(false);
+  
+  return (
+    <div className="relative">
+      <div 
+        className={`${inputCls} flex items-center justify-between cursor-pointer`}
+        onClick={() => setOpen(!open)}
+      >
+        <span>{options.find(o => o.value === value)?.label || placeholder}</span>
+        <ChevronDown className="w-4 h-4 text-slate-400" />
+      </div>
+      
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg py-1 max-h-60 overflow-auto">
+            {options.map(opt => (
+              <div
+                key={opt.value}
+                className="px-3 py-2 text-xs text-slate-700 hover:bg-teal-50 hover:text-teal-700 cursor-pointer transition"
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+              >
+                {opt.label}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 // Dynamic Post New Payment Modal
 const PostPaymentModal = ({ onClose, onSuccess }) => {
@@ -133,6 +169,7 @@ const PostPaymentModal = ({ onClose, onSuccess }) => {
           lineIndex: 0,
           amount: Number(form.amount),
           type: form.paymentType,
+          method: form.method,
           checkRef: form.checkNumber || form.referenceNumber || 'REF-AUTO'
         }
       );
@@ -298,22 +335,55 @@ const PostPaymentModal = ({ onClose, onSuccess }) => {
               </div>
               <div>
                 <label className={labelCls}>Payment Method</label>
-                <select className={inputCls} value={form.method} onChange={e => set('method', e.target.value)}>
-                  <option value="EFT">EFT / ACH Direct Deposit</option>
-                  <option value="CHECK">Insurance Check</option>
-                  <option value="CREDIT_CARD">Credit Card</option>
-                  <option value="CASH">Cash / Patient Direct</option>
-                  <option value="WIRE">Attorney Settlement Wire</option>
-                </select>
+                <CustomSelect 
+                  value={form.method}
+                  onChange={v => set('method', v)}
+                  options={[
+                    { value: "EFT", label: "EFT / ACH Direct Deposit" },
+                    { value: "CHECK", label: "Insurance Check" },
+                    { value: "CREDIT_CARD", label: "Credit Card" },
+                    { value: "CASH", label: "Cash / Patient Direct" },
+                    { value: "WIRE", label: "Attorney Settlement Wire" }
+                  ]}
+                  placeholder="Select Method"
+                />
               </div>
               <div>
-                <label className={labelCls}>Check / Trace Number</label>
-                <input className={inputCls} value={form.checkNumber} onChange={e => set('checkNumber', e.target.value)} placeholder="e.g. CHK-889201" />
+                {form.method === 'CHECK' && (
+                  <>
+                    <label className={labelCls}>Check Number</label>
+                    <input className={inputCls} value={form.checkNumber} onChange={e => set('checkNumber', e.target.value)} placeholder="e.g. CHK-889201" />
+                  </>
+                )}
+                {form.method === 'EFT' && (
+                  <>
+                    <label className={labelCls}>Trace / Reference Number</label>
+                    <input className={inputCls} value={form.checkNumber} onChange={e => set('checkNumber', e.target.value)} placeholder="e.g. TRC-889201" />
+                  </>
+                )}
+                {form.method === 'CREDIT_CARD' && (
+                  <>
+                    <label className={labelCls}>Transaction ID / Auth Code</label>
+                    <input className={inputCls} value={form.checkNumber} onChange={e => set('checkNumber', e.target.value)} placeholder="e.g. TXN-12345" />
+                  </>
+                )}
+                {form.method === 'CASH' && (
+                  <>
+                    <label className={labelCls}>Receipt Number</label>
+                    <input className={inputCls} value={form.checkNumber} onChange={e => set('checkNumber', e.target.value)} placeholder="e.g. RCT-001" />
+                  </>
+                )}
+                {form.method === 'WIRE' && (
+                  <>
+                    <label className={labelCls}>Wire Transfer Reference</label>
+                    <input className={inputCls} value={form.checkNumber} onChange={e => set('checkNumber', e.target.value)} placeholder="e.g. WT-5678" />
+                  </>
+                )}
               </div>
             </div>
             
             <div className="mt-3">
-              <label className={labelCls}>Reference / ERA Number</label>
+              <label className={labelCls}>Additional ERA / Reference Number</label>
               <input className={inputCls} value={form.referenceNumber} onChange={e => set('referenceNumber', e.target.value)} placeholder="e.g. ERA-2026-081" />
             </div>
           </div>
