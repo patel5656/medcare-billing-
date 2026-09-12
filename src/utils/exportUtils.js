@@ -132,27 +132,27 @@ export const exportToPDF = async (elementOrId, filename = 'cms1500_claim.pdf') =
         scrollX: 0,
         windowWidth: 816,
         onclone: (clonedDoc, element) => {
+          // 1. Reset scale transforms and margins on cloned container elements
+          const scaledSheets = clonedDoc.querySelectorAll('.print-page-sheet, .print-page-sheet-wrapper');
+          scaledSheets.forEach(s => {
+            s.style.transform = 'none';
+            s.style.marginBottom = '0';
+            s.style.marginTop = '0';
+          });
+
+          // 2. Convert input/textarea elements into text spans matching natural FieldInput layout
           const origInputs = targetEl.querySelectorAll('input, textarea, select');
           const clonedInputs = element.querySelectorAll('input, textarea, select');
           origInputs.forEach((inp, i) => {
             const clonedInp = clonedInputs[i];
             if (clonedInp) {
               const val = inp.value || inp.getAttribute('value') || '';
+              const isTextArea = inp.tagName === 'TEXTAREA';
               const span = clonedDoc.createElement('span');
               span.className = clonedInp.className;
-              
-              const isRight = clonedInp.classList.contains('text-right');
-              const isLeft = clonedInp.classList.contains('text-left');
-              const justifyVal = isRight ? 'flex-end' : isLeft ? 'flex-start' : 'center';
-
-              span.style.display = 'inline-flex';
-              span.style.alignItems = 'center';
-              span.style.justifyContent = justifyVal;
-              span.style.width = '100%';
-              span.style.height = '100%';
-              span.style.lineHeight = '1';
-              span.style.whiteSpace = 'pre-wrap';
-              span.style.overflow = 'hidden';
+              span.style.display = isTextArea ? 'block' : 'inline-block';
+              span.style.whiteSpace = isTextArea ? 'pre-wrap' : 'nowrap';
+              span.style.verticalAlign = 'baseline';
               span.textContent = val;
 
               if (clonedInp.parentNode) {

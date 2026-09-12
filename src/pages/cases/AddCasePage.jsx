@@ -70,6 +70,8 @@ const INITIAL_CASE_STATE = {
   pipAvailable: false,
   pipLimit: '',
   umAvailable: false,
+  referringProviderName: '',
+  referringProviderNpi: '',
   assignedProviderIds: ['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor']
 };
 
@@ -110,6 +112,8 @@ export const AddCasePage = () => {
       claimNumber: patientObj.primaryPolicyNumber || prev.claimNumber || '',
       adjusterName: patientObj.insuranceAdjusterName || patientObj.adjusterName || prev.adjusterName || '',
       adjusterPhone: patientObj.insuranceAdjusterPhone || patientObj.adjusterPhone || prev.adjusterPhone || '',
+      referringProviderName: patientObj.referringProvider || patientObj.referringProviderName || prev.referringProviderName || '',
+      referringProviderNpi: patientObj.referringProviderNpi || prev.referringProviderNpi || '',
       caseNotes: patientObj.patientNotes || prev.caseNotes || ''
     }));
   };
