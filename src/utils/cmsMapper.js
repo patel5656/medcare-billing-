@@ -62,8 +62,8 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   const renderingProviderId = renderingProvider.providerId || renderingProvider.id || renderingProvider.renderingId || bill.renderingProviderId || '';
 
   // --- Referring provider from Case ---
-  const referringName = bill.referringProviderName || patientCase?.referringProviderName || '';
-  const referringNpi = bill.referringProviderNpi || patientCase?.referringProviderNpi || '';
+  const referringName = bill.referringProviderName || patientCase?.referringProviderName || bill.providerName || providerConfig?.name || '';
+  const referringNpi = bill.referringProviderNpi || patientCase?.referringProviderNpi || providerNpi || '';
 
   // --- Service Facility from provider DB ---
   const serviceFacility = bill.serviceFacility || providerConfig?.serviceFacility || {};
@@ -87,7 +87,8 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
 
   // --- Totals from real bill data ---
   const billTotals = bill.totals || {};
-  const totalPayments = bill.totalPayments || billTotals.totalPayments || 0;
+  const totalPayments = bill.totalPayments !== undefined ? bill.totalPayments : (billTotals.totalPayments || 0);
+  const totalAdjustments = bill.totalAdjustments !== undefined ? bill.totalAdjustments : (billTotals.totalAdjustments || 0);
 
   // --- Accident / Illness date from case ---
   const accidentDate = bill.accidentDate || patientCase?.accidentDate || '';
@@ -141,7 +142,8 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
 
     const claimTotalCharge = totalCharge > 0 ? totalCharge : 0;
     const claimAmountPaid = Number(totalPayments) || 0;
-    const claimBalanceDue = claimTotalCharge - claimAmountPaid;
+    const claimAdjustments = Number(totalAdjustments) || 0;
+    const claimBalanceDue = Math.max(0, claimTotalCharge - (claimAmountPaid + claimAdjustments));
 
     return {
       claimId: `cms-${bill.id}-${idx}`,
