@@ -19,7 +19,41 @@
       window.addEventListener('unhandledrejection', e => { 
         document.body.innerHTML = '<div style="padding:20px;color:red;font-size:20px;font-family:sans-serif"><h1>Unhandled Promise Rejection</h1><pre>' + (e.reason && e.reason.stack ? e.reason.stack : e.reason) + '</pre></div>'; 
       });
+
+      // MONKEY PATCH TO FIX REACT CRASHES FROM GOOGLE TRANSLATE
+      if (typeof Node === 'function' && Node.prototype) {
+        const originalRemoveChild = Node.prototype.removeChild;
+        Node.prototype.removeChild = function(child) {
+          if (child.parentNode !== this) {
+            console.warn('Google Translate React Fix: Ignored removeChild on wrong parent.');
+            return child;
+          }
+          return originalRemoveChild.apply(this, arguments);
+        };
+        const originalInsertBefore = Node.prototype.insertBefore;
+        Node.prototype.insertBefore = function(newNode, referenceNode) {
+          if (referenceNode && referenceNode.parentNode !== this) {
+            console.warn('Google Translate React Fix: Ignored insertBefore on wrong parent.');
+            return newNode;
+          }
+          return originalInsertBefore.apply(this, arguments);
+        };
+      }
     </script>
+    
+    <!-- Google Translate Hidden Widget -->
+    <div id="google_translate_master_container" style="display:none;"></div>
+    <script type="text/javascript">
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement({
+          pageLanguage: 'en',
+          includedLanguages: 'en,fr,es',
+          autoDisplay: false
+        }, 'google_translate_master_container');
+      }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

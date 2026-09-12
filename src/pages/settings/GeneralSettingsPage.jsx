@@ -687,7 +687,27 @@ export const GeneralSettingsPage = () => {
               </select>
             </div>
             <div><label className={labelCls}>Language</label>
-              <select className={inputCls} value={settings.language} onChange={e => set('language', e.target.value)}>
+              <select className={inputCls} value={settings.language} onChange={e => {
+                const newLang = e.target.value;
+                set('language', newLang);
+                
+                const langCode = newLang.split('-')[0];
+                
+                if (langCode === 'en') {
+                  // To revert to original English, we MUST clear cookies and reload 
+                  // because Google Translate permanently mutates the DOM.
+                  document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                  document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${window.location.hostname}; path=/;`;
+                  window.location.reload();
+                } else {
+                  // For Spanish/French, we can instantly trigger the widget
+                  const masterSelect = document.querySelector(".goog-te-combo");
+                  if (masterSelect) {
+                    masterSelect.value = langCode;
+                    masterSelect.dispatchEvent(new Event("change"));
+                  }
+                }
+              }}>
                 <option value="en-US">English (US)</option>
                 <option value="es-US">Spanish (US)</option>
                 <option value="fr-CA">French (CA)</option>

@@ -340,3 +340,24 @@ button, a {
     print-color-adjust: exact !important;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   Google Translate Widget Overrides
+   ───────────────────────────────────────────────────────────────── */
+.skiptranslate iframe {
+  display: none !important;
+}
+body {
+  top: 0px !important; 
+}
+.goog-tooltip {
+  display: none !important;
+}
+.goog-tooltip:hover {
+  display: none !important;
+}
+.goog-text-highlight {
+  background-color: transparent !important;
+  border: none !important; 
+  box-shadow: none !important;
+}
