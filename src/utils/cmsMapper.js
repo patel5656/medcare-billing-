@@ -1,39 +1,116 @@
 // src/utils/cmsMapper.js
-import { CMS_REFERENCE_FIXTURES } from '../constants/cmsReferenceFixtures';
 
 /**
- * Maps a bill statement and case to date-grouped CMS-1500 claims
+ * Maps a bill statement and case to date-grouped CMS-1500 claims.
+ * All field values are sourced from real database records — no hardcoded placeholders.
  */
 export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   if (!bill) return [];
 
-  // 1. Check if exact QA fixture exists for this bill ID
-  
-
-  // 2. Dynamic mapper for custom bills: Group service lines by unique Date of Service (dos)
+  // 1. Group service lines by unique Date of Service (dos)
   const lineItems = bill.lineItems || bill.serviceLines || [];
   const dosGroups = {};
 
   lineItems.forEach(item => {
-    const dosKey = item.dos || item.dateOfService || bill.statementDate ;
+    const dosKey = item.dos || item.dateOfService || bill.statementDate;
     if (!dosGroups[dosKey]) dosGroups[dosKey] = [];
     dosGroups[dosKey].push(item);
   });
 
   let dosKeys = Object.keys(dosGroups);
-
-  // If this provider packet expects 3 claims (e.g. ANIK or DAV'S) but only 1 DOS was registered, generate the 3 session claims
-  const pid = providerConfig?.id || bill.providerId;
   if (dosKeys.length === 0) { dosKeys = [""]; }
 
-  const patientName = patientCase?.patientName || bill.patientName ;
-  const patientId = patientCase?.patientId || bill.patientSystemId ;
-  const patientDob = patientCase?.patientDob || patientCase?.patient?.dob || '';
+  // --- Patient Name: Format as LASTNAME, FIRSTNAME MI (CMS-1500 standard) ---
+  let patientName = '';
+  const pLast = bill.patientLastName || patientCase?.patientLastName || '';
+  const pFirst = bill.patientFirstName || patientCase?.patientFirstName || '';
+  const pMiddle = bill.patientMiddleName || patientCase?.patientMiddleName || '';
+  if (pLast && pFirst) {
+    const mi = pMiddle ? ` ${pMiddle.charAt(0)}` : '';
+    patientName = `${pLast.toUpperCase()}, ${pFirst.toUpperCase()}${mi.toUpperCase()}`;
+  } else {
+    // Fallback to pre-formatted name from backend
+    patientName = bill.patientName || patientCase?.patientName || '';
+  }
+
+  // --- Patient demographics ---
+  const patientId = bill.patientSystemId || patientCase?.patientId || bill.patientId || '';
+  const patientDob = bill.patientDob || patientCase?.patientDob || patientCase?.patient?.dob || '';
   const dobString = patientDob ? String(patientDob) : '';
   const dobParts = dobString.split(/[-/]/);
   const mm = dobString ? (dobParts[0] || '') : '';
   const dd = dobString ? (dobParts[1] || '') : '';
   const yy = dobString ? (dobParts[2] || '') : '';
+  const patientSex = bill.patientSex || patientCase?.patientSex || patientCase?.patient?.sex || '';
+
+  // --- Patient address (individual components from DB) ---
+  const patientStreet = bill.patientStreet || patientCase?.patientStreet || '';
+  const patientCity = bill.patientCity || patientCase?.patientCity || '';
+  const patientState = bill.patientState || patientCase?.patientState || '';
+  const patientZip = bill.patientZip || patientCase?.patientZip || '';
+  const patientPhone = bill.patientPhone || patientCase?.patientPhone || '';
+
+  // --- Provider identifiers from real DB data ---
+  const providerNpi = bill.providerNpi || providerConfig?.identifiers?.npi || bill.identifiers?.npi || '';
+  const providerTaxId = bill.providerTaxId || providerConfig?.identifiers?.taxId || bill.identifiers?.taxId || '';
+  const providerSsnOrEin = bill.providerSsnOrEin || providerConfig?.identifiers?.ssnOrEin || 'EIN';
+
+  // --- Rendering provider from real DB data ---
+  const renderingProvider = bill.renderingProvider || providerConfig?.renderingProvider || {};
+  const renderingName = renderingProvider.name || '';
+  const renderingNpi = renderingProvider.npi || providerNpi;
+  const renderingProviderId = renderingProvider.providerId || renderingProvider.id || renderingProvider.renderingId || bill.renderingProviderId || '';
+
+  // --- Referring provider from Case ---
+  const referringName = bill.referringProviderName || patientCase?.referringProviderName || bill.providerName || providerConfig?.name || '';
+  const referringNpi = bill.referringProviderNpi || patientCase?.referringProviderNpi || providerNpi || '';
+
+  // --- Service Facility from provider DB ---
+  const serviceFacility = bill.serviceFacility || providerConfig?.serviceFacility || {};
+  const sfName = serviceFacility.name || bill.providerName || '';
+  const sfAddress = serviceFacility.address || '';
+
+  // --- Billing Provider from provider DB ---
+  const billingProvider = bill.billingProvider || providerConfig?.billingProvider || {};
+  const bpName = billingProvider.name || bill.providerName || '';
+  const bpAddress = billingProvider.address || '';
+  const bpPhone = billingProvider.phone || bill.providerPhone || '';
+
+  // --- Diagnosis Codes from real data ---
+  const rawDiag = bill.diagnosisCodes || bill.diagnoses || bill.box21Diagnoses || patientCase?.diagnosisCodes || patientCase?.diagnoses || [];
+  let parsedDiagnoses = [];
+  if (Array.isArray(rawDiag)) {
+    parsedDiagnoses = rawDiag.map(d => String(d).trim()).filter(Boolean);
+  } else if (typeof rawDiag === 'string') {
+    parsedDiagnoses = rawDiag.split(/[,;\n]+/).map(d => d.trim()).filter(Boolean);
+  }
+
+  // --- Totals from real bill data ---
+  const billTotals = bill.totals || {};
+  const totalPayments = bill.totalPayments || billTotals.totalPayments || 0;
+
+  // --- Accident / Illness date from case ---
+  const accidentDate = bill.accidentDate || patientCase?.accidentDate || '';
+  const accidentDateParts = accidentDate ? String(accidentDate).split(/[-/]/) : [];
+  const illMm = accidentDateParts[0] || '';
+  const illDd = accidentDateParts[1] || '';
+  const illYy = accidentDateParts[2] || '';
+
+  // --- Carrier Header from attorney data ---
+  const attorneyName = bill.attorneyName || bill.billToName || patientCase?.attorneyName || '';
+  const attorneyAddress = bill.attorneyAddress || bill.billToAddress || patientCase?.attorneyAddress || '';
+  const carrierHeader = attorneyName
+    ? `${attorneyName}\n${attorneyAddress}`
+    : 'PATIENT SELF-PAY / DIRECT BILLING';
+
+  // --- Build auto diagnosis pointer string based on actual diagnosis count ---
+  const buildDiagPtr = (existingPtr) => {
+    if (existingPtr) return existingPtr;
+    // Generate pointers like "1", "12", "123", "1234" based on how many diagnoses exist
+    const count = Math.min(parsedDiagnoses.length, 4);
+    if (count === 0) return '';
+    return Array.from({ length: count }, (_, i) => String(i + 1)).join('');
+  };
 
   return dosKeys.map((dosKey, idx) => {
     const items = dosGroups[dosKey] || lineItems;
@@ -42,37 +119,35 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       const lineFee = parseFloat(item.charge || item.fee || item.lineTotal || 0);
       totalCharge += lineFee;
 
+      const itemRenderingId = item.renderingProviderId || item.renderingId || item.renderingProvider?.providerId || item.renderingProvider?.id || renderingProviderId;
+      const itemRenderingNpi = item.renderingNpi || item.renderingProvider?.npi || renderingNpi;
+
       return {
         note: item.description || '',
-        fromDos: item.dos || dosKey,
-        pos: providerConfig?.id === 'prov-davs' ? '10' : '11',
-        cpt: item.cptCode || item.cpt ,
-        mod1: item.mod1 || item.modifier1 || (item.modifiers && item.modifiers[0]) ,
-        mod2: item.mod2 || item.modifier2 || (item.modifiers && item.modifiers[1]) ,
+        fromDos: item.dos || item.dateOfService || dosKey,
+        pos: item.placeOfService || providerConfig?.defaultPlaceOfService || '11',
+        cpt: item.cptCode || item.cpt || '',
+        mod1: item.mod1 || item.modifier1 || (item.modifiers && item.modifiers[0]) || '',
+        mod2: item.mod2 || item.modifier2 || (item.modifiers && item.modifiers[1]) || '',
         mod3: item.mod3 || item.modifier3 || (item.modifiers && item.modifiers[2]) || '',
         mod4: item.mod4 || item.modifier4 || (item.modifiers && item.modifiers[3]) || '',
-        diagPtr: item.diagPtr || item.diagnosisPointer ,
-        charge: (lineFee || 4000).toFixed(2),
+        diagPtr: buildDiagPtr(item.diagPtr || item.diagPointer || item.diagnosisPointer || ''),
+        charge: lineFee > 0 ? lineFee.toFixed(2) : '0.00',
         units: String(item.units || 1),
-        renderingId: item.renderingNpi 
+        renderingId: itemRenderingId,
+        renderingNpi: itemRenderingNpi
       };
     });
 
-    const isJosmic = providerConfig?.id === 'prov-josmic' || bill.providerId === 'prov-josmic';
-
-    const rawDiag = bill.diagnosisCodes || bill.diagnoses || bill.box21Diagnoses || patientCase?.diagnosisCodes || patientCase?.diagnoses || [];
-    let parsedDiagnoses = [];
-    if (Array.isArray(rawDiag)) {
-      parsedDiagnoses = rawDiag.map(d => String(d).trim()).filter(Boolean);
-    } else if (typeof rawDiag === 'string') {
-      parsedDiagnoses = rawDiag.split(/[,;\n]+/).map(d => d.trim()).filter(Boolean);
-    }
+    const claimTotalCharge = totalCharge > 0 ? totalCharge : 0;
+    const claimAmountPaid = Number(totalPayments) || 0;
+    const claimBalanceDue = claimTotalCharge - claimAmountPaid;
 
     return {
       claimId: `cms-${bill.id}-${idx}`,
       billId: bill.id,
-      providerId: bill.providerId || pid,
-      providerName: bill.providerName ,
+      providerId: bill.providerId || providerConfig?.id || '',
+      providerName: bill.providerName || '',
       dos: dosKey,
       dosDisplay: dosKey,
       createdAt: bill.createdAt || bill.created_at || bill.createdAtTimestamp || bill.updatedAt || bill.updated_at || bill.statementDate || bill.date || new Date().toISOString(),
@@ -82,17 +157,19 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box1a: patientId,
       box2: patientName,
       box3Dob: { mm, dd, yy },
-      box3Sex: patientCase?.patientSex || patientCase?.patient?.sex ,
+      box3Sex: patientSex,
       box4: patientName,
-      box5Address: patientCase?.patientAddress ,
-      box5City: 'HOUSTON',
-      box5State: 'TX',
-      box5Zip: '77036',
+      box5Address: patientStreet,
+      box5City: patientCity,
+      box5State: patientState,
+      box5Zip: patientZip,
+      box5Phone: patientPhone,
       box6Relation: 'Self',
-      box7Address: patientCase?.patientAddress ,
-      box7City: 'HOUSTON',
-      box7State: 'TX',
-      box7Zip: '77036',
+      box7Address: patientStreet,
+      box7City: patientCity,
+      box7State: patientState,
+      box7Zip: patientZip,
+      box7Phone: patientPhone,
       box8Status: 'Single',
       box9a: '',
       box9bDob: { mm: '', dd: '', yy: '' },
@@ -100,24 +177,24 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box9c: '',
       box9d: '',
       box10AutoAccident: 'YES',
-      box10State: 'TX',
+      box10State: bill.accidentState || patientCase?.accidentState || patientState,
       box10d: '',
       box11: '',
       box11InsuredDob: { mm, dd, yy },
-      box11InsuredSex: patientCase?.patientSex || patientCase?.patient?.sex ,
+      box11InsuredSex: patientSex,
       box11b: '',
       box11c: '',
       box11d: '',
       box12Signature: 'SIGNATURE ON FILE',
       box12Date: dosKey,
       box13Signature: 'SIGNATURE ON FILE',
-      box14IllnessDate: { mm: '12', dd: '27', yy: '2025' },
+      box14IllnessDate: { mm: illMm, dd: illDd, yy: illYy },
       box15Date: { mm: '', dd: '', yy: '' },
       box16From: { mm: '', dd: '', yy: '' },
       box16To: { mm: '', dd: '', yy: '' },
-      box17ReferringName: "",
-      box17a: '',
-      box17Npi: '1234567890',
+      box17ReferringName: referringName,
+      box17a: referringName,
+      box17Npi: referringNpi,
       box18From: { mm: '', dd: '', yy: '' },
       box18To: { mm: '', dd: '', yy: '' },
       box19: '',
@@ -126,18 +203,20 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box22Ref: '',
       box23: '',
       box24Lines,
-      box25TaxId: providerConfig?.identifiers?.taxId ,
-      box25Type: 'EIN',
+      box25TaxId: providerTaxId,
+      box25Type: providerSsnOrEin,
+      box26Account: patientId,
       box27AcceptAssignment: 'YES',
-      box28TotalCharge: (totalCharge || 4000).toFixed(2),
-      box29AmountPaid: '0.00',
-      box30BalanceDue: (totalCharge || 4000).toFixed(2),
-      box31ProviderSignature: "",
+      box28TotalCharge: claimTotalCharge.toFixed(2),
+      box29AmountPaid: claimAmountPaid.toFixed(2),
+      box30BalanceDue: claimBalanceDue.toFixed(2),
+      box31ProviderSignature: renderingName,
       box31Date: dosKey,
-      box32Facility: `${bill.providerName }\n10101 HARWIN DR, SUITE 774\nHOUSTON, TX 77036`,
-      box33BillingProvider: `${bill.providerName }\n10101 HARWIN DR, SUITE 774\nHOUSTON, TX 77036`,
-      box33Phone: '(713) 555-0100',
-      carrierHeader: patientCase?.attorneyName ? `${patientCase.attorneyName}\n${patientCase.attorneyAddress }` : `PATIENT SELF-PAY / DIRECT BILLING\n10101 Harwin Dr., Houston`,
+      box32Facility: sfAddress ? `${sfName}\n${sfAddress}` : sfName,
+      box33BillingProvider: bpAddress ? `${bpName}\n${bpAddress}` : bpName,
+      box33Phone: bpPhone,
+      box33Npi: providerNpi,
+      carrierHeader: carrierHeader,
     };
   });
 };
@@ -147,11 +226,11 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
  */
 export const mapAppointmentToCmsClaim = (appointment) => {
   if (!appointment) return null;
-  const dos = appointment.date ;
+  const dos = appointment.date || '';
   const serviceLines = appointment.serviceLines || [
     {
-      cptCode: appointment.serviceCode ,
-      description: appointment.serviceName ,
+      cptCode: appointment.serviceCode || '',
+      description: appointment.serviceName || '',
       modifier1: '25',
       modifier2: '',
       modifier3: '',
@@ -177,10 +256,10 @@ export const mapAppointmentToCmsClaim = (appointment) => {
       mod2: line.modifier2 || line.mod2 || '',
       mod3: line.modifier3 || line.mod3 || '',
       mod4: line.modifier4 || line.mod4 || '',
-      diagPtr: line.diagPointer || line.diagPtr ,
+      diagPtr: line.diagPointer || line.diagPtr || '',
       charge: fee.toFixed(2),
       units: String(line.units || 1),
-      renderingId: appointment.providerNpi 
+      renderingId: appointment.providerNpi || ''
     };
   });
 
@@ -191,20 +270,20 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     status: 'Ready to Bill',
     formVersion: '02/12',
     box1: 'OTHER',
-    box1a: appointment.patientId ,
-    box2: appointment.patientName ,
-    box3Dob: { mm: '05', dd: '15', yy: '1985' },
-    box3Sex: 'M',
-    box4: appointment.patientName ,
-    box5Address: '10101 Harwin Dr. Suite 774',
-    box5City: 'HOUSTON',
-    box5State: 'TX',
-    box5Zip: '77036',
+    box1a: appointment.patientId || '',
+    box2: appointment.patientName || '',
+    box3Dob: { mm: '', dd: '', yy: '' },
+    box3Sex: '',
+    box4: appointment.patientName || '',
+    box5Address: '',
+    box5City: '',
+    box5State: '',
+    box5Zip: '',
     box6Relation: 'Self',
-    box7Address: '10101 Harwin Dr. Suite 774',
-    box7City: 'HOUSTON',
-    box7State: 'TX',
-    box7Zip: '77036',
+    box7Address: '',
+    box7City: '',
+    box7State: '',
+    box7Zip: '',
     box8Status: 'Single',
     box9a: '',
     box9bDob: { mm: '', dd: '', yy: '' },
@@ -212,24 +291,24 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     box9c: '',
     box9d: '',
     box10AutoAccident: 'YES',
-    box10State: 'TX',
+    box10State: '',
     box10d: '',
     box11: '',
-    box11InsuredDob: { mm: '05', dd: '15', yy: '1985' },
-    box11InsuredSex: 'M',
+    box11InsuredDob: { mm: '', dd: '', yy: '' },
+    box11InsuredSex: '',
     box11b: '',
     box11c: '',
     box11d: '',
     box12Signature: 'SIGNATURE ON FILE',
     box12Date: dos,
     box13Signature: 'SIGNATURE ON FILE',
-    box14IllnessDate: { mm: '12', dd: '27', yy: '2025' },
+    box14IllnessDate: { mm: '', dd: '', yy: '' },
     box15Date: { mm: '', dd: '', yy: '' },
     box16From: { mm: '', dd: '', yy: '' },
     box16To: { mm: '', dd: '', yy: '' },
-    box17ReferringName: appointment.providerName ,
-    box17a: '',
-    box17Npi: appointment.providerNpi ,
+    box17ReferringName: appointment.providerName || '',
+    box17a: appointment.providerName || '',
+    box17Npi: appointment.providerNpi || '',
     box18From: { mm: '', dd: '', yy: '' },
     box18To: { mm: '', dd: '', yy: '' },
     box19: '',
@@ -238,18 +317,18 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     box22Ref: '',
     box23: '',
     box24Lines,
-    box25TaxId: '75-1234567',
+    box25TaxId: '',
     box25Type: 'EIN',
     box27AcceptAssignment: 'YES',
     box28TotalCharge: totalCharge.toFixed(2),
     box29AmountPaid: '0.00',
     box30BalanceDue: totalCharge.toFixed(2),
-    box31ProviderSignature: appointment.providerName ,
+    box31ProviderSignature: appointment.providerName || '',
     box31Date: dos,
-    box32Facility: `JOSMIC Wellness Center\n10101 HARWIN DR, SUITE 774\nHOUSTON, TX 77036`,
-    box33BillingProvider: `JOSMIC Wellness Center\n10101 HARWIN DR, SUITE 774\nHOUSTON, TX 77036`,
-    box33Phone: '(713) 555-0100',
-    carrierHeader: 'OJ LAW FIRM & ATTORNEY LIEN\n11711 BEDFORD ST. SUITE 01\nHOUSTON, TX 77031'
+    box32Facility: '',
+    box33BillingProvider: '',
+    box33Phone: '',
+    box33Npi: '',
+    carrierHeader: ''
   };
 };
-

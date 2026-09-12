@@ -25,18 +25,19 @@ export const INITIAL_PROVIDER_CONFIGS = {
     },
     identifiers: {
       taxId: '993723387',
-      npi: 'R7637',
+      npi: '1932847560',
       ssnOrEin: 'EIN'
     },
     renderingProvider: {
       name: 'Adeoye, Segun',
       credentials: 'DC / MD',
-      npi: 'R7637'
+      providerId: 'R7637',
+      npi: '1932847560'
     },
     serviceFacility: {
       name: 'JOSMIC Wellness Center',
       address: '10101 Harwin Dr, Suite 320, Houston, TX 77036',
-      npi: 'R7637'
+      npi: '1932847560'
     },
     billingProvider: {
       name: 'JOSMIC Wellness Center',
@@ -96,18 +97,19 @@ export const INITIAL_PROVIDER_CONFIGS = {
     },
     identifiers: {
       taxId: '883049745',
-      npi: 'R7637',
+      npi: '1932847561',
       ssnOrEin: 'EIN'
     },
     renderingProvider: {
       name: 'Adeoye, Segun',
       credentials: 'DC',
-      npi: 'R7637'
+      providerId: 'R7638',
+      npi: '1932847561'
     },
     serviceFacility: {
       name: "DAV'S Anatomy",
       address: '10101 Harwin Dr, Suite 320, Houston, TX 77036',
-      npi: 'R7637'
+      npi: '1932847561'
     },
     billingProvider: {
       name: "DAV'S Anatomy",
@@ -168,18 +170,19 @@ export const INITIAL_PROVIDER_CONFIGS = {
     },
     identifiers: {
       taxId: '993723387',
-      npi: 'R7637',
+      npi: '1932847562',
       ssnOrEin: 'EIN'
     },
     renderingProvider: {
       name: 'Adeoye, Segun',
       credentials: 'DC / MD',
-      npi: 'R7637'
+      providerId: 'R7639',
+      npi: '1932847562'
     },
     serviceFacility: {
       name: 'ANIK Laser Therapy',
       address: '10101 Harwin Dr, Suite 274, Houston, TX 77036',
-      npi: 'R7637'
+      npi: '1932847562'
     },
     billingProvider: {
       name: 'ANIK Laser Therapy',
@@ -235,18 +238,19 @@ export const INITIAL_PROVIDER_CONFIGS = {
     },
     identifiers: {
       taxId: '748291039',
-      npi: '1982736450',
+      npi: '1487965213',
       ssnOrEin: 'EIN'
     },
     renderingProvider: {
       name: 'Miller, Jordan',
       credentials: 'LPC / LMFT',
-      npi: '1982736450'
+      providerId: 'R7640',
+      npi: '1487965213'
     },
     serviceFacility: {
       name: 'Hope Behavioral Health',
       address: '10101 Harwin Dr, Suite 110, Houston, TX 77036',
-      npi: '1982736450'
+      npi: '1487965213'
     },
     billingProvider: {
       name: 'Hope Behavioral Health LLC',
@@ -303,18 +307,19 @@ export const INITIAL_PROVIDER_CONFIGS = {
     },
     identifiers: {
       taxId: '123456789',
-      npi: '1982736451',
+      npi: '1982347563',
       ssnOrEin: 'EIN'
     },
     renderingProvider: {
       name: 'Smith, John',
       credentials: 'MD',
-      npi: '1982736451'
+      providerId: 'R7641',
+      npi: '1982347563'
     },
     serviceFacility: {
       name: 'Trigger Point Injection Clinic',
       address: '10101 Harwin Dr, Suite 200, Houston, TX 77036',
-      npi: '1982736451'
+      npi: '1982347563'
     },
     billingProvider: {
       name: 'TPI Specialist LLC',
@@ -371,18 +376,19 @@ export const INITIAL_PROVIDER_CONFIGS = {
     },
     identifiers: {
       taxId: '987654321',
-      npi: '1982736452',
+      npi: '1789234560',
       ssnOrEin: 'EIN'
     },
     renderingProvider: {
       name: 'Davis, Emily',
       credentials: 'PT, DPT',
-      npi: '1982736452'
+      providerId: 'R7642',
+      npi: '1789234560'
     },
     serviceFacility: {
       name: 'TECAR Therapy Clinic',
       address: '10101 Harwin Dr, Suite 210, Houston, TX 77036',
-      npi: '1982736452'
+      npi: '1789234560'
     },
     billingProvider: {
       name: 'TECAR Advanced Physio LLC',

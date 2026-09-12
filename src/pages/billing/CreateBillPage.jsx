@@ -18,7 +18,9 @@ const SectionHead = ({ Icon, title }) => (
 );
 
 export const CreateBillPage = () => {
-  const [providerId, setProviderId] = useState('prov-josmic');
+  const { addToast, activeProviderFilter } = useUIStore();
+  const initialProvider = (activeProviderFilter && activeProviderFilter !== 'ALL') ? activeProviderFilter : 'prov-davs';
+  const [providerId, setProviderId] = useState(initialProvider);
   const [statementNumber, setStatementNumber] = useState(`STMT-${Math.floor(100000 + Math.random() * 900000)}`);
   const [serviceLines, setServiceLines] = useState([
     createDefaultServiceLine(1, '99204', 'Initial Consultation - Post-MVA Pain Management', 450.00),
@@ -52,7 +54,6 @@ export const CreateBillPage = () => {
     billNotes: 'Statement to be submitted to attorney lien. Await settlement before payment processing.',
   });
   const [isLoading, setIsLoading] = useState(false);
-  const { addToast } = useUIStore();
   const navigate = useNavigate();
 
   const set = (field, val) => setForm(p => ({ ...p, [field]: val }));
