@@ -62,8 +62,8 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   const renderingProviderId = renderingProvider.providerId || renderingProvider.id || renderingProvider.renderingId || bill.renderingProviderId || '';
 
   // --- Referring provider from Case ---
-  const referringName = bill.referringProviderName || patientCase?.referringProviderName || '';
-  const referringNpi = bill.referringProviderNpi || patientCase?.referringProviderNpi || '';
+  const referringName = bill.referringProviderName || patientCase?.referringProviderName || bill.providerName || providerConfig?.name || '';
+  const referringNpi = bill.referringProviderNpi || patientCase?.referringProviderNpi || providerNpi || '';
 
   // --- Service Facility from provider DB ---
   const serviceFacility = bill.serviceFacility || providerConfig?.serviceFacility || {};
