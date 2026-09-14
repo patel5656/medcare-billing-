@@ -516,6 +516,20 @@ const PostAdjustmentModal = ({ onClose, onSuccess }) => {
       return;
     }
 
+    const maxBalance = selectedStatement?.totals?.balanceDue !== undefined 
+      ? Number(selectedStatement.totals.balanceDue) 
+      : 0;
+
+    if (maxBalance <= 0) {
+      addToast('This statement has a $0 remaining balance. No further adjustments can be applied.', 'warning');
+      return;
+    }
+
+    if (Number(form.amount) > maxBalance) {
+      addToast(`Adjustment amount ($${Number(form.amount).toFixed(2)}) cannot exceed remaining balance ($${maxBalance.toFixed(2)}).`, 'warning');
+      return;
+    }
+
     setSaving(true);
     try {
       await apiBillingService.postAdjustment(form.linkedBillId, {
@@ -528,7 +542,7 @@ const PostAdjustmentModal = ({ onClose, onSuccess }) => {
       onClose();
     } catch (err) {
       console.error('Error posting adjustment:', err);
-      addToast('Failed to apply adjustment to database.', 'error');
+      addToast(err?.message || 'Failed to apply adjustment to database.', 'error');
     } finally {
       setSaving(false);
     }

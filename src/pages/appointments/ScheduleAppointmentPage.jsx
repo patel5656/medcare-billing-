@@ -10,7 +10,7 @@ import { useUIStore } from '../../store/uiStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, Save, Bell, User, MapPin, FileText, Tag } from 'lucide-react';
 
-import { isClinicClosed } from '../../constants/usHolidays';
+import { isClinicClosed, getTodayDateStr, getNextBusinessDay } from '../../constants/usHolidays';
 import { useAuthStore } from '../../store/authStore';
 import { apiProviderService } from '../../services/api/apiProviderService';
 
@@ -39,13 +39,7 @@ export const ScheduleAppointmentPage = () => {
       .catch(console.error);
   }, []);
 
-  const getTodayDateString = () => {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  };
+  const getTodayDateString = getTodayDateStr;
 
   const getInitialServiceLinesForProvider = (providerKey, visitType = 'INITIAL') => {
     const config = INITIAL_PROVIDER_CONFIGS[providerKey];
@@ -104,7 +98,7 @@ export const ScheduleAppointmentPage = () => {
       appointmentType: 'Pain Consult & Evaluation',
       cptCode: '99204, 97039',
       reasonForVisit: '',
-      date: getTodayDateString(),
+      date: getNextBusinessDay(),
       startTime: '09:00 AM',
       endTime: '10:00 AM',
       duration: '60',
@@ -175,6 +169,10 @@ export const ScheduleAppointmentPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const closedCheck = isClinicClosed(formData.date);
+    if (closedCheck.isPast) {
+      addToast('Booking is disabled for past dates. Please select today or a future working day.', 'error');
+      return;
+    }
     if (closedCheck.isClosed && !formData.holidayOverride) {
       addToast(`${closedCheck.reason}. Enable Admin Override to force book.`, 'warning');
       return;
@@ -355,16 +353,29 @@ export const ScheduleAppointmentPage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className={labelCls}>Visit Date *</label>
-              <input type="date" required className={inputCls} value={formData.date} onChange={e => set('date', e.target.value)} />
+              <input type="date" min={getTodayDateStr()} required className={inputCls} value={formData.date} onChange={e => set('date', e.target.value)} />
             </div>
             <div><label className={labelCls}>Start Time *</label><input type="text" required className={inputCls} value={formData.startTime} onChange={e => set('startTime', e.target.value)} /></div>
             <div><label className={labelCls}>End Time *</label><input type="text" required className={inputCls} value={formData.endTime} onChange={e => set('endTime', e.target.value)} /></div>
           </div>
 
-          {/* Weekend / Holiday Closure Check */}
+          {/* Weekend / Holiday / Past Date Closure Check */}
           {(() => {
             const closedCheck = isClinicClosed(formData.date);
             if (closedCheck.isClosed) {
+              if (closedCheck.isPast) {
+                return (
+                  <div className="p-3.5 bg-red-50 border border-red-300 rounded-xl text-red-950 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-red-900">
+                      <span className="text-base">🚫</span>
+                      <span>Past Date - Booking Disabled</span>
+                    </div>
+                    <p className="text-[11px] text-red-800 leading-relaxed">
+                      Appointments cannot be created for past dates (yesterday or earlier). Please select today or a future valid working day.
+                    </p>
+                  </div>
+                );
+              }
               return (
                 <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-950 space-y-2">
                   <div className="flex items-center gap-2 text-xs font-bold text-amber-900">

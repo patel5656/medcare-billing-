@@ -107,6 +107,13 @@ export const isUSFederalHoliday = (dateStr) => {
 };
 
 // Check if a specific YYYY-MM-DD date string falls on a weekend (Saturday or Sunday)
+export const getTodayDateStr = () => formatDateStr(new Date());
+
+export const isPastDate = (dateStr) => {
+  if (!dateStr) return false;
+  return dateStr < getTodayDateStr();
+};
+
 export const isWeekend = (dateStr) => {
   if (!dateStr) return { isWeekend: false, dayName: '' };
   const d = new Date(dateStr + 'T00:00:00');
@@ -116,14 +123,25 @@ export const isWeekend = (dateStr) => {
   return { isWeekend: false, dayName: '' };
 };
 
-// Check if clinic is closed on dateStr (either Weekend or US Federal Holiday)
+// Check if clinic is closed on dateStr (Past date, Weekend, or US Federal Holiday)
 export const isClinicClosed = (dateStr) => {
   if (!dateStr) return { isClosed: false, reason: '' };
+
+  if (isPastDate(dateStr)) {
+    return {
+      isClosed: true,
+      isPast: true,
+      isWeekend: false,
+      isHoliday: false,
+      reason: 'Past Date - Appointments cannot be scheduled for past dates'
+    };
+  }
 
   const weekendCheck = isWeekend(dateStr);
   if (weekendCheck.isWeekend) {
     return {
       isClosed: true,
+      isPast: false,
       isWeekend: true,
       isHoliday: false,
       reason: `Weekend (${weekendCheck.dayName}) - Clinic is closed`
@@ -134,6 +152,7 @@ export const isClinicClosed = (dateStr) => {
   if (holidayCheck.isHoliday) {
     return {
       isClosed: true,
+      isPast: false,
       isWeekend: false,
       isHoliday: true,
       reason: `US Federal Holiday (${holidayCheck.name}) - Clinic is closed`,
@@ -141,14 +160,16 @@ export const isClinicClosed = (dateStr) => {
     };
   }
 
-  return { isClosed: false, isWeekend: false, isHoliday: false, reason: '' };
+  return { isClosed: false, isPast: false, isWeekend: false, isHoliday: false, reason: '' };
 };
 
 // Get the next valid open clinic business day (skips Sat, Sun, Holidays)
 export const getNextBusinessDay = (startDateStr) => {
   const current = startDateStr ? new Date(startDateStr + 'T00:00:00') : new Date();
   let candidate = new Date(current);
-  candidate.setDate(candidate.getDate() + 1);
+  if (startDateStr) {
+    candidate.setDate(candidate.getDate() + 1);
+  }
 
   for (let i = 0; i < 14; i++) {
     const formatted = formatDateStr(candidate);

@@ -7,7 +7,7 @@ import { apiCaseService } from '../../services/api/apiCaseService';
 import { INITIAL_PROVIDER_CONFIGS } from '../../constants/providerConfigs';
 import { createDefaultServiceLine } from '../../constants/servicesCatalog';
 import { MultiLineCptTable } from '../common/MultiLineCptTable';
-import { isClinicClosed } from '../../constants/usHolidays';
+import { isClinicClosed, getTodayDateStr, getNextBusinessDay } from '../../constants/usHolidays';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { Calendar, Clock, User, Save, AlertCircle, Phone, Stethoscope } from 'lucide-react';
@@ -45,7 +45,7 @@ export const ScheduleAppointmentModal = ({
       providerId: defaultProviderId,
       visitType: 'INITIAL',
       appointmentType: 'Pain Consult',
-      date: new Date().toISOString().split('T')[0],
+      date: getNextBusinessDay(),
       startTime: '09:00 AM',
       endTime: '10:00 AM',
       duration: '60',
@@ -101,6 +101,10 @@ export const ScheduleAppointmentModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (closedCheck.isPast) {
+      addToast('Booking is disabled for past dates. Please select today or a future working day.', 'error');
+      return;
+    }
     if (closedCheck.isClosed && !formData.holidayOverride) {
       addToast(`${closedCheck.reason}. Enable Admin Override to force book.`, 'warning');
       return;
@@ -293,6 +297,7 @@ export const ScheduleAppointmentModal = ({
             <label className={labelCls}>Visit Date *</label>
             <input
               type="date"
+              min={getTodayDateStr()}
               required
               className={inputCls}
               value={formData.date}
@@ -324,28 +329,40 @@ export const ScheduleAppointmentModal = ({
           />
         </div>
 
-        {/* Weekend / Holiday Alert Banner */}
+        {/* Weekend / Holiday / Past Date Alert Banner */}
         {closedCheck.isClosed && (
-          <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-950 space-y-1.5 text-xs">
-            <div className="flex items-center gap-2 font-bold text-amber-900">
-              <span>{closedCheck.isWeekend ? '📅' : '🇺🇸'}</span>
-              <span>Clinic Closed: {closedCheck.reason}</span>
+          closedCheck.isPast ? (
+            <div className="p-3.5 bg-red-50 border border-red-300 rounded-xl text-red-950 space-y-1.5 text-xs">
+              <div className="flex items-center gap-2 font-bold text-red-900">
+                <span>🚫</span>
+                <span>Past Date - Booking Disabled</span>
+              </div>
+              <p className="text-[11px] text-red-800">
+                Appointments cannot be created for past dates (yesterday or earlier). Please select today or a future valid working day.
+              </p>
             </div>
-            <p className="text-[11px] text-amber-800">
-              {closedCheck.isWeekend
-                ? 'Routine clinic visits are not scheduled on Saturdays and Sundays. Please select a Monday-Friday date or toggle Admin Override.'
-                : 'Routine appointments are suspended for this US Federal Holiday.'}
-            </p>
-            <label className="flex items-center gap-2 cursor-pointer font-bold text-amber-950 pt-1">
-              <input
-                type="checkbox"
-                checked={formData.holidayOverride}
-                onChange={e => set('holidayOverride', e.target.checked)}
-                className="rounded text-amber-600 focus:ring-amber-500"
-              />
-              Admin Override: Authorize Weekend / Emergency Visit
-            </label>
-          </div>
+          ) : (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-950 space-y-1.5 text-xs">
+              <div className="flex items-center gap-2 font-bold text-amber-900">
+                <span>{closedCheck.isWeekend ? '📅' : '🇺🇸'}</span>
+                <span>Clinic Closed: {closedCheck.reason}</span>
+              </div>
+              <p className="text-[11px] text-amber-800">
+                {closedCheck.isWeekend
+                  ? 'Routine clinic visits are not scheduled on Saturdays and Sundays. Please select a Monday-Friday date or toggle Admin Override.'
+                  : 'Routine appointments are suspended for this US Federal Holiday.'}
+              </p>
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-amber-950 pt-1">
+                <input
+                  type="checkbox"
+                  checked={formData.holidayOverride}
+                  onChange={e => set('holidayOverride', e.target.checked)}
+                  className="rounded text-amber-600 focus:ring-amber-500"
+                />
+                Admin Override: Authorize Weekend / Emergency Visit
+              </label>
+            </div>
+          )
         )}
 
         <div>
