@@ -2,14 +2,30 @@
 import React from 'react';
 
 export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
-  const val = (v) => blankMode ? '' : v;
+  const patientNameVal = blankMode || !packetData ? '' : (packetData.patientName || '');
   
   const serviceDates = serviceLines && serviceLines.length > 0
     ? [...new Set(serviceLines.map(l => l.dos || l.dateOfService).filter(Boolean))]
     : [];
-  const activeDos = blankMode ? '' : (dos || (serviceDates.length > 0 ? serviceDates[0] : (packetData?.initialDate || '01/20/2026')));
-  const patientNameVal = blankMode ? '' : (packetData ? packetData.patientName : 'SAMPLE PATIENT');
-  
+  const activeDos = blankMode ? '' : (dos || (serviceDates.length > 0 ? serviceDates[0] : (packetData?.procedureDos || packetData?.tecarDos || packetData?.serviceDate || '')));
+
+  const signatureDateVal = blankMode || !packetData ? '' : (packetData.signatureDate || packetData.signedAt || packetData.dischargeDate || '');
+  const providerNameVal = blankMode || !packetData ? '' : (packetData.operatingProviderName || packetData.referringProviderName || packetData.providerName || packetData.attendingProviderName || '');
+
+  const diagnosisText = blankMode || !packetData ? '' : (packetData.diagnosisText || (packetData.diagnosisCodes && packetData.diagnosisCodes.length > 0 ? packetData.diagnosisCodes.join(', ') : ''));
+  const anatomicalRegionText = blankMode || !packetData ? '' : (packetData.anatomicalRegion || packetData.treatmentArea || packetData.bodyPart || '');
+
+  const cetElectrodeSize = blankMode || !packetData ? '' : (packetData.cetElectrodeSize || packetData.cetSize || '');
+  const cetPower = blankMode || !packetData ? '' : (packetData.cetPower || packetData.cetIntensity || '');
+  const cetDuration = blankMode || !packetData ? '' : (packetData.cetDuration || '');
+
+  const retElectrodeSize = blankMode || !packetData ? '' : (packetData.retElectrodeSize || packetData.retSize || '');
+  const retPower = blankMode || !packetData ? '' : (packetData.retPower || packetData.retIntensity || '');
+  const retDuration = blankMode || !packetData ? '' : (packetData.retDuration || '');
+
+  const totalTimeText = blankMode || !packetData ? '' : (packetData.totalTreatmentTime || packetData.totalTime || '');
+  const clinicalNotesText = blankMode || !packetData ? '' : (packetData.clinicalNotes || packetData.patientResponse || packetData.procedureDescription || packetData.technique || '');
+
   return (
     <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '48px 56px' }}>
       {/* Header */}
@@ -32,19 +48,19 @@ export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = fal
 
       {/* Pre-Op */}
       <div className="mb-6">
-        <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">Treatment Area & Diagnosis</h2>
+        <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">Treatment Area &amp; Diagnosis</h2>
         <div className="grid grid-cols-2 gap-4 text-xs font-mono px-2">
           <div>
             <span className="font-bold block mb-1">Diagnosis (ICD-10):</span>
-            <p className="text-slate-700 border border-slate-300 p-2 min-h-[40px] bg-slate-50">
-              {val('Low Back Pain (M54.50)')}
-            </p>
+            <div className="text-slate-700 border border-slate-300 p-2 min-h-[40px] bg-slate-50">
+              {diagnosisText}
+            </div>
           </div>
           <div>
             <span className="font-bold block mb-1">Anatomical Region:</span>
-            <p className="text-slate-700 border border-slate-300 p-2 min-h-[40px] bg-slate-50">
-              {val('Lumbar Spine & Paraspinal Musculature')}
-            </p>
+            <div className="text-slate-700 border border-slate-300 p-2 min-h-[40px] bg-slate-50">
+              {anatomicalRegionText}
+            </div>
           </div>
         </div>
       </div>
@@ -66,19 +82,19 @@ export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = fal
             <tbody>
               <tr>
                 <td className="border border-slate-300 p-2 font-bold">Capacitive (CET)</td>
-                <td className="border border-slate-300 p-2">{val('60 mm')}</td>
-                <td className="border border-slate-300 p-2">{val('35% - Athermal / Mild thermal')}</td>
-                <td className="border border-slate-300 p-2">{val('10 mins')}</td>
+                <td className="border border-slate-300 p-2">{cetElectrodeSize}&nbsp;</td>
+                <td className="border border-slate-300 p-2">{cetPower}&nbsp;</td>
+                <td className="border border-slate-300 p-2">{cetDuration}&nbsp;</td>
               </tr>
               <tr>
                 <td className="border border-slate-300 p-2 font-bold">Resistive (RET)</td>
-                <td className="border border-slate-300 p-2">{val('40 mm')}</td>
-                <td className="border border-slate-300 p-2">{val('50% - Moderate thermal')}</td>
-                <td className="border border-slate-300 p-2">{val('15 mins')}</td>
+                <td className="border border-slate-300 p-2">{retElectrodeSize}&nbsp;</td>
+                <td className="border border-slate-300 p-2">{retPower}&nbsp;</td>
+                <td className="border border-slate-300 p-2">{retDuration}&nbsp;</td>
               </tr>
               <tr className="bg-slate-50 font-bold">
                 <td className="border border-slate-300 p-2 text-right" colSpan="3">Total Treatment Time:</td>
-                <td className="border border-slate-300 p-2">{val('25 mins')}</td>
+                <td className="border border-slate-300 p-2">{totalTimeText}&nbsp;</td>
               </tr>
             </tbody>
           </table>
@@ -87,22 +103,22 @@ export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = fal
 
       {/* Technique */}
       <div className="mb-6">
-        <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">Clinical Notes & Patient Response</h2>
+        <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">Clinical Notes &amp; Patient Response</h2>
         <div className="text-xs font-mono px-2">
-          <p className="text-slate-700 border border-slate-300 p-2 min-h-[100px] bg-slate-50 leading-relaxed">
-            {val('Return electrode placed on the patient\'s abdomen. Conductive cream applied to the lumbar area. Capacitive mode was used initially to address superficial vascularization and muscle relaxation. Followed by Resistive mode targeting deep ligamentous and fascial structures of the lumbar spine. Active mobilization was performed concurrently during the Resistive phase. Patient reported a pleasant warming sensation and noted immediate improvement in lumbar range of motion post-treatment. No adverse skin reactions noted.')}
-          </p>
+          <div className="text-slate-700 border border-slate-300 p-2 min-h-[100px] bg-slate-50 leading-relaxed">
+            {clinicalNotesText}
+          </div>
         </div>
       </div>
 
       {/* Footer */}
       <div className="absolute bottom-12 left-14 right-14 border-t border-slate-300 pt-4 text-xs font-mono flex justify-between">
         <div>
-          <div className="border-b border-slate-400 pb-1 mb-1 w-48">&nbsp;</div>
+          <div className="border-b border-slate-400 pb-1 mb-1 w-48 font-bold">{providerNameVal}&nbsp;</div>
           <p className="text-slate-600">Operating Provider Signature</p>
         </div>
         <div>
-          <div className="border-b border-slate-400 pb-1 mb-1 w-32">{val(activeDos)}&nbsp;</div>
+          <div className="border-b border-slate-400 pb-1 mb-1 w-32">{signatureDateVal}&nbsp;</div>
           <p className="text-slate-600">Date</p>
         </div>
       </div>

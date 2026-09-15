@@ -144,7 +144,7 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   const renderPageComponent = (pageDef) => {
     const key = pageDef.componentKey;
     if (key === 'PrintableBillingStatement') {
-      return <PrintableBillingStatement bill={blankPracticeMode ? null : bill} pageIndex={pageDef.pageIndex || 0} />;
+      return <PrintableBillingStatement bill={blankPracticeMode ? null : bill} pageIndex={pageDef.pageIndex || 0} selectedCase={selectedCase} />;
     }
     if (key === 'CmsRedGridForm') {
       const claim = cmsClaims[pageDef.claimIndex || 0] || cmsClaims[0] || null;
@@ -165,7 +165,7 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     if (key === 'DavFinalNarrative') return <DavFinalNarrative reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={selectedCase} />;
 
     // JOSMIC Components
-    if (key === 'JosmicCoverPage') return <JosmicCoverPage blankMode={blankPracticeMode} packetData={selectedCase} />;
+    if (key === 'JosmicCoverPage') return <JosmicCoverPage blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
     if (key === 'JosmicPainManagementReport') return <JosmicPainManagementReport reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={selectedCase} />;
 
     // Counselor Components
@@ -173,12 +173,12 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     if (key === 'CounselorAssessmentForm') return <CounselorAssessmentForm blankMode={blankPracticeMode} packetData={selectedCase} />;
 
     // TPI Components
-    if (key === 'TpiCoverPage') return <TpiCoverPage blankMode={blankPracticeMode} packetData={selectedCase} />;
+    if (key === 'TpiCoverPage') return <TpiCoverPage blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
     if (key === 'TpiAssessmentForm') return <TpiAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
     if (key === 'TpiProcedureForm') return <TpiProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
 
     // TECAR Components
-    if (key === 'TecarCoverPage') return <TecarCoverPage blankMode={blankPracticeMode} packetData={selectedCase} />;
+    if (key === 'TecarCoverPage') return <TecarCoverPage blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
     if (key === 'TecarAssessmentForm') return <TecarAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
     if (key === 'TecarProcedureForm') return <TecarProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
 
