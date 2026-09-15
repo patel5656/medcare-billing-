@@ -115,6 +115,7 @@ const INITIAL_FORM_DATA = {
     state: 'TX',
     zipCode: ''
   },
+  location: '',
   emergencyContactName: '',
   emergencyContactRelation: '',
   emergencyContactPhone: '',
@@ -203,6 +204,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
             state: patientToEdit.address?.state || patientToEdit.state || 'TX',
             zipCode: patientToEdit.address?.zipCode || patientToEdit.zipCode || ''
           },
+          location: patientToEdit.location || '',
           emergencyContactName: patientToEdit.emergencyContactName || '',
           emergencyContactRelation: patientToEdit.emergencyContactRelation || '',
           emergencyContactPhone: patientToEdit.emergencyContactPhone || '',
@@ -845,6 +847,18 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     value={formData.address.zipCode}
                     onChange={e => setAddr('zipCode', e.target.value.replace(/\D/g, '').slice(0, 5))}
                     placeholder="77036"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className={labelCls}>Location Info</label>
+                  <input
+                    className={inputCls()}
+                    value={formData.location}
+                    onChange={e => set('location', e.target.value)}
+                    placeholder="e.g. Near highway, Building B, etc."
                   />
                 </div>
               </div>
