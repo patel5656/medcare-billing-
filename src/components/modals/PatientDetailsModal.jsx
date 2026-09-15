@@ -174,7 +174,7 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
                 <div className="space-y-1 text-slate-700">
                   <div className="flex justify-between"><span>Insurance Carrier:</span><strong className="text-slate-900">{patient.primaryInsuranceCompany || 'State Farm Auto Insurance'}</strong></div>
                   <div className="flex justify-between"><span>Policy Number:</span><strong className="text-slate-900">{patient.primaryPolicyNumber || 'POL-TX-99281'}</strong></div>
-                  <div className="flex justify-between"><span>Claim / Group #:</span><strong className="text-slate-900">{patient.primaryGroupNumber || 'CLM-88192'}</strong></div>
+                  <div className="flex justify-between"><span>Group Number:</span><strong className="text-slate-900">{patient.primaryGroupNumber || ''}</strong></div>
                 </div>
               </div>
             </div>

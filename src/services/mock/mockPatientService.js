@@ -94,6 +94,8 @@ export const mockPatientService = {
         },
         communicationPref: patientData.communicationPref || 'SMS',
         consentStatus: patientData.consentStatus || 'SIGNED',
+        referringProvider: patientData.referringProvider || patientData.referringProviderName || '',
+        referringProviderNpi: patientData.referringProviderNpi || '',
         assignedProviderIds: patientData.assignedProviderIds || ['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor'],
         status: 'ACTIVE',
         createdAt: new Date().toISOString().split('T')[0]

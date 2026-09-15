@@ -222,7 +222,7 @@ export const PatientProfilePage = () => {
               <div className="space-y-2 text-xs text-slate-600">
                 <div className="flex justify-between"><span>Insurance Carrier:</span><strong className="text-slate-900">{patient.primaryInsuranceCompany || 'Geico Auto Insurance'}</strong></div>
                 <div className="flex justify-between"><span>Policy / Claim Number:</span><strong className="text-slate-900 font-mono">{patient.primaryPolicyNumber || 'POL-TX-9921'}</strong></div>
-                <div className="flex justify-between"><span>Group Number:</span><strong className="text-slate-900">{patient.primaryGroupNumber || 'GRP-88210'}</strong></div>
+                <div className="flex justify-between"><span>Group Number:</span><strong className="text-slate-900">{patient.primaryGroupNumber || ''}</strong></div>
                 <div className="flex justify-between"><span>Member ID:</span><strong className="text-slate-900">{patient.primaryInsuranceMemberId || 'MEM-2026-991'}</strong></div>
                 <div className="flex justify-between"><span>Adjuster Contact:</span><strong className="text-slate-900">{patient.adjusterName || 'Marcus Vance'} ({patient.adjusterPhone || '800-555-0199'})</strong></div>
               </div>
