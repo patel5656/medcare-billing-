@@ -1,4 +1,4 @@
-﻿// src/components/modals/Modal.jsx
+// src/components/modals/Modal.jsx
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
@@ -42,7 +42,7 @@ export const Modal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex justify-center items-center p-4 sm:p-6">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
@@ -50,11 +50,10 @@ export const Modal = ({
       />
 
       {/* Modal Container */}
-      <div className="flex min-h-full items-end sm:items-center justify-center p-2 sm:p-4 md:p-6 text-center">
-        <div
-          className={`w-full ${SIZES[size] || SIZES.xl} transform overflow-hidden rounded-t-3xl sm:rounded-3xl bg-white text-left align-middle shadow-2xl transition-all border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[94dvh] sm:max-h-[90vh]`}
+      <div
+          className={`relative w-full ${SIZES[size] || SIZES.xl} transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-full`}
           onClick={(e) => e.stopPropagation()}
-        >
+      >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-50/90 flex-shrink-0">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
@@ -80,7 +79,7 @@ export const Modal = ({
           </div>
 
           {/* Body with Touch Momentum Scrolling */}
-          <div className="overflow-y-auto p-3.5 sm:p-6 space-y-4 touch-scroll flex-1 text-slate-800">
+          <div className="overflow-y-auto min-h-0 p-3.5 sm:p-6 space-y-4 touch-scroll flex-1 text-slate-800">
             {children}
           </div>
 
@@ -91,7 +90,6 @@ export const Modal = ({
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 };
