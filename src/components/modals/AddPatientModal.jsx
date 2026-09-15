@@ -1,7 +1,8 @@
 // src/components/modals/AddPatientModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { apiPatientService } from '../../services/api/apiPatientService';
+import { apiProviderService } from '../../services/api/apiProviderService';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import {
@@ -38,52 +39,28 @@ const inputCls = (hasError) =>
 const labelCls = 'block text-xs font-bold text-slate-800 mb-1';
 const sectionHeaderCls = 'text-xs font-bold text-slate-900 border-b border-slate-200 pb-1.5 flex items-center gap-1.5 mb-2.5';
 
-const PRACTICE_PROVIDERS = [
-  {
-    id: 'prov-josmic',
-    name: 'JOSMIC Wellness Center',
-    specialty: 'Pain Management & Medical Evaluation',
-    provider: 'Dr. Michael Adeyemi, MD',
-    badge: 'Physician / Pain Mgmt',
-    icon: Stethoscope,
-    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
-    pos: 'Office (POS 11)',
-    scope: 'Comprehensive physical exam, diagnostic workup, medication management & injection procedures.'
-  },
-  {
-    id: 'prov-davs',
-    name: "DAV'S Anatomy",
-    specialty: 'ESWT Shockwave Therapy & Rehab',
-    provider: 'Dr. David Chen, PT, DPT',
-    badge: 'Physical Therapy',
-    icon: Activity,
-    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    pos: 'Office (POS 11)',
-    scope: 'Radial & focused extracorporeal shockwave therapy, therapeutic exercise & joint mobilization.'
-  },
-  {
-    id: 'prov-anik',
-    name: 'ANIK Laser Therapy',
-    specialty: 'High-Intensity Laser Therapy & Recovery',
-    provider: 'Dr. Anika Patel, DC',
-    badge: 'Laser Therapy',
-    icon: Sparkles,
-    badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
-    pos: 'Office (POS 11)',
-    scope: 'Class IV high-intensity therapeutic laser, deep tissue biostimulation & acute inflammation reduction.'
-  },
-  {
-    id: 'prov-counselor',
-    name: 'Counselor Practice (Hope Behavioral)',
-    specialty: 'Mental Health Psychotherapy & PTSD Care',
-    provider: 'Sarah Jenkins, LPC',
-    badge: 'Counseling & Psych',
-    icon: HeartPulse,
-    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
-    pos: 'Office (POS 11)',
-    scope: 'Trauma counseling, pain psych assessment, accident-related PTSD & cognitive behavioral therapy.'
-  },
-];
+const getProviderUIMeta = (provider) => {
+  const pName = (provider.name || '').toLowerCase();
+  const pCat = (provider.serviceCategory || '').toLowerCase();
+  const posStr = `Office (POS ${provider.defaultPlaceOfService || '11'})`;
+  const providerAttending = typeof provider.renderingProvider === 'object' ? (provider.renderingProvider?.name || 'Assigned Provider') : 'Assigned Provider';
+  
+  if (pName.includes('josmic') || pCat.includes('pain')) {
+    return { icon: Stethoscope, badge: 'Physician / Pain Mgmt', badgeColor: 'bg-blue-100 text-blue-800 border-blue-200', pos: posStr, scope: 'Comprehensive physical exam, diagnostic workup, medication management & injection procedures.', providerName: providerAttending };
+  } else if (pName.includes('dav') || pName.includes('anatomy') || pCat.includes('shockwave') || pCat.includes('eswt')) {
+    return { icon: Activity, badge: 'Physical Therapy', badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200', pos: posStr, scope: 'Radial & focused extracorporeal shockwave therapy, therapeutic exercise & joint mobilization.', providerName: providerAttending };
+  } else if (pName.includes('anik') || pCat.includes('laser')) {
+    return { icon: Sparkles, badge: 'Laser Therapy', badgeColor: 'bg-purple-100 text-purple-800 border-purple-200', pos: posStr, scope: 'Class IV high-intensity therapeutic laser, deep tissue biostimulation & acute inflammation reduction.', providerName: providerAttending };
+  } else if (pName.includes('counselor') || pName.includes('behavioral') || pName.includes('hope') || pCat.includes('counseling') || pCat.includes('mental')) {
+    return { icon: HeartPulse, badge: 'Counseling & Psych', badgeColor: 'bg-amber-100 text-amber-800 border-amber-200', pos: posStr, scope: 'Trauma counseling, pain psych assessment, accident-related PTSD & cognitive behavioral therapy.', providerName: providerAttending };
+  } else if (pName.includes('tpi') || pName.includes('trigger') || pCat.includes('injection')) {
+    return { icon: Stethoscope, badge: 'TPI / Procedure', badgeColor: 'bg-blue-100 text-blue-800 border-blue-200', pos: posStr, scope: 'Trigger point injections and specialized pain interventions.', providerName: providerAttending };
+  } else if (pName.includes('tecar') || pName.includes('physio') || pCat.includes('radiofrequency')) {
+    return { icon: Activity, badge: 'TECAR Therapy', badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200', pos: posStr, scope: 'TECAR radiofrequency therapy for deep tissue regeneration and pain relief.', providerName: providerAttending };
+  } else {
+    return { icon: Building2, badge: provider.serviceCategory || 'Practice Provider', badgeColor: 'bg-slate-100 text-slate-800 border-slate-200', pos: posStr, scope: 'General practice and medical evaluation services.', providerName: providerAttending };
+  }
+};
 
 const QUICK_ALLERGIES = [
   'NKDA (No Known Drug Allergies)',
@@ -154,7 +131,7 @@ const INITIAL_FORM_DATA = {
   secondaryPolicyNumber: '',
 
   // 3. Practice Providers & Referrals
-  assignedProviderIds: ['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor'],
+  assignedProviderIds: [],
   referringAttorney: '',
   attorneyCaseManager: '',
   referringProvider: '',
@@ -181,6 +158,22 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
     const allProviders = [...new Set([...INITIAL_FORM_DATA.assignedProviderIds, currentProviderId])];
     return { ...INITIAL_FORM_DATA, assignedProviderIds: allProviders };
   });
+    const [availableProviders, setAvailableProviders] = useState([]);
+
+  useEffect(() => {
+    apiProviderService.getProviders().then(data => {
+      const list = Array.isArray(data) ? data : Object.values(data);
+      setAvailableProviders(list);
+      setFormData(prev => {
+        if (prev.assignedProviderIds.length === 0) {
+          const allIds = list.map(p => p.id);
+          const currentProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+          return { ...prev, assignedProviderIds: [...new Set([...allIds, currentProviderId])] };
+        }
+        return prev;
+      });
+    }).catch(console.error);
+  }, [currentUser]);
   const [currentStep, setCurrentStep] = useState(1); // 1 | 2 | 3 | 4
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -292,7 +285,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
   const handleSelectAllProviders = () => {
     setFormData(prev => ({
       ...prev,
-      assignedProviderIds: PRACTICE_PROVIDERS.map(p => p.id)
+      assignedProviderIds: availableProviders.map(p => p.id)
     }));
   };
 
@@ -1016,7 +1009,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
         {/* ================= STEP 3: PRACTICE PROVIDERS ================= */}
         {currentStep === 3 && (
           <div className="space-y-4 animate-in fade-in-50 duration-150 text-xs">
-            {/* Section 1: 4 Practice Entity Selection */}
+            {/* Section 1: Practice Entity Selection */}
             <div className="bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-slate-200">
                 <div>
@@ -1033,7 +1026,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     onClick={handleSelectAllProviders}
                     className="text-[11px] font-bold text-teal-700 hover:text-teal-900 underline cursor-pointer"
                   >
-                    Select All 4 Clinics
+                    Select All {availableProviders.length} Clinics
                   </button>
                   <span className="text-slate-300">|</span>
                   <button
@@ -1054,9 +1047,10 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {PRACTICE_PROVIDERS.map((prov) => {
+                {availableProviders.map((prov) => {
                   const isSelected = formData.assignedProviderIds.includes(prov.id);
-                  const ProvIcon = prov.icon;
+                  const provMeta = getProviderUIMeta(prov);
+                  const ProvIcon = provMeta.icon;
                   return (
                     <div
                       key={prov.id}
@@ -1079,14 +1073,14 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <strong className="text-xs font-bold text-slate-900">{prov.name}</strong>
                             <span
-                              className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${prov.badgeColor}`}
+                              className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${provMeta.badgeColor}`}
                             >
-                              {prov.badge}
+                              {provMeta.badge}
                             </span>
                           </div>
-                          <p className="text-[11px] font-medium text-slate-600 mt-0.5">{prov.specialty}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">Attending: {prov.provider} • {prov.pos}</p>
-                          <p className="text-[10px] text-slate-500 italic mt-1">{prov.scope}</p>
+                          <p className="text-[11px] font-medium text-slate-600 mt-0.5">{prov.serviceCategory || 'Specialty Clinic'}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Attending: {provMeta.providerName} • {provMeta.pos}</p>
+                          <p className="text-[10px] text-slate-500 italic mt-1">{provMeta.scope}</p>
                         </div>
                       </div>
 
@@ -1106,10 +1100,10 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
 
               <div className="bg-white p-3 rounded-xl border border-slate-200 text-[11px] text-slate-600 flex items-center justify-between">
                 <span>
-                  Selected Coverage: <strong>{formData.assignedProviderIds.length} of 4 clinics</strong>
+                  Selected Coverage: <strong>{formData.assignedProviderIds.length} of {availableProviders.length} clinics</strong>
                 </span>
                 <span className="text-teal-700 font-semibold">
-                  {formData.assignedProviderIds.length === 4
+                  {formData.assignedProviderIds.length === availableProviders.length && availableProviders.length > 0
                     ? '✓ Complete Practice Coverage'
                     : `${formData.assignedProviderIds.length} clinic(s) assigned`}
                 </span>
@@ -1387,7 +1381,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                 <div className="bg-white/90 p-2.5 rounded-xl border border-slate-200/70">
                   <span className="text-[10px] text-slate-400 block font-semibold">ASSIGNED CLINICS</span>
                   <strong className="text-teal-700 block">
-                    {formData.assignedProviderIds.length} of 4 Practices
+                    {formData.assignedProviderIds.length} of {availableProviders.length} Practices
                   </strong>
                   <span className="text-[10px] text-slate-500 block">
                     Allergies: {formData.knownAllergies ? 'Noted' : 'None'}
