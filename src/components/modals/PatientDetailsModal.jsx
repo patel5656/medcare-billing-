@@ -90,8 +90,8 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
           <div className="flex items-center gap-3 sm:text-right border-t sm:border-t-0 border-slate-800 pt-3 sm:pt-0">
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold block">Total Practice A/R</span>
-              <strong className="text-white text-base sm:text-lg font-mono">$24,960.00</strong>
-              <p className="text-[10px] text-teal-300">4 Connected Provider Bills</p>
+              <strong className="text-white text-base sm:text-lg font-mono">{formatCurrency(patient.totalPracticeAR || 0)}</strong>
+              <p className="text-[10px] text-teal-300">{patient.connectedProviderBillsCount || 0} Connected Provider Bills</p>
             </div>
           </div>
         </div>
@@ -270,7 +270,7 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
 
             <div className="p-3.5 bg-slate-900 text-white rounded-2xl flex items-center justify-between font-bold">
               <span>Grand Total Patient Case Billing:</span>
-              <span className="text-base font-mono text-teal-300">$24,960.00</span>
+              <span className="text-base font-mono text-teal-300">{formatCurrency(patient.totalPracticeAR || 0)}</span>
             </div>
           </div>
         )}

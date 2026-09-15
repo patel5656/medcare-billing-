@@ -68,9 +68,10 @@ export const PacketBuilderPage = () => {
   const handleBuildPacket = async () => {
     setIsBuilding(true);
     try {
-      const res = await apiDocumentService.buildPatientPacket(selectedIds, selectedCaseId);
-      setPacketResult(res);
-      addToast(`Master Patient Document Packet ${res.packetId} generated!`, 'success');
+      const blob = await apiDocumentService.buildPatientPacket(selectedIds, selectedCaseId);
+      const url = window.URL.createObjectURL(blob);
+      setPacketResult({ packetId: `PKT-${Date.now()}`, url });
+      addToast(`Master Patient Document Packet generated!`, 'success');
     } catch (err) {
       addToast('Failed to build packet', 'error');
     } finally {
@@ -211,12 +212,14 @@ export const PacketBuilderPage = () => {
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Master Packet Ready
               </p>
               <p className="text-[11px] text-slate-500 font-mono">Packet ID: {packetResult.packetId}</p>
-              <button
-                onClick={() => addToast('Complete medical-legal packet PDF ready for download!', 'success')}
-                className="w-full mt-2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer"
+              <a
+                href={packetResult.url}
+                download={`Master_Legal_Packet_${selectedCaseId}.pdf`}
+                onClick={() => addToast('Downloading Complete PDF Packet...', 'success')}
+                className="w-full mt-2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer text-center"
               >
                 <Download className="w-4 h-4" /> Download Complete PDF Packet
-              </button>
+              </a>
             </div>
           )}
         </div>

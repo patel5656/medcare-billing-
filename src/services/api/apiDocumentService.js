@@ -46,6 +46,6 @@ export const apiDocumentService = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Failed to build patient packet.');
     }
-    return res.json();
+    return res.blob();
   }
 };
