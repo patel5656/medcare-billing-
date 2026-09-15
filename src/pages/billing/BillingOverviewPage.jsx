@@ -27,7 +27,7 @@ export const BillingOverviewPage = () => {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Billing Overview</h1>
-        <p className="text-xs text-slate-500">Practice-wide financial summary across all 4 provider billing ledgers</p>
+        <p className="text-xs text-slate-500">Practice-wide financial summary across all {providers.length} provider billing ledgers</p>
       </div>
 
       {/* KPI Cards — Responsive text & padding */}
