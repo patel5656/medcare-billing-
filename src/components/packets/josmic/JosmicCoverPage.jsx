@@ -1,16 +1,28 @@
 // src/components/packets/josmic/JosmicCoverPage.jsx
 import React from 'react';
 
-export const JosmicCoverPage = ({ blankMode = false, packetData = null }) => {
-  const getField = (field, fallback = '') => {
+export const JosmicCoverPage = ({ blankMode = false, packetData = null, bill = null, serviceLines = [] }) => {
+  const getField = (field) => {
     if (blankMode) return '';
-    if (!packetData) return fallback;
-    if (field === 'patientName') return packetData.patientName || fallback;
-    if (field === 'dob') return packetData.patient?.dob || packetData.patientDob || fallback;
-    if (field === 'accidentDate') return packetData.accidentDate || fallback;
-    if (field === 'initialDate') return packetData.initialDate || fallback;
-    if (field === 'dischargeDate') return packetData.dischargeDate || fallback;
-    return fallback;
+    if (!packetData) return '';
+    if (field === 'patientName') return packetData.patientName || '';
+    if (field === 'dob') return packetData.patient?.dob || packetData.patientDob || '';
+    if (field === 'accidentDate') return packetData.accidentDate || '';
+    if (field === 'initialDate') return packetData.initialDate || '';
+    if (field === 'dischargeDate') return packetData.dischargeDate || '';
+    return '';
+  };
+
+  const getCmsDos = () => {
+    if (blankMode) return '';
+    const lineDos = serviceLines && serviceLines.length > 0 ? (serviceLines[0].dos || serviceLines[0].dateOfService) : null;
+    const billDos = lineDos || bill?.statementDate;
+    return billDos || '';
+  };
+
+  const getSignatureDate = () => {
+    if (blankMode) return '';
+    return packetData?.dischargeDate || bill?.statementDate || packetData?.signedAt || '';
   };
 
   return (
@@ -45,23 +57,23 @@ export const JosmicCoverPage = ({ blankMode = false, packetData = null }) => {
         <div className="grid grid-cols-2 gap-x-8 gap-y-3 font-mono text-xs">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">NAME:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[120px] text-slate-900">{getField('patientName', 'SAMPLE TESTING')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[120px] text-slate-900">{getField('patientName')}&nbsp;</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">Date of Birth:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[100px] text-slate-900">{getField('dob', '10/08/1974')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[100px] text-slate-900">{getField('dob')}&nbsp;</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">Date of Accident:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('accidentDate', '12/27/2025')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('accidentDate')}&nbsp;</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">Initial Date:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('initialDate', '12/30/2025')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('initialDate')}&nbsp;</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">Discharge Date:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('dischargeDate', '12/30/2025')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('dischargeDate')}&nbsp;</div>
           </div>
         </div>
       </div>
@@ -72,7 +84,7 @@ export const JosmicCoverPage = ({ blankMode = false, packetData = null }) => {
         <ol className="list-decimal pl-4 space-y-1.5 text-slate-700 text-xs font-mono">
           <li>Patient &amp; Accident Cover Sheet</li>
           <li>Billing Statement</li>
-          <li>CMS-1500 Claim Form (DOS: {packetData ? (packetData.initialDate || '12/30/2025') : '12/30/2025'})</li>
+          <li>CMS-1500 Claim Form (DOS: {getCmsDos()})</li>
           <li>Pain Management Evaluation Report (Page 1)</li>
           <li>Pain Management Evaluation Report (Page 2)</li>
           <li>Pain Management Evaluation Report (Page 3)</li>
@@ -91,7 +103,7 @@ export const JosmicCoverPage = ({ blankMode = false, packetData = null }) => {
             <p className="text-slate-600">Authorized Provider Signature</p>
           </div>
           <div>
-            <div className="border-b border-slate-400 pb-1 mb-1 min-h-[24px]">{packetData ? (packetData.dischargeDate || '02/11/2026') : val('02/11/2026')}&nbsp;</div>
+            <div className="border-b border-slate-400 pb-1 mb-1 min-h-[24px]">{getSignatureDate()}&nbsp;</div>
             <p className="text-slate-600">Date</p>
           </div>
         </div>

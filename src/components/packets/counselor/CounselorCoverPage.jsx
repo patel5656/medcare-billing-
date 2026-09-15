@@ -2,13 +2,13 @@
 import React from 'react';
 
 export const CounselorCoverPage = ({ blankMode = false, packetData = null }) => {
-  const getField = (field, fallback = '') => {
+  const getField = (field) => {
     if (blankMode) return '';
-    if (!packetData) return fallback;
-    if (field === 'patientName') return packetData.patientName || fallback;
-    if (field === 'dob') return packetData.patient?.dob || packetData.patientDob || fallback;
-    if (field === 'accidentDate') return packetData.accidentDate || fallback;
-    if (field === 'initialDate') return packetData.initialDate || fallback;
+    if (!packetData) return '';
+    if (field === 'patientName') return packetData.patientName || '';
+    if (field === 'dob') return packetData.patient?.dob || packetData.patientDob || '';
+    if (field === 'accidentDate') return packetData.accidentDate || '';
+    if (field === 'initialDate') return packetData.initialDate || '';
     if (field === 'dx') {
       if (Array.isArray(packetData.diagnosisCodes)) {
         const cleaned = packetData.diagnosisCodes
@@ -16,10 +16,16 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null }) => 
           .filter(Boolean);
         if (cleaned.length > 0) return cleaned.join(', ');
       }
-      return packetData.diagnosisCodes || packetData.diagnosis || fallback;
+      return packetData.diagnosisCodes || packetData.diagnosis || '';
     }
-    return fallback;
+    return '';
   };
+
+  const providerName = blankMode || !packetData ? '' : (packetData.referringProviderName || packetData.providerName || packetData.attendingProviderName || '');
+  const providerTitle = blankMode || !packetData ? '' : (packetData.providerTitle || packetData.providerCredentials || '');
+  const npi = packetData?.providerNpi || packetData?.npi || '';
+  const lic = packetData?.licenseNo || packetData?.providerLicense || '';
+  const npiLicText = blankMode || !packetData ? '' : ([npi ? `NPI: ${npi}` : '', lic ? `State Lic # ${lic}` : ''].filter(Boolean).join(' | '));
 
   return (
     <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '48px 56px' }}>
@@ -45,23 +51,23 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null }) => 
         <div className="grid grid-cols-2 gap-x-8 gap-y-3 font-mono text-xs">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">NAME:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[120px] text-slate-900">{getField('patientName', '')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[120px] text-slate-900">{getField('patientName')}&nbsp;</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">Date of Birth:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[100px] text-slate-900">{getField('dob', '')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[100px] text-slate-900">{getField('dob')}&nbsp;</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">Date of Accident:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('accidentDate', '')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('accidentDate')}&nbsp;</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">Initial Evaluation:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('initialDate', '')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('initialDate')}&nbsp;</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">Diagnostic Codes:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900 font-bold">{getField('dx', '')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900 font-bold">{getField('dx')}&nbsp;</div>
           </div>
         </div>
       </div>
@@ -92,12 +98,12 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null }) => 
       {/* Attestation */}
       <div className="mt-12 pt-6 border-t-2 border-slate-800 flex justify-between items-end text-xs font-mono">
         <div>
-          <p className="font-bold">JORDAN MILLER, LCSW, BCD</p>
-          <p className="text-slate-600">Licensed Clinical Social Worker</p>
-          <p className="text-slate-600">NPI: 1487965213 | State Lic # 58921</p>
+          <p className="font-bold">{providerName}</p>
+          <p className="text-slate-600">{providerTitle}</p>
+          <p className="text-slate-600">{npiLicText}</p>
         </div>
         <div className="text-right">
-          <p className="border-b border-slate-400 w-48 mb-1 pb-1 font-cursive italic text-indigo-900 font-bold">Jordan Miller, LCSW</p>
+          <p className="border-b border-slate-400 w-48 mb-1 pb-1 font-cursive italic text-indigo-900 font-bold">{providerName}</p>
           <p className="text-slate-500 text-[10px]">AUTHORIZED SIGNATURE</p>
         </div>
       </div>
