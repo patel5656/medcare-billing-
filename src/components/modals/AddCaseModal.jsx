@@ -38,8 +38,8 @@ const INITIAL_CASE_DATA = {
   accidentType: 'CLINICAL_VISIT',
   accidentState: 'TX',
   accidentCity: 'Houston',
-  accidentLocation: 'Houston, TX Metro Area',
-  mechanismOfInjury: 'General illness or localized pain',
+  accidentLocation: '',
+  mechanismOfInjury: '',
   policeReportNumber: '',
   emergencyTransport: 'NONE',
   chiefComplaint: '',
@@ -113,11 +113,11 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
     setFormData(prev => ({
       ...prev,
       patientId: patientObj.id || '',
-      patientName: `${patientObj.firstName || ''} ${patientObj.lastName || ''}`.trim(),
+      patientName: `${patientObj.firstName || ''} ${patientObj.middleName ? patientObj.middleName + ' ' : ''}${patientObj.lastName || ''}`.trim(),
       patientDob: patientObj.dob || '',
       patientPhone: patientObj.phone || '',
       accidentDate: patientObj.accidentDate || patientObj.incidentDate || prev.accidentDate || '',
-      mechanismOfInjury: patientObj.mechanismOfInjury || prev.mechanismOfInjury || 'Motor Vehicle Collision with deceleration impact',
+      mechanismOfInjury: patientObj.mechanismOfInjury || prev.mechanismOfInjury || '',
       injuryBodyParts: Array.isArray(patientObj.selectedInjuryAreas)
         ? patientObj.selectedInjuryAreas.join(', ')
         : (patientObj.injuryBodyParts || prev.injuryBodyParts || 'Neck, Low Back, Left Ankle'),
@@ -510,7 +510,7 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
                       <option value="">-- Choose Patient from Registry --</option>
                       {patients.map(p => (
                         <option key={p.id} value={p.id}>
-                          {p.firstName} {p.lastName} (DOB: {p.dob || 'N/A'}) - ID: {p.patientId || p.id}
+                          {p.firstName} {p.middleName ? p.middleName + ' ' : ''}{p.lastName} (DOB: {p.dob || 'N/A'}) - ID: {p.patientId || p.id}
                         </option>
                       ))}
                     </select>
