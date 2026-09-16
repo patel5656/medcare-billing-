@@ -220,11 +220,19 @@ export const PatientProfilePage = () => {
                 <ShieldCheck className="w-4 h-4 text-teal-600" /> Insurance &amp; Coverage Information
               </h2>
               <div className="space-y-2 text-xs text-slate-600">
+<<<<<<< HEAD
                 <div className="flex justify-between"><span>Insurance Carrier:</span><strong className="text-slate-900">{patient.primaryInsuranceCompany || 'N/A'}</strong></div>
                 <div className="flex justify-between"><span>Policy / Claim Number:</span><strong className="text-slate-900 font-mono">{patient.primaryPolicyNumber || 'N/A'}</strong></div>
                 <div className="flex justify-between"><span>Group Number:</span><strong className="text-slate-900">{patient.primaryGroupNumber || 'N/A'}</strong></div>
                 <div className="flex justify-between"><span>Member ID:</span><strong className="text-slate-900">{patient.primaryInsuranceMemberId || 'N/A'}</strong></div>
                 <div className="flex justify-between"><span>Adjuster Contact:</span><strong className="text-slate-900">{patient.adjusterName || 'N/A'} {patient.adjusterPhone ? `(${patient.adjusterPhone})` : ''}</strong></div>
+=======
+                <div className="flex justify-between"><span>Insurance Carrier:</span><strong className="text-slate-900">{patient.primaryInsuranceCompany || 'Geico Auto Insurance'}</strong></div>
+                <div className="flex justify-between"><span>Policy / Claim Number:</span><strong className="text-slate-900 font-mono">{patient.primaryPolicyNumber || 'POL-TX-9921'}</strong></div>
+                <div className="flex justify-between"><span>Group Number:</span><strong className="text-slate-900">{patient.primaryGroupNumber || ''}</strong></div>
+                <div className="flex justify-between"><span>Member ID:</span><strong className="text-slate-900">{patient.primaryInsuranceMemberId || 'MEM-2026-991'}</strong></div>
+                <div className="flex justify-between"><span>Adjuster Contact:</span><strong className="text-slate-900">{patient.adjusterName || 'Marcus Vance'} ({patient.adjusterPhone || '800-555-0199'})</strong></div>
+>>>>>>> 6f20f16262c3d0354e2961078b7ac1da669bbd4b
               </div>
             </div>
 

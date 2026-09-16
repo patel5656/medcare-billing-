@@ -3,27 +3,81 @@ import React from 'react';
 import { formatCurrency } from '../../../utils/billingCalculations';
 import { useSettings } from '../../../utils/settingsCache';
 
-export const PrintableBillingStatement = ({ bill, pageIndex = 0 }) => {
+export const PrintableBillingStatement = ({ bill, pageIndex = 0, selectedCase = null }) => {
   const settings = useSettings();
-  const b = bill || {
-    providerName: '',
-    providerAddress: '',
-    providerPhone: '',
-    statementNumber: '',
-    statementDate: '',
-    patientName: '',
-    patientSystemId: '',
-    patientAddress: '',
-    billToName: '',
-    billToAddress: '',
-    lineItems: [],
-    totals: { totalCharges: 0, totalPayments: 0, totalAdjustments: 0, balanceDue: 0 }
+
+  // Extract patient info from bill or selectedCase
+  const pt = selectedCase?.patient || {};
+  const patientName = bill?.patientName || selectedCase?.patientName || (pt.firstName ? `${pt.firstName || ''} ${pt.lastName || ''}`.trim() : '');
+  
+  const ptStreet = pt.street || pt.addressLine1 || '';
+  const ptCity = pt.city || '';
+  const ptState = pt.state || '';
+  const ptZip = pt.zipCode || '';
+  const casePtAddress = [ptStreet, ptCity, ptState, ptZip].filter(Boolean).join(', ');
+  const patientAddress = bill?.patientAddress || casePtAddress || '';
+
+  const patientSystemId = bill?.patientSystemId || pt.patientId || selectedCase?.patientId || '';
+  const caseId = bill?.caseId || selectedCase?.caseId || selectedCase?.id || '';
+
+  const patientIdCaseDisplay = () => {
+    if (patientSystemId && caseId) return `${patientSystemId} (${caseId})`;
+    if (patientSystemId) return patientSystemId;
+    if (caseId) return caseId;
+    return '';
   };
 
-  const lineItems = b.lineItems || [];
-  const displayItems = lineItems.length > 8
-    ? (pageIndex === 0 ? lineItems.slice(0, 8) : lineItems.slice(8))
-    : lineItems;
+  const billToName = bill?.billToName || selectedCase?.attorneyName || selectedCase?.lawFirm || '';
+  const billToAddress = bill?.billToAddress || selectedCase?.attorneyAddress || '';
+
+  const providerName = bill?.providerName || 'JOSMIC WELLNESS CENTER';
+  const providerAddress = bill?.providerAddress || '10101 HARWIN DR. SUITE 274, HOUSTON, TX 77036';
+  const providerPhone = bill?.providerPhone || '713-485-5712';
+  const statementNumber = bill?.statementNumber || '';
+  const statementDate = bill?.statementDate || '';
+
+  const rawLines = bill?.lineItems || bill?.serviceLines || [];
+  
+  const displayItems = (rawLines.length > 8
+    ? (pageIndex === 0 ? rawLines.slice(0, 8) : rawLines.slice(8))
+    : rawLines).map(item => {
+      const charge = Number(item.charge) || 0;
+      const insPay = Number(item.payments?.insurance || item.insurancePayment) || 0;
+      const patPay = Number(item.payments?.patient || item.patientPayment) || 0;
+      const adj = Number(item.adjustments) || 0;
+      const lineBal = item.lineBalance !== undefined && item.lineBalance !== null
+        ? Number(item.lineBalance)
+        : Math.max(0, charge - (insPay + patPay + adj));
+      return {
+        ...item,
+        dos: item.dos || item.dateOfService || '',
+        cptCode: item.cptCode || '',
+        description: item.description || '',
+        charge,
+        insPay,
+        patPay,
+        adj,
+        lineBal
+      };
+    });
+
+  const totalCharges = rawLines.reduce((sum, i) => sum + (Number(i.charge) || 0), 0);
+  const totalInsPay = rawLines.reduce((sum, i) => sum + (Number(i.payments?.insurance || i.insurancePayment) || 0), 0);
+  const totalPatPay = rawLines.reduce((sum, i) => sum + (Number(i.payments?.patient || i.patientPayment) || 0), 0);
+  const totalAdj = rawLines.reduce((sum, i) => sum + (Number(i.adjustments) || 0), 0);
+
+  const calculatedBalance = Math.max(0, totalCharges - (totalInsPay + totalPatPay + totalAdj));
+  const balanceDue = bill?.totals?.balanceDue !== undefined && bill?.totals?.balanceDue !== null && bill?.totals?.balanceDue > 0
+    ? Number(bill.totals.balanceDue)
+    : calculatedBalance;
+
+  const agingCurrent = Number(bill?.aging?.current) || 0;
+  const aging30 = Number(bill?.aging?.past30) || 0;
+  const aging60 = Number(bill?.aging?.past60) || 0;
+  const aging90 = Number(bill?.aging?.past90) || 0;
+
+  const sumAging = agingCurrent + aging30 + aging60 + aging90;
+  const finalCurrentDue = (sumAging === 0 && balanceDue > 0) ? balanceDue : agingCurrent;
 
   return (
     <div
@@ -33,38 +87,38 @@ export const PrintableBillingStatement = ({ bill, pageIndex = 0 }) => {
       {/* Statement Top Header */}
       <div className="flex justify-between items-start border-b border-slate-800 pb-4">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900 tracking-tight uppercase">{b.providerName}</h1>
-          <p className="text-xs text-slate-600 mt-1">{b.providerAddress}</p>
-          <p className="text-xs text-slate-600">TEL / CELL: {b.providerPhone} | FAX: 832-416-1502</p>
+          <h1 className="text-xl font-extrabold text-slate-900 tracking-tight uppercase">{providerName}</h1>
+          <p className="text-xs text-slate-600 mt-1">{providerAddress}</p>
+          <p className="text-xs text-slate-600">TEL / CELL: {providerPhone} | FAX: 832-416-1502</p>
         </div>
         <div className="text-right font-mono">
           <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Billing Statement</h2>
-          <p className="text-xs font-bold text-slate-700 mt-1">Statement No: <span className="text-slate-900">{b.statementNumber}</span></p>
-          <p className="text-xs font-semibold text-slate-600">Statement Date: {b.statementDate}</p>
-          <p className="text-[10px] text-slate-500 font-bold mt-1">PAGE {pageIndex + 1} OF {lineItems.length > 8 ? 2 : 1}</p>
+          <p className="text-xs font-bold text-slate-700 mt-1">Statement No: <span className="text-slate-900">{statementNumber}</span></p>
+          <p className="text-xs font-semibold text-slate-600">Statement Date: {statementDate}</p>
+          <p className="text-[10px] text-slate-500 font-bold mt-1">PAGE {pageIndex + 1} OF {rawLines.length > 8 ? 2 : 1}</p>
         </div>
       </div>
 
       {/* Bill To Box */}
       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 w-full sm:w-1/2">
         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bill To:</p>
-        <h3 className="text-sm font-bold text-slate-900 mt-0.5">{b.billToName}</h3>
-        <p className="text-xs text-slate-700 whitespace-pre-line">{b.billToAddress}</p>
+        <h3 className="text-sm font-bold text-slate-900 mt-0.5">{billToName}</h3>
+        <p className="text-xs text-slate-700 whitespace-pre-line">{billToAddress}</p>
       </div>
 
       {/* Patient Details Banner */}
       <div className="grid grid-cols-3 gap-4 p-3 bg-slate-100 rounded-xl border border-slate-200 text-xs">
         <div>
           <span className="text-[10px] font-bold text-slate-500 block">Patient Name:</span>
-          <strong className="text-slate-900 font-bold">{b.patientName}</strong>
+          <strong className="text-slate-900 font-bold">{patientName}</strong>
         </div>
         <div>
           <span className="text-[10px] font-bold text-slate-500 block">Patient Address:</span>
-          <span className="text-slate-800 truncate block">{b.patientAddress}</span>
+          <span className="text-slate-800 truncate block">{patientAddress}</span>
         </div>
         <div>
           <span className="text-[10px] font-bold text-slate-500 block">Patient ID / Case:</span>
-          <span className="font-mono font-bold text-slate-900">{b.patientSystemId} ({b.caseId})</span>
+          <span className="font-mono font-bold text-slate-900">{patientIdCaseDisplay()}</span>
         </div>
       </div>
 
@@ -84,24 +138,30 @@ export const PrintableBillingStatement = ({ bill, pageIndex = 0 }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {displayItems.map((item, idx) => (
-              <tr key={idx} className="hover:bg-slate-50 font-tabular">
-                <td className="p-2 border-r border-slate-200 font-mono">{item.dos}</td>
-                <td className="p-2 border-r border-slate-200 font-bold">{item.cptCode}</td>
-                <td className="p-2 border-r border-slate-200">{item.description}</td>
-                <td className="p-2 text-right border-r border-slate-200 font-bold">{formatCurrency(item.charge)}</td>
-                <td className="p-2 text-right border-r border-slate-200 text-slate-600">{formatCurrency(item.payments?.insurance || 0)}</td>
-                <td className="p-2 text-right border-r border-slate-200 text-slate-600">{formatCurrency(item.payments?.patient || 0)}</td>
-                <td className="p-2 text-right border-r border-slate-200 text-slate-600">{formatCurrency(item.adjustments || 0)}</td>
-                <td className="p-2 text-right font-bold text-slate-900">{formatCurrency(item.lineBalance || 0)}</td>
+            {displayItems.length > 0 ? (
+              displayItems.map((item, idx) => (
+                <tr key={idx} className="hover:bg-slate-50 font-tabular">
+                  <td className="p-2 border-r border-slate-200 font-mono">{item.dos}</td>
+                  <td className="p-2 border-r border-slate-200 font-bold">{item.cptCode}</td>
+                  <td className="p-2 border-r border-slate-200">{item.description}</td>
+                  <td className="p-2 text-right border-r border-slate-200 font-bold">{formatCurrency(item.charge)}</td>
+                  <td className="p-2 text-right border-r border-slate-200 text-slate-600">{formatCurrency(item.insPay)}</td>
+                  <td className="p-2 text-right border-r border-slate-200 text-slate-600">{formatCurrency(item.patPay)}</td>
+                  <td className="p-2 text-right border-r border-slate-200 text-slate-600">{formatCurrency(item.adj)}</td>
+                  <td className="p-2 text-right font-bold text-slate-900">{formatCurrency(item.lineBal)}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8} className="p-4 text-center text-slate-400 font-mono">No service lines recorded for this statement.</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
 
       {/* Aging Grid Footer */}
-      {pageIndex === (lineItems.length > 8 ? 1 : 0) && (
+      {pageIndex === (rawLines.length > 8 ? 1 : 0) && (
         <div className="pt-4 space-y-4">
           <div className="border border-slate-300 rounded-xl overflow-hidden">
             <table className="w-full text-center text-xs font-tabular">
@@ -116,11 +176,11 @@ export const PrintableBillingStatement = ({ bill, pageIndex = 0 }) => {
               </thead>
               <tbody>
                 <tr className="font-bold text-slate-900">
-                  <td className="p-2.5 border-r border-slate-300">{formatCurrency(b.aging?.current || 0)}</td>
-                  <td className="p-2.5 border-r border-slate-300">{formatCurrency(b.aging?.past30 || 0)}</td>
-                  <td className="p-2.5 border-r border-slate-300">{formatCurrency(b.aging?.past60 || 0)}</td>
-                  <td className="p-2.5 border-r border-slate-300">{formatCurrency(b.aging?.past90 || 0)}</td>
-                  <td className="p-2.5 bg-slate-100 text-slate-900 font-black text-sm">{formatCurrency(b.totals?.balanceDue || 0)}</td>
+                  <td className="p-2.5 border-r border-slate-300">{formatCurrency(finalCurrentDue)}</td>
+                  <td className="p-2.5 border-r border-slate-300">{formatCurrency(aging30)}</td>
+                  <td className="p-2.5 border-r border-slate-300">{formatCurrency(aging60)}</td>
+                  <td className="p-2.5 border-r border-slate-300">{formatCurrency(aging90)}</td>
+                  <td className="p-2.5 bg-slate-100 text-slate-900 font-black text-sm">{formatCurrency(balanceDue)}</td>
                 </tr>
               </tbody>
             </table>

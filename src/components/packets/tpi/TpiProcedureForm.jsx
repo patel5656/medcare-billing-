@@ -1,15 +1,31 @@
 // src/components/packets/tpi/TpiProcedureForm.jsx
 import React from 'react';
 
+const getMusclesTableData = (packetData) => {
+  if (!packetData) return [];
+  const list = packetData.musclesInjectedList || packetData.injectedMuscles || packetData.musclesTable;
+  if (Array.isArray(list)) return list;
+  return [];
+};
+
 export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
-  const val = (v) => blankMode ? '' : v;
+  const patientNameVal = blankMode || !packetData ? '' : (packetData.patientName || '');
   
   const serviceDates = serviceLines && serviceLines.length > 0
     ? [...new Set(serviceLines.map(l => l.dos || l.dateOfService).filter(Boolean))]
     : [];
-  const activeDos = blankMode ? '' : (dos || (serviceDates.length > 0 ? serviceDates[0] : (packetData?.initialDate || '01/15/2026')));
-  const patientNameVal = blankMode ? '' : (packetData ? packetData.patientName : 'SAMPLE PATIENT');
-  
+  const activeDos = blankMode ? '' : (dos || (serviceDates.length > 0 ? serviceDates[0] : (packetData?.procedureDos || packetData?.serviceDate || '')));
+
+  const signatureDateVal = blankMode || !packetData ? '' : (packetData.signatureDate || packetData.signedAt || packetData.dischargeDate || '');
+  const providerNameVal = blankMode || !packetData ? '' : (packetData.operatingProviderName || packetData.referringProviderName || packetData.providerName || packetData.attendingProviderName || '');
+
+  const preOpDiagText = blankMode || !packetData ? '' : (packetData.preOpDiagnosis || packetData.preOperativeDiagnosis || (packetData.diagnosisCodes && packetData.diagnosisCodes.length > 0 ? packetData.diagnosisCodes.join(', ') : ''));
+  const medInjectedText = blankMode || !packetData ? '' : (packetData.medicationInjected || packetData.medicationsInjected || packetData.medication || '');
+  const totalVolumeText = blankMode || !packetData ? '' : (packetData.totalVolume || packetData.needlesUsed || packetData.volumeAndNeedles || '');
+  const procedureDescText = blankMode || !packetData ? '' : (packetData.procedureDescription || packetData.procedureNotes || packetData.technique || '');
+
+  const musclesList = blankMode ? [] : getMusclesTableData(packetData);
+
   return (
     <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '48px 56px' }}>
       {/* Header */}
@@ -34,13 +50,13 @@ export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false
       <div className="mb-6">
         <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">Pre-Operative Diagnosis</h2>
         <div className="text-xs font-mono px-2">
-          <p
+          <div
             contentEditable={!readOnly}
             suppressContentEditableWarning
             className="text-slate-700 border border-slate-300 p-2 min-h-[40px] bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-text"
           >
-            {val('Myofascial Pain Syndrome (M79.1)')}
-          </p>
+            {preOpDiagText}
+          </div>
         </div>
       </div>
 
@@ -50,23 +66,23 @@ export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false
         <div className="grid grid-cols-2 gap-4 text-xs font-mono px-2">
           <div>
             <span className="font-bold block mb-1">Medication Injected:</span>
-            <p
+            <div
               contentEditable={!readOnly}
               suppressContentEditableWarning
-              className="text-slate-700 border border-slate-300 p-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-text"
+              className="text-slate-700 border border-slate-300 p-2 min-h-[38px] bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-text"
             >
-              {val('Lidocaine 1% (2mL) + Bupivacaine 0.5% (2mL)')}
-            </p>
+              {medInjectedText}
+            </div>
           </div>
           <div>
             <span className="font-bold block mb-1">Total Volume / Needles Used:</span>
-            <p
+            <div
               contentEditable={!readOnly}
               suppressContentEditableWarning
-              className="text-slate-700 border border-slate-300 p-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-text"
+              className="text-slate-700 border border-slate-300 p-2 min-h-[38px] bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-text"
             >
-              {val('4mL total. 25-gauge 1.5-inch needle.')}
-            </p>
+              {totalVolumeText}
+            </div>
           </div>
         </div>
         
@@ -81,21 +97,22 @@ export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">{val('Trapezius')}</td>
-                <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">{val('Right')}</td>
-                <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">{val('2.0 mL')}</td>
-              </tr>
-              <tr>
-                <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">{val('Trapezius')}</td>
-                <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">{val('Left')}</td>
-                <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">{val('2.0 mL')}</td>
-              </tr>
-              <tr>
-                <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">&nbsp;</td>
-                <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">&nbsp;</td>
-                <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">&nbsp;</td>
-              </tr>
+              {Array.from({ length: 3 }).map((_, idx) => {
+                const item = musclesList[idx] || {};
+                return (
+                  <tr key={idx}>
+                    <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">
+                      {blankMode ? '' : (item.muscle || item.name || '')}&nbsp;
+                    </td>
+                    <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">
+                      {blankMode ? '' : (item.side || '')}&nbsp;
+                    </td>
+                    <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">
+                      {blankMode ? '' : (item.volume || '')}&nbsp;
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -105,24 +122,24 @@ export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false
       <div className="mb-6">
         <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">Procedure Description</h2>
         <div className="text-xs font-mono px-2">
-          <p
+          <div
             contentEditable={!readOnly}
             suppressContentEditableWarning
             className="text-slate-700 border border-slate-300 p-2 min-h-[100px] bg-slate-50 leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-text"
           >
-            {val('The patient was positioned comfortably. The skin over the identified trigger points was prepped with alcohol/betadine. Using a sterile technique, the needle was advanced into the taut band of the muscle. A local twitch response was elicited. After negative aspiration for blood, the medication was injected slowly. The needle was withdrawn, and pressure was applied for hemostasis. The patient tolerated the procedure well without immediate complications.')}
-          </p>
+            {procedureDescText}
+          </div>
         </div>
       </div>
 
       {/* Footer */}
       <div className="absolute bottom-12 left-14 right-14 border-t border-slate-300 pt-4 text-xs font-mono flex justify-between">
         <div>
-          <div className="border-b border-slate-400 pb-1 mb-1 w-48">&nbsp;</div>
+          <div className="border-b border-slate-400 pb-1 mb-1 w-48 font-bold">{providerNameVal}&nbsp;</div>
           <p className="text-slate-600">Operating Provider Signature</p>
         </div>
         <div>
-          <div className="border-b border-slate-400 pb-1 mb-1 w-32">{val(activeDos)}&nbsp;</div>
+          <div className="border-b border-slate-400 pb-1 mb-1 w-32">{signatureDateVal}&nbsp;</div>
           <p className="text-slate-600">Date</p>
         </div>
       </div>

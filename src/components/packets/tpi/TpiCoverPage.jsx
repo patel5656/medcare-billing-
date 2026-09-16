@@ -1,17 +1,32 @@
 // src/components/packets/tpi/TpiCoverPage.jsx
 import React from 'react';
 
-export const TpiCoverPage = ({ blankMode = false, packetData = null }) => {
-  const getField = (field, fallback = '') => {
+export const TpiCoverPage = ({ blankMode = false, packetData = null, bill = null, serviceLines = [] }) => {
+  const getField = (field) => {
     if (blankMode) return '';
-    if (!packetData) return fallback;
-    if (field === 'patientName') return packetData.patientName || fallback;
-    if (field === 'dob') return packetData.patient?.dob || packetData.patientDob || fallback;
-    if (field === 'accidentDate') return packetData.accidentDate || fallback;
-    if (field === 'initialDate') return packetData.initialDate || fallback;
-    if (field === 'dischargeDate') return packetData.dischargeDate || fallback;
-    return fallback;
+    if (!packetData) return '';
+    if (field === 'patientName') return packetData.patientName || '';
+    if (field === 'dob') return packetData.patient?.dob || packetData.patientDob || '';
+    if (field === 'accidentDate') return packetData.accidentDate || '';
+    if (field === 'initialDate') return packetData.initialDate || '';
+    return '';
   };
+
+  const getProcedureDos = () => {
+    if (blankMode) return '';
+    const lineDos = serviceLines && serviceLines.length > 0 ? (serviceLines[0].dos || serviceLines[0].dateOfService) : null;
+    const procDos = lineDos || packetData?.procedureDos || packetData?.serviceDate || packetData?.initialDate;
+    return procDos || '';
+  };
+
+  const getSignatureDate = () => {
+    if (blankMode) return '';
+    return packetData?.signatureDate || packetData?.dischargeDate || packetData?.signedAt || '';
+  };
+
+  const providerName = blankMode ? '' : (packetData?.referringProviderName || packetData?.providerName || packetData?.attendingProviderName || '');
+  const procedureDos = getProcedureDos();
+  const signatureDate = getSignatureDate();
 
   return (
     <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '48px 56px' }}>
@@ -37,19 +52,19 @@ export const TpiCoverPage = ({ blankMode = false, packetData = null }) => {
         <div className="grid grid-cols-2 gap-x-8 gap-y-3 font-mono text-xs">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">NAME:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[120px] text-slate-900">{getField('patientName', 'SAMPLE PATIENT')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[120px] text-slate-900">{getField('patientName')}&nbsp;</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">Date of Birth:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[100px] text-slate-900">{getField('dob', '01/01/1980')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 min-w-[100px] text-slate-900">{getField('dob')}&nbsp;</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">Date of Accident:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('accidentDate', '12/01/2025')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('accidentDate')}&nbsp;</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 whitespace-nowrap">Initial Date:</span>
-            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('initialDate', '01/15/2026')}&nbsp;</div>
+            <div className="flex-1 border-b border-slate-400 pb-0.5 text-slate-900">{getField('initialDate')}&nbsp;</div>
           </div>
         </div>
       </div>
@@ -62,7 +77,7 @@ export const TpiCoverPage = ({ blankMode = false, packetData = null }) => {
           <li>Provider Billing Statement</li>
           <li>CMS-1500 Claim Form</li>
           <li>Trigger Point Assessment Form</li>
-          <li>Trigger Point Procedure Form (DOS: {getField('initialDate', '01/15/2026')})</li>
+          <li>Trigger Point Procedure Form {procedureDos ? `(DOS: ${procedureDos})` : ''}</li>
         </ol>
       </div>
 
@@ -73,11 +88,11 @@ export const TpiCoverPage = ({ blankMode = false, packetData = null }) => {
         </p>
         <div className="mt-6 grid grid-cols-2 gap-8 text-xs font-mono">
           <div>
-            <div className="border-b border-slate-400 pb-1 mb-1 min-h-[24px]">&nbsp;</div>
+            <div className="border-b border-slate-400 pb-1 mb-1 min-h-[24px] font-bold">{providerName}&nbsp;</div>
             <p className="text-slate-600">Authorized Provider Signature</p>
           </div>
           <div>
-            <div className="border-b border-slate-400 pb-1 mb-1 min-h-[24px]">{getField('dischargeDate', '01/15/2026')}&nbsp;</div>
+            <div className="border-b border-slate-400 pb-1 mb-1 min-h-[24px]">{signatureDate}&nbsp;</div>
             <p className="text-slate-600">Date</p>
           </div>
         </div>

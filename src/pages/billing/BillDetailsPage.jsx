@@ -87,6 +87,15 @@ export const BillDetailsPage = () => {
 
   const handlePostAdjustment = async (e) => {
     e.preventDefault();
+    const remainingBalance = bill?.totals?.balanceDue !== undefined ? Number(bill.totals.balanceDue) : 0;
+    if (remainingBalance <= 0) {
+      addToast('This bill has a $0 remaining balance. No further adjustments can be applied.', 'warning');
+      return;
+    }
+    if (Number(adjustmentForm.amount) > remainingBalance) {
+      addToast(`Adjustment amount ($${Number(adjustmentForm.amount).toFixed(2)}) cannot exceed remaining balance ($${remainingBalance.toFixed(2)}).`, 'warning');
+      return;
+    }
     try {
       const updated = await apiBillingService.postAdjustment(bill.id, {
         lineIndex: adjustmentForm.lineIndex,
@@ -97,7 +106,7 @@ export const BillDetailsPage = () => {
       setShowAdjustmentModal(false);
       addToast('Adjustment posted directly to database!', 'success');
     } catch (err) {
-      addToast('Failed to post adjustment', 'error');
+      addToast(err?.message || 'Failed to post adjustment', 'error');
     }
   };
 

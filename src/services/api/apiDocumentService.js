@@ -46,22 +46,6 @@ export const apiDocumentService = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Failed to build patient packet.');
     }
-    
-    const contentType = res.headers.get('content-type');
-    if (contentType && contentType.includes('application/pdf')) {
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Master_Legal_Packet_${caseId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      
-      return { packetId: `PKT-${Date.now().toString().slice(-6)}`, success: true };
-    }
-
     return res.json();
   }
 };

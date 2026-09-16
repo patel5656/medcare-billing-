@@ -44,11 +44,15 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   const patientSex = bill.patientSex || patientCase?.patientSex || patientCase?.patient?.sex || '';
 
   // --- Patient address (individual components from DB) ---
-  const patientStreet = bill.patientStreet || patientCase?.patientStreet || '';
-  const patientCity = bill.patientCity || patientCase?.patientCity || '';
-  const patientState = bill.patientState || patientCase?.patientState || '';
-  const patientZip = bill.patientZip || patientCase?.patientZip || '';
-  const patientPhone = bill.patientPhone || patientCase?.patientPhone || '';
+  const ptObj = patientCase?.patient || bill?.patient || {};
+  const ptAddrObj = typeof ptObj.address === 'object' && ptObj.address ? ptObj.address : {};
+
+  const patientStreet = bill.patientStreet || ptObj.street || ptAddrObj.street || patientCase?.patientStreet || '';
+  const patientCity = bill.patientCity || ptObj.city || ptAddrObj.city || patientCase?.patientCity || '';
+  const patientState = bill.patientState || ptObj.state || ptAddrObj.state || patientCase?.patientState || '';
+  const patientZip = bill.patientZip || ptObj.zipCode || ptAddrObj.zipCode || patientCase?.patientZip || '';
+  const patientPhone = bill.patientPhone || ptObj.phone || ptAddrObj.phone || patientCase?.patientPhone || '';
+  const primaryGroupNumber = bill.primaryGroupNumber || ptObj.primaryGroupNumber || patientCase?.patient?.primaryGroupNumber || patientCase?.primaryGroupNumber || '';
 
   // --- Provider identifiers from real DB data ---
   const providerNpi = bill.providerNpi || providerConfig?.identifiers?.npi || bill.identifiers?.npi || '';
@@ -61,14 +65,16 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   const renderingNpi = renderingProvider.npi || providerNpi;
   const renderingProviderId = renderingProvider.providerId || renderingProvider.id || renderingProvider.renderingId || bill.renderingProviderId || '';
 
-  // --- Referring provider from Case ---
-  const referringName = bill.referringProviderName || patientCase?.referringProviderName || bill.providerName || providerConfig?.name || '';
-  const referringNpi = bill.referringProviderNpi || patientCase?.referringProviderNpi || providerNpi || '';
+  // --- Referring provider from Case or Patient (no fallbacks to billing provider) ---
+  const ptObjRef = patientCase?.patient || bill?.patient || {};
+  const referringName = bill.referringProviderName || patientCase?.referringProviderName || bill.referringProvider || ptObjRef.referringProvider || ptObjRef.referringProviderName || '';
+  const referringNpi = bill.referringProviderNpi || patientCase?.referringProviderNpi || ptObjRef.referringProviderNpi || '';
 
   // --- Service Facility from provider DB ---
   const serviceFacility = bill.serviceFacility || providerConfig?.serviceFacility || {};
   const sfName = serviceFacility.name || bill.providerName || '';
   const sfAddress = serviceFacility.address || '';
+  const sfNpi = serviceFacility.npi || '';
 
   // --- Billing Provider from provider DB ---
   const billingProvider = bill.billingProvider || providerConfig?.billingProvider || {};
@@ -87,8 +93,8 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
 
   // --- Totals from real bill data ---
   const billTotals = bill.totals || {};
-  const totalPayments = bill.totalPayments || billTotals.totalPayments || 0;
-  const totalAdjustments = bill.totalAdjustments || billTotals.totalAdjustments || 0;
+  const totalPayments = bill.totalPayments !== undefined ? bill.totalPayments : (billTotals.totalPayments || 0);
+  const totalAdjustments = bill.totalAdjustments !== undefined ? bill.totalAdjustments : (billTotals.totalAdjustments || 0);
 
   // --- Accident / Illness date from case ---
   const accidentDate = bill.accidentDate || patientCase?.accidentDate || '';
@@ -142,8 +148,8 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
 
     const claimTotalCharge = totalCharge > 0 ? totalCharge : 0;
     const claimAmountPaid = Number(totalPayments) || 0;
-    const claimTotalAdjustments = Number(totalAdjustments) || 0;
-    const claimBalanceDue = claimTotalCharge - claimAmountPaid - claimTotalAdjustments;
+    const claimAdjustments = Number(totalAdjustments) || 0;
+    const claimBalanceDue = Math.max(0, claimTotalCharge - (claimAmountPaid + claimAdjustments));
 
     return {
       claimId: `cms-${bill.id}-${idx}`,
@@ -156,7 +162,7 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       status: 'Generated & Validated',
       formVersion: '02/12',
       box1: 'OTHER',
-      box1a: patientId,
+      box1a: bill.insurancePolicyNumber || patientCase?.insurancePolicyNumber || '',
       box2: patientName,
       box3Dob: { mm, dd, yy },
       box3Sex: patientSex,
@@ -181,11 +187,11 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box10AutoAccident: 'YES',
       box10State: bill.accidentState || patientCase?.accidentState || patientState,
       box10d: '',
-      box11: '',
+      box11: primaryGroupNumber,
       box11InsuredDob: { mm, dd, yy },
       box11InsuredSex: patientSex,
       box11b: '',
-      box11c: '',
+      box11c: bill.insuranceCompany || patientCase?.insuranceCompany || '',
       box11d: '',
       box12Signature: 'SIGNATURE ON FILE',
       box12Date: dosKey,
@@ -215,6 +221,7 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box31ProviderSignature: renderingName,
       box31Date: dosKey,
       box32Facility: sfAddress ? `${sfName}\n${sfAddress}` : sfName,
+      box32Npi: sfNpi,
       box33BillingProvider: bpAddress ? `${bpName}\n${bpAddress}` : bpName,
       box33Phone: bpPhone,
       box33Npi: providerNpi,
@@ -265,6 +272,14 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     };
   });
 
+  const apptPt = appointment.patient || {};
+  const apptPtAddr = typeof apptPt.address === 'object' && apptPt.address ? apptPt.address : {};
+  const apptStreet = appointment.patientStreet || apptPt.street || apptPtAddr.street || '';
+  const apptCity = appointment.patientCity || apptPt.city || apptPtAddr.city || '';
+  const apptState = appointment.patientState || apptPt.state || apptPtAddr.state || '';
+  const apptZip = appointment.patientZip || apptPt.zipCode || apptPtAddr.zipCode || '';
+  const apptPhone = appointment.patientPhone || apptPt.phone || apptPtAddr.phone || '';
+
   return {
     claimId: `cms-appt-${appointment.id}`,
     appointmentId: appointment.id,
@@ -272,20 +287,22 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     status: 'Ready to Bill',
     formVersion: '02/12',
     box1: 'OTHER',
-    box1a: appointment.patientId || '',
+    box1a: appointment.insurancePolicyNumber || appointment.policyNumber || '',
     box2: appointment.patientName || '',
     box3Dob: { mm: '', dd: '', yy: '' },
     box3Sex: '',
     box4: appointment.patientName || '',
-    box5Address: '',
-    box5City: '',
-    box5State: '',
-    box5Zip: '',
+    box5Address: apptStreet,
+    box5City: apptCity,
+    box5State: apptState,
+    box5Zip: apptZip,
+    box5Phone: apptPhone,
     box6Relation: 'Self',
-    box7Address: '',
-    box7City: '',
-    box7State: '',
-    box7Zip: '',
+    box7Address: apptStreet,
+    box7City: apptCity,
+    box7State: apptState,
+    box7Zip: apptZip,
+    box7Phone: apptPhone,
     box8Status: 'Single',
     box9a: '',
     box9bDob: { mm: '', dd: '', yy: '' },
@@ -295,11 +312,11 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     box10AutoAccident: 'YES',
     box10State: '',
     box10d: '',
-    box11: '',
+    box11: appointment.insurancePolicyNumber || appointment.policyNumber || '',
     box11InsuredDob: { mm: '', dd: '', yy: '' },
     box11InsuredSex: '',
     box11b: '',
-    box11c: '',
+    box11c: appointment.insuranceCompany || appointment.insuranceCarrier || '',
     box11d: '',
     box12Signature: 'SIGNATURE ON FILE',
     box12Date: dos,
@@ -308,9 +325,9 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     box15Date: { mm: '', dd: '', yy: '' },
     box16From: { mm: '', dd: '', yy: '' },
     box16To: { mm: '', dd: '', yy: '' },
-    box17ReferringName: appointment.providerName || '',
-    box17a: appointment.providerName || '',
-    box17Npi: appointment.providerNpi || '',
+    box17ReferringName: appointment.referringProviderName || appointment.referringProvider || apptPt.referringProvider || apptPt.referringProviderName || '',
+    box17a: '',
+    box17Npi: appointment.referringProviderNpi || apptPt.referringProviderNpi || '',
     box18From: { mm: '', dd: '', yy: '' },
     box18To: { mm: '', dd: '', yy: '' },
     box19: '',
@@ -328,6 +345,7 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     box31ProviderSignature: appointment.providerName || '',
     box31Date: dos,
     box32Facility: '',
+    box32Npi: '',
     box33BillingProvider: '',
     box33Phone: '',
     box33Npi: '',
