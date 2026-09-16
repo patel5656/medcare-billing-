@@ -9,6 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { apiBillingService as mockBillingService } from '../../services/api/apiBillingService';
 import { apiClinicalNoteService as mockClinicalNoteService } from '../../services/api/apiClinicalNoteService';
+import { apiCaseService } from '../../services/api/apiCaseService';
 import { formatCurrency } from '../../utils/billingCalculations';
 import { useAuthStore } from '../../store/authStore';
 import { ROLES } from '../../constants/rolePermissions';
@@ -17,6 +18,7 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
   const navigate = useNavigate();
   const { currentUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState('OVERVIEW');
+  const [cases, setCases] = useState([]);
   const [bills, setBills] = useState([]);
   const [notes, setNotes] = useState([]);
 
@@ -24,7 +26,19 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
 
   useEffect(() => {
     if (patient) {
-      mockBillingService.getFourBillsByCase('case-001').then(res => setBills(res.allBills || []));
+      apiCaseService.getCases({ patientId: patient.id }).then(res => {
+        const foundCases = res || [];
+        setCases(foundCases);
+        if (foundCases.length > 0) {
+          mockBillingService.getFourBillsByCase(foundCases[0].id || foundCases[0].caseId).then(bRes => setBills(bRes.allBills || []));
+        } else {
+          setBills([]);
+        }
+      }).catch(err => {
+        console.error(err);
+        setCases([]);
+        setBills([]);
+      });
       mockClinicalNoteService.getNotes({ patientId: patient.id || 'pat-001' }).then(setNotes);
     }
   }, [patient]);
@@ -35,6 +49,10 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
     onClose();
     navigate(`/patients/${patient.id}/profile`);
   };
+
+  const activeCase = cases.length > 0 ? cases[0] : null;
+  const totalPracticeAR = bills.reduce((sum, b) => sum + (b.totals?.totalCharges || 0), 0);
+  const formattedTotalAR = formatCurrency(totalPracticeAR);
 
   return (
     <Modal
@@ -82,7 +100,7 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                DOB: <strong className="text-slate-200">{patient.dob}</strong> | SSN: <strong className="text-slate-200">{patient.ssn || '***-**-1234'}</strong> | DL: <strong className="text-slate-200">{patient.driversLicense || 'TX-8921820'}</strong>
+                DOB: <strong className="text-slate-200">{patient.dob || 'N/A'}</strong> | SSN: <strong className="text-slate-200">{patient.ssn || 'N/A'}</strong> | DL: <strong className="text-slate-200">{patient.driversLicense || 'N/A'}</strong>
               </p>
             </div>
           </div>
@@ -90,8 +108,8 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
           <div className="flex items-center gap-3 sm:text-right border-t sm:border-t-0 border-slate-800 pt-3 sm:pt-0">
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold block">Total Practice A/R</span>
-              <strong className="text-white text-base sm:text-lg font-mono">$24,960.00</strong>
-              <p className="text-[10px] text-teal-300">4 Connected Provider Bills</p>
+              <strong className="text-white text-base sm:text-lg font-mono">{formattedTotalAR}</strong>
+              <p className="text-[10px] text-teal-300">{bills.length} Connected Provider Bills</p>
             </div>
           </div>
         </div>
@@ -101,7 +119,7 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
           {[
             { id: 'OVERVIEW', label: '1. Demographics & Contact', icon: User },
             { id: 'CASES', label: '2. Accident Case & Lien', icon: FileText },
-            { id: 'BILLS', label: '3. Four Bills Ledger ($24.9k)', icon: Receipt },
+            { id: 'BILLS', label: `3. Four Bills Ledger (${bills.length > 0 ? formattedTotalAR : '$0'})`, icon: Receipt },
             { id: 'NOTES', label: '4. Clinical Notes', icon: Brain },
             { id: 'HISTORY', label: '5. Medical & Allergies', icon: Activity },
           ].map((tab) => {
@@ -133,11 +151,11 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
                 </h4>
                 <div className="space-y-1.5 text-slate-700">
                   <div className="flex justify-between"><span>Full Legal Name:</span><strong className="text-slate-900">{patient.firstName} {patient.middleName} {patient.lastName} {patient.suffix || ''}</strong></div>
-                  <div className="flex justify-between"><span>Date of Birth:</span><strong className="text-slate-900">{patient.dob}</strong></div>
-                  <div className="flex justify-between"><span>Gender / Sex:</span><strong className="text-slate-900">{patient.sex === 'F' ? 'Female' : 'Male'}</strong></div>
-                  <div className="flex justify-between"><span>Marital Status:</span><strong className="text-slate-900">{patient.maritalStatus || 'Single'}</strong></div>
-                  <div className="flex justify-between"><span>Driver's License:</span><strong className="text-slate-900">{patient.driversLicense || 'TX-8921820'} ({patient.driversLicenseState || 'TX'})</strong></div>
-                  <div className="flex justify-between"><span>Preferred Language:</span><strong className="text-slate-900">{patient.language || 'English'}</strong></div>
+                  <div className="flex justify-between"><span>Date of Birth:</span><strong className="text-slate-900">{patient.dob || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Gender / Sex:</span><strong className="text-slate-900">{patient.sex === 'F' ? 'Female' : patient.sex === 'M' ? 'Male' : 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Marital Status:</span><strong className="text-slate-900">{patient.maritalStatus || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Driver's License:</span><strong className="text-slate-900">{patient.driversLicense || 'N/A'} {patient.driversLicenseState ? `(${patient.driversLicenseState})` : ''}</strong></div>
+                  <div className="flex justify-between"><span>Preferred Language:</span><strong className="text-slate-900">{patient.language || 'N/A'}</strong></div>
                 </div>
               </div>
 
@@ -146,11 +164,11 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
                   <Phone className="w-4 h-4 text-teal-600" /> Contact Details &amp; Address
                 </h4>
                 <div className="space-y-1.5 text-slate-700">
-                  <div className="flex justify-between"><span>Mobile Phone:</span><strong className="text-slate-900">{patient.phone || '713-555-0100'}</strong></div>
-                  <div className="flex justify-between"><span>Email Address:</span><strong className="text-slate-900 truncate max-w-[180px]">{patient.email || 'patient@example.test'}</strong></div>
-                  <div className="flex justify-between"><span>Street Address:</span><strong className="text-slate-900">{patient.address?.street || '10101 Harwin Dr.'}</strong></div>
-                  <div className="flex justify-between"><span>City / State / Zip:</span><strong className="text-slate-900">{patient.address?.city || 'Houston'}, {patient.address?.state || 'TX'} {patient.address?.zipCode || '77036'}</strong></div>
-                  <div className="flex justify-between"><span>Communication Pref:</span><strong className="text-teal-700 font-bold">{patient.communicationPref || 'SMS (Text Reminders)'}</strong></div>
+                  <div className="flex justify-between"><span>Mobile Phone:</span><strong className="text-slate-900">{patient.phone || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Email Address:</span><strong className="text-slate-900 truncate max-w-[180px]">{patient.email || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Street Address:</span><strong className="text-slate-900">{patient.address?.street || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>City / State / Zip:</span><strong className="text-slate-900">{patient.address?.city || 'N/A'}, {patient.address?.state || ''} {patient.address?.zipCode || ''}</strong></div>
+                  <div className="flex justify-between"><span>Communication Pref:</span><strong className="text-teal-700 font-bold">{patient.communicationPref || 'N/A'}</strong></div>
                 </div>
               </div>
             </div>
@@ -161,9 +179,9 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
                   <Phone className="w-4 h-4 text-amber-600" /> Emergency Contact
                 </h4>
                 <div className="space-y-1 text-slate-700">
-                  <div className="flex justify-between"><span>Contact Name:</span><strong className="text-slate-900">{patient.emergencyContactName || 'Jane Doe'}</strong></div>
-                  <div className="flex justify-between"><span>Relationship:</span><strong className="text-slate-900">{patient.emergencyContactRelation || 'Spouse'}</strong></div>
-                  <div className="flex justify-between"><span>Contact Phone:</span><strong className="text-slate-900">{patient.emergencyContactPhone || '713-555-0102'}</strong></div>
+                  <div className="flex justify-between"><span>Contact Name:</span><strong className="text-slate-900">{patient.emergencyContactName || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Relationship:</span><strong className="text-slate-900">{patient.emergencyContactRelation || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Contact Phone:</span><strong className="text-slate-900">{patient.emergencyContactPhone || 'N/A'}</strong></div>
                 </div>
               </div>
 
@@ -172,9 +190,9 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
                   <ShieldCheck className="w-4 h-4 text-teal-600" /> Auto Insurance Policy (PIP / MedPay)
                 </h4>
                 <div className="space-y-1 text-slate-700">
-                  <div className="flex justify-between"><span>Insurance Carrier:</span><strong className="text-slate-900">{patient.primaryInsuranceCompany || 'State Farm Auto Insurance'}</strong></div>
-                  <div className="flex justify-between"><span>Policy Number:</span><strong className="text-slate-900">{patient.primaryPolicyNumber || 'POL-TX-99281'}</strong></div>
-                  <div className="flex justify-between"><span>Claim / Group #:</span><strong className="text-slate-900">{patient.primaryGroupNumber || 'CLM-88192'}</strong></div>
+                  <div className="flex justify-between"><span>Insurance Carrier:</span><strong className="text-slate-900">{patient.primaryInsuranceCompany || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Policy Number:</span><strong className="text-slate-900">{patient.primaryPolicyNumber || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Claim / Group #:</span><strong className="text-slate-900">{patient.primaryGroupNumber || 'N/A'}</strong></div>
                 </div>
               </div>
             </div>
@@ -190,42 +208,48 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
                   <FileText className="w-4 h-4 text-teal-600" /> Active Motor Vehicle Accident Case (MVA)
                 </h4>
                 <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">
-                  CASE-2025-1227
+                  {activeCase ? (activeCase.caseId || activeCase.id) : 'No Active Case'}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
-                <div>
-                  <span className="text-slate-500 block">Date of Accident (DOA)</span>
-                  <strong className="text-slate-900 text-sm">12/27/2025</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Accident Location</span>
-                  <strong className="text-slate-900">Interstate 10, Houston TX</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Police Report #</span>
-                  <strong className="text-slate-900">HPD-2025-889201</strong>
-                </div>
-              </div>
+              {activeCase ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
+                    <div>
+                      <span className="text-slate-500 block">Date of Accident (DOA)</span>
+                      <strong className="text-slate-900 text-sm">{activeCase.accidentDate || 'N/A'}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Accident Location</span>
+                      <strong className="text-slate-900">{activeCase.accidentState || 'N/A'}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Status</span>
+                      <strong className="text-slate-900">{activeCase.status || 'ACTIVE'}</strong>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1">
-                  <strong className="text-slate-900 block border-b border-slate-100 pb-1">Attorney &amp; Law Firm (Lien)</strong>
-                  <div className="flex justify-between"><span>Attorney:</span><strong>OJ Lawal &amp; Associates</strong></div>
-                  <div className="flex justify-between"><span>Law Firm:</span><strong>OJ Law Firm LLC</strong></div>
-                  <div className="flex justify-between"><span>Firm Phone:</span><strong>713-555-0188</strong></div>
-                  <div className="flex justify-between"><span>Status:</span><span className="text-teal-700 font-bold">Letter of Protection (LOP) Signed</span></div>
-                </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1">
+                      <strong className="text-slate-900 block border-b border-slate-100 pb-1">Attorney &amp; Law Firm (Lien)</strong>
+                      <div className="flex justify-between"><span>Attorney:</span><strong>{activeCase.attorneyName || 'N/A'}</strong></div>
+                      <div className="flex justify-between"><span>Law Firm:</span><strong>{activeCase.lawFirm || 'N/A'}</strong></div>
+                      <div className="flex justify-between"><span>Firm Phone:</span><strong>{activeCase.attorneyPhone || 'N/A'}</strong></div>
+                      <div className="flex justify-between"><span>Status:</span><span className="text-teal-700 font-bold">{activeCase.legalStatus || 'N/A'}</span></div>
+                    </div>
 
-                <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1">
-                  <strong className="text-slate-900 block border-b border-slate-100 pb-1">Third-Party Auto Insurance</strong>
-                  <div className="flex justify-between"><span>Carrier:</span><strong>Example Auto Insurance Co.</strong></div>
-                  <div className="flex justify-between"><span>Claim #:</span><strong>CLM-2025-88192</strong></div>
-                  <div className="flex justify-between"><span>Adjuster:</span><strong>James Wilson (800-555-0299)</strong></div>
-                  <div className="flex justify-between"><span>Liability:</span><span className="text-emerald-700 font-bold">100% Accepted</span></div>
-                </div>
-              </div>
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1">
+                      <strong className="text-slate-900 block border-b border-slate-100 pb-1">Third-Party Auto Insurance</strong>
+                      <div className="flex justify-between"><span>Carrier:</span><strong>{activeCase.insuranceCompany || 'N/A'}</strong></div>
+                      <div className="flex justify-between"><span>Claim #:</span><strong>{activeCase.insuranceClaimNumber || 'N/A'}</strong></div>
+                      <div className="flex justify-between"><span>Adjuster:</span><strong>{activeCase.adjusterName || 'N/A'} {activeCase.adjusterPhone ? `(${activeCase.adjusterPhone})` : ''}</strong></div>
+                      <div className="flex justify-between"><span>Liability:</span><span className="text-emerald-700 font-bold">{activeCase.liabilityStatus || 'N/A'}</span></div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                 <div className="p-4 text-center text-slate-500 text-xs bg-white rounded-xl border border-slate-200">No active cases found for this patient.</div>
+              )}
             </div>
           </div>
         )}
@@ -235,7 +259,7 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
           <div className="space-y-3 text-xs">
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-teal-600" /> Connected 4-Provider Bills Breakdown
+                <Receipt className="w-4 h-4 text-teal-600" /> Connected {bills.length}-Provider Bills Breakdown
               </h4>
               {canViewBilling && (
                 <button
@@ -248,29 +272,26 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                { name: '1. JOSMIC Wellness Center', role: 'Pain Management Consultation', amount: 1214.00, cpt: '99204', st: 'Statement #1024-J' },
-                { name: "2. DAV'S Anatomy", role: 'ESWT Shockwave Therapy (8 Sessions)', amount: 8000.00, cpt: '0101T', st: 'Statement #1024-D' },
-                { name: '3. ANIK Laser Therapy', role: 'Laser Therapy + Supplies (6 Sessions)', amount: 14606.00, cpt: '97039, 10001, 97124', st: 'Statement #1024-A' },
-                { name: '4. Counselor Practice (Hope Behavioral)', role: 'Individual Psychotherapy & PTSD', amount: 1140.00, cpt: '90791, 90834, 90837', st: 'Statement #1024-C' },
-              ].map((b, idx) => (
-                <div key={idx} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+              {bills.length > 0 ? bills.map((b, idx) => (
+                <div key={b.id || idx} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <strong className="text-slate-900 font-bold">{b.name}</strong>
-                    <span className="font-mono font-bold text-teal-800 text-sm">{formatCurrency(b.amount)}</span>
+                    <strong className="text-slate-900 font-bold">{b.providerName || 'Provider'}</strong>
+                    <span className="font-mono font-bold text-teal-800 text-sm">{formatCurrency(b.totals?.totalCharges || 0)}</span>
                   </div>
-                  <p className="text-[11px] text-slate-500">{b.role}</p>
+                  <p className="text-[11px] text-slate-500">{b.providerName || 'N/A'}</p>
                   <div className="flex items-center justify-between pt-1 border-t border-slate-200/80 text-[10px]">
-                    <span className="font-mono text-slate-600">CPT: {b.cpt}</span>
-                    <span className="font-bold text-slate-700">{b.st}</span>
+                    <span className="font-mono text-slate-600">Lines: {(b.lineItems || []).length}</span>
+                    <span className="font-bold text-slate-700">{b.statementNumber || b.id}</span>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="p-4 text-center text-slate-500 text-xs col-span-1 sm:col-span-2 bg-slate-50 rounded-2xl border border-slate-200">No connected provider bills found.</div>
+              )}
             </div>
 
             <div className="p-3.5 bg-slate-900 text-white rounded-2xl flex items-center justify-between font-bold">
               <span>Grand Total Patient Case Billing:</span>
-              <span className="text-base font-mono text-teal-300">$24,960.00</span>
+              <span className="text-base font-mono text-teal-300">{formattedTotalAR}</span>
             </div>
           </div>
         )}
@@ -283,7 +304,7 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
             </h4>
             
             <div className="space-y-2">
-              {notes.map(n => (
+              {notes.length > 0 ? notes.map(n => (
                 <div key={n.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <strong className="text-slate-900 block">{n.title}</strong>
@@ -293,7 +314,9 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
                     {n.status}
                   </span>
                 </div>
-              ))}
+              )) : (
+                 <div className="p-4 text-center text-slate-500 text-xs bg-slate-50 rounded-xl border border-slate-200">No clinical notes found.</div>
+              )}
             </div>
           </div>
         )}
@@ -304,18 +327,18 @@ export const PatientDetailsModal = ({ isOpen, onClose, patient }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
                 <strong className="text-slate-900 block border-b border-slate-200 pb-1">Known Allergies</strong>
-                <p className="text-slate-700">{patient.knownAllergies || 'NKDA (No Known Drug Allergies)'}</p>
+                <p className="text-slate-700">{patient.knownAllergies || 'N/A'}</p>
               </div>
 
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
                 <strong className="text-slate-900 block border-b border-slate-200 pb-1">Current Medications</strong>
-                <p className="text-slate-700">{patient.currentMedications || 'Cyclobenzaprine 10mg PRN, Ibuprofen 800mg PO TID'}</p>
+                <p className="text-slate-700">{patient.currentMedications || 'N/A'}</p>
               </div>
             </div>
 
             <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
               <strong className="text-slate-900 block border-b border-slate-200 pb-1">Past Medical &amp; Surgical History</strong>
-              <p className="text-slate-700">{patient.pastMedicalHistory || 'Non-contributory prior to MVA. Denies prior cervical or lumbar spine pathology.'}</p>
+              <p className="text-slate-700">{patient.pastMedicalHistory || 'N/A'}</p>
             </div>
           </div>
         )}

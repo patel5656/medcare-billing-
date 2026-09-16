@@ -505,13 +505,13 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <span className="leading-none block">READ BACK OF FORM BEFORE COMPLETING &amp; SIGNING THIS FORM.</span>
             <span className="text-[6.5px] font-normal leading-tight block mt-0.5">12. PATIENT'S OR AUTHORIZED PERSON'S SIGNATURE I authorize the release of any medical or other information necessary to process this claim. I also request payment of government benefits either to myself or to the party who accepts assignment below.</span>
             <div className="flex justify-between items-end mt-1 font-mono text-xs text-slate-900">
-              <div>
+              <div className="flex items-center w-2/3 pr-2">
                 <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1">SIGNED</span>
-                <span className="font-bold border-b border-slate-400 pb-0.5">{c(claim.box12Signature || 'SIGNATURE ON FILE')}</span>
+                <FieldInput defaultValue={c(claim.box12Signature || 'SIGNATURE ON FILE')} readOnly={readOnly} className="font-bold border-b border-slate-400 pb-0.5 w-full" />
               </div>
               <div>
                 <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1">DATE</span>
-                <span className="font-bold">{c(claim.box12Date || '01/22/2026')}</span>
+                <FieldInput defaultValue={c(claim.box12Date || '01/22/2026')} readOnly={readOnly} className="font-bold w-24" />
               </div>
             </div>
           </div>
@@ -521,9 +521,9 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <span>13. INSURED'S OR AUTHORIZED PERSON'S SIGNATURE</span>
               <span className="text-[6.5px] font-normal leading-tight block mt-0.5">I authorize payment of medical benefits to the undersigned physician or supplier for services described below.</span>
             </div>
-            <div className="font-mono text-xs text-slate-900 mt-1">
+            <div className="flex items-center font-mono text-xs text-slate-900 mt-1">
               <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1">SIGNED</span>
-              <span className="font-bold border-b border-slate-400 pb-0.5">{c(claim.box13Signature || 'SIGNATURE ON FILE')}</span>
+              <FieldInput defaultValue={c(claim.box13Signature || 'SIGNATURE ON FILE')} readOnly={readOnly} className="font-bold border-b border-slate-400 pb-0.5 flex-1" />
             </div>
           </div>
         </div>
