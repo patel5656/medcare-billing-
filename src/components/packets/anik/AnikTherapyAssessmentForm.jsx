@@ -3,16 +3,16 @@ import React, { useState, useEffect } from 'react';
 
 /**
  * ANIK Therapy Assessment Form - ANIK Reference PDF Page 7
- * Now connected dynamically to serviceLines
+ * Dynamic patient, diagnosis, serviceLines, and clinical assessment data
  */
 export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
-  // We'll support up to 3 sessions per page based on dynamic serviceLines
   const [assessments, setAssessments] = useState({});
 
   useEffect(() => {
-    // If not blank mode and we don't have DB states loaded, we could initialize defaults.
-    // For now, we'll let them be editable.
-  }, [blankMode, packetData]);
+    if (packetData?.assessments) {
+      setAssessments(packetData.assessments);
+    }
+  }, [packetData]);
 
   const updateAssessment = (date, field, value) => {
     if (readOnly) return;
@@ -25,20 +25,44 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
     }));
   };
 
+  // Extract patient name
+  const patientName = blankMode || !packetData
+    ? ''
+    : (packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '');
+
+  // Extract diagnosis
+  const getDiagnosis = () => {
+    if (blankMode || !packetData) return '';
+    if (Array.isArray(packetData.diagnosisCodes) && packetData.diagnosisCodes.length > 0) {
+      const cleaned = packetData.diagnosisCodes
+        .map(d => (typeof d === 'string' ? d : (d.description || d.code || d.icdCode || '')).trim())
+        .filter(Boolean);
+      if (cleaned.length > 0) return cleaned.join(', ');
+    }
+    if (packetData.diagnosis) return packetData.diagnosis;
+    if (Array.isArray(packetData.diagnoses) && packetData.diagnoses.length > 0) {
+      const cleaned = packetData.diagnoses
+        .map(d => (typeof d === 'string' ? d : (d.description || d.code || d.icdCode || '')).trim())
+        .filter(Boolean);
+      if (cleaned.length > 0) return cleaned.join(', ');
+    }
+    return '';
+  };
+  const diagnosisText = getDiagnosis();
+
   // Group service lines by Date of Service (dos)
+  const linesToUse = (serviceLines && serviceLines.length > 0)
+    ? serviceLines
+    : (packetData?.serviceLines || packetData?.items || []);
+
   const dosGroups = {};
-  if (!blankMode && serviceLines && serviceLines.length > 0) {
-    serviceLines.forEach(line => {
-      const dosKey = line.dos || line.dateOfService;
+  if (!blankMode && Array.isArray(linesToUse) && linesToUse.length > 0) {
+    linesToUse.forEach(line => {
+      const dosKey = line.dos || line.dateOfService || line.date;
       if (!dosKey) return;
       if (!dosGroups[dosKey]) dosGroups[dosKey] = [];
       dosGroups[dosKey].push(line);
     });
-  } else if (!blankMode) {
-    // Fallback/Demo if no service lines exist
-    dosGroups['01/22/2026'] = [{ cptCode: '97124' }, { cptCode: '97039', units: 3 }];
-    dosGroups['01/24/2026'] = [{ cptCode: '97124' }, { cptCode: '97039', units: 3 }];
-    dosGroups['01/26/2026'] = [{ cptCode: '97124' }, { cptCode: '97039', units: 3 }];
   }
 
   const sortedDates = Object.keys(dosGroups).sort((a, b) => new Date(a) - new Date(b));
@@ -46,9 +70,9 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
   const displayDates = sortedDates.slice(0, 3);
 
   // Helper to check if a specific CPT exists in a given date's lines
-  const hasCpt = (lines, codePrefix) => lines.some(l => l.cptCode && l.cptCode.startsWith(codePrefix));
+  const hasCpt = (lines, codePrefix) => lines.some(l => l.cptCode && String(l.cptCode).startsWith(codePrefix));
   const getCptUnits = (lines, codePrefix) => {
-    const line = lines.find(l => l.cptCode && l.cptCode.startsWith(codePrefix));
+    const line = lines.find(l => l.cptCode && String(l.cptCode).startsWith(codePrefix));
     return line && line.units > 1 ? ` X${line.units}` : '';
   };
 
@@ -72,49 +96,29 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
       <div className="space-y-1.5 text-xs font-mono font-bold border-b border-slate-300 pb-2">
         <div className="flex gap-2">
           <span>PATIENT NAME:</span>
-          {blankMode || !packetData ? (
+          {!patientName ? (
             <div className="border-b border-slate-400 mt-1 w-48">&nbsp;</div>
           ) : (
-            <span className="text-slate-900">{packetData.patientName}</span>
+            <span className="text-slate-900">{patientName}</span>
           )}
         </div>
         <div className="flex gap-2">
           <span>DIAGNOSIS:</span>
-          {blankMode ? (
+          {!diagnosisText ? (
             <div className="border-b border-slate-400 mt-1 w-64">&nbsp;</div>
           ) : (
-            <span className="text-slate-900 font-mono font-bold">
-              {(() => {
-                if (packetData && Array.isArray(packetData.diagnosisCodes) && packetData.diagnosisCodes.length > 0) {
-                  const cleaned = packetData.diagnosisCodes
-                    .map(d => (typeof d === 'string' ? d : (d.description || d.code || d.icdCode || '')).trim())
-                    .filter(Boolean);
-                  if (cleaned.length > 0) return cleaned.join(', ');
-                }
-                if (packetData?.diagnosis) return packetData.diagnosis;
-                return 'NECK, LOW BACK, LEFT ANKLE';
-              })()}
-            </span>
+            <span className="text-slate-900 font-mono font-bold">{diagnosisText}</span>
           )}
         </div>
       </div>
 
       {/* Dynamic Session Rendering */}
-      {displayDates.map((dos, idx) => {
+      {displayDates.map((dos) => {
         const lines = dosGroups[dos];
         const state = assessments[dos] || {};
-        const tol = state.tol || '';
-        const imp = state.imp || '';
-        const care = state.care || '';
-
-        // Initial default fallback to make it look like the original PDF if they haven't edited
-        const defaultTol = (!state.tol && idx === 0) ? 'FAIRLY' : (!state.tol && idx === 1) ? 'WELL' : tol;
-        const defaultImp = (!state.imp && idx === 0) ? 'IMPROVING_SLOWLY' : (!state.imp && idx === 1) ? 'IMPROVING' : imp;
-        const defaultCare = (!state.care && (idx === 0 || idx === 1)) ? 'CONTINUES_CARE' : care;
-
-        const currentTol = blankMode ? tol : defaultTol;
-        const currentImp = blankMode ? imp : defaultImp;
-        const currentCare = blankMode ? care : defaultCare;
+        const currentTol = state.tol || '';
+        const currentImp = state.imp || '';
+        const currentCare = state.care || '';
 
         return (
           <div key={dos} className="space-y-2 pt-2">
@@ -247,3 +251,4 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
     </div>
   );
 };
+

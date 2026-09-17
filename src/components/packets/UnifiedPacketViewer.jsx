@@ -152,9 +152,9 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     }
     
     // ANIK Components
-    if (key === 'AnikCoverPage') return <AnikCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} />;
+    if (key === 'AnikCoverPage') return <AnikCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
     if (key === 'AnikTherapyAssessmentForm') return <AnikTherapyAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'AnikLaserProcedureForm') return <AnikLaserProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} />;
+    if (key === 'AnikLaserProcedureForm') return <AnikLaserProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} pageIndex={pageDef.pageNumber ? pageDef.pageNumber - 8 : 0} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} procedureData={selectedCase?.procedures?.[pageDef.pageNumber ? pageDef.pageNumber - 8 : 0]} />;
     if (key === 'AnikNarrativeReport') return <AnikNarrativeReport reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={selectedCase} />;
     if (key === 'AnikFinalReport') return <AnikFinalReport reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={selectedCase} />;
 

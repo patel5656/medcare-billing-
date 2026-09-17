@@ -61,13 +61,19 @@ export const CreateBillPage = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    if (!form.caseId) {
+      addToast('Please specify a valid clinical case ID.', 'warning');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === providerId);
       const totalAmount = serviceLines.reduce((acc, line) => acc + ((parseFloat(line.units) || 1) * (parseFloat(line.charge) || 0)), 0);
       
       const newBill = await apiBillingService.createBill({
-        caseId: form.caseId || 'case-001',
-        patientId: form.patientId || 'pat-001',
+        caseId: form.caseId,
+        patientId: form.patientId || '',
         providerId: providerId,
         providerName: selectedProv?.name || 'JOSMIC Wellness Center',
         statementNumber,

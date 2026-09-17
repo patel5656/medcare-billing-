@@ -17,12 +17,94 @@ const InlineInput = ({ defaultValue = '', readOnly = false, className = '' }) =>
 };
 
 /**
- * ANIK Laser Therapy Procedure Form (Radial Device) - Sample PDF Pages 8, 9, 10
+ * ANIK Laser Therapy Procedure Form (Radial Device) - PDF Pages 8, 9, 10
+ * Fully dynamic patient, clinical, treatment, date, and provider signature data.
  */
-export const AnikLaserProcedureForm = ({ dos = '01/22/2026', readOnly = false, blankMode = false, packetData = null }) => {
-  const [nerveBlock, setNerveBlock] = useState('NO');
-  const [tolerated, setTolerated] = useState('YES');
-  const [durationCompleted, setDurationCompleted] = useState('YES');
+export const AnikLaserProcedureForm = ({ 
+  dos = '', 
+  pageIndex = 0,
+  readOnly = false, 
+  blankMode = false, 
+  packetData = null,
+  procedureData = null,
+  serviceLines = []
+}) => {
+  // Determine actual procedure DOS dynamically
+  const getProcedureDos = () => {
+    if (blankMode) return '';
+    if (procedureData?.dos || procedureData?.dateOfService) {
+      return procedureData.dos || procedureData.dateOfService;
+    }
+
+    const lines = (serviceLines && serviceLines.length > 0)
+      ? serviceLines
+      : (packetData?.serviceLines || packetData?.items || []);
+
+    const uniqueDates = Array.from(new Set(
+      lines.map(l => l.dos || l.dateOfService || l.date).filter(Boolean)
+    ));
+
+    if (uniqueDates.length > 0) {
+      if (pageIndex !== undefined && pageIndex !== null) {
+        return uniqueDates[pageIndex] || '';
+      }
+      return uniqueDates[0];
+    }
+
+    return '';
+  };
+
+  const procedureDos = getProcedureDos();
+
+  // Patient Demographics
+  const patientName = blankMode || !packetData ? '' : (packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '');
+  const patientDob = blankMode || !packetData ? '' : (packetData.patientDob || packetData.patient?.dob || packetData.dob || '');
+  const patientSex = blankMode || !packetData ? '' : (packetData.patientSex || packetData.patient?.sex || packetData.sex || '');
+
+  // Vitals & Clinical Info
+  const allergies = blankMode || !procedureDos ? '' : (procedureData?.allergies || packetData?.allergies || '');
+  const bp = blankMode || !procedureDos ? '' : (procedureData?.bp || procedureData?.vitals?.bp || packetData?.vitals?.bp || '');
+  const hr = blankMode || !procedureDos ? '' : (procedureData?.hr || procedureData?.vitals?.hr || packetData?.vitals?.hr || '');
+  const sessions = blankMode || !procedureDos ? '' : (procedureData?.sessions !== undefined && procedureData?.sessions !== null ? String(procedureData.sessions) : (packetData?.sessions !== undefined && packetData?.sessions !== null ? String(packetData.sessions) : ''));
+
+  // Nerve Block & Treatment Areas
+  const nerveBlockVal = blankMode || !procedureDos ? '' : (procedureData?.nerveBlockInjections || procedureData?.nerveBlock || packetData?.nerveBlockInjections || '');
+  
+  const getTreatmentAreas = () => {
+    if (blankMode || !packetData || !procedureDos) return '';
+    if (procedureData?.treatmentAreas || procedureData?.treatmentArea) {
+      return procedureData.treatmentAreas || procedureData.treatmentArea;
+    }
+    if (packetData.treatmentAreas || packetData.treatmentArea) {
+      return packetData.treatmentAreas || packetData.treatmentArea;
+    }
+    if (packetData.injuryBodyParts) {
+      return Array.isArray(packetData.injuryBodyParts) ? packetData.injuryBodyParts.join(', ') : packetData.injuryBodyParts;
+    }
+    return '';
+  };
+  const treatmentAreas = getTreatmentAreas();
+
+  // Laser Parameters
+  const wavelength = blankMode || !procedureDos ? '' : (procedureData?.wavelength || packetData?.laserParameters?.wavelength || '');
+  const totalMins = blankMode || !procedureDos ? '' : (procedureData?.totalMins || procedureData?.duration || packetData?.laserParameters?.totalMins || '');
+  const dose = blankMode || !procedureDos ? '' : (procedureData?.dose || packetData?.laserParameters?.dose || '');
+  const totalEnergy = blankMode || !procedureDos ? '' : (procedureData?.totalEnergy || packetData?.laserParameters?.totalEnergy || '');
+
+  // Findings / Observational Checks
+  const findings = blankMode || !procedureDos ? {} : (procedureData?.findings || procedureData?.observationalFindings || packetData?.findings || {});
+  const isFindingChecked = (key) => Boolean(findings[key]);
+
+  // Procedure Tolerated & Duration Completed
+  const procedureTolerated = blankMode || !procedureDos ? '' : (procedureData?.procedureTolerated || procedureData?.tolerated || packetData?.procedureTolerated || '');
+  const durationCompletedVal = blankMode || !procedureDos ? '' : (procedureData?.durationCompleted || packetData?.durationCompleted || '');
+
+  // Provider Signature
+  const providerSignature = blankMode || !procedureDos ? '' : (procedureData?.providerSignature || procedureData?.providerName || packetData?.renderingProviderName || packetData?.providerName || '');
+  const signatureDate = blankMode || !procedureDos ? '' : (procedureData?.signatureDate || packetData?.signatureDate || '');
+
+  // Check if target diagram markers should show
+  const hasTargetMarkers = !blankMode && Boolean(procedureDos) && Boolean(procedureData?.targetMarkers || procedureData?.treatmentAreas || packetData?.injuryBodyParts);
 
   return (
     <div
@@ -38,10 +120,10 @@ export const AnikLaserProcedureForm = ({ dos = '01/22/2026', readOnly = false, b
 
       {/* Demographics Row */}
       <div className="grid grid-cols-4 gap-2 text-xs font-mono border-b border-slate-300 pb-2">
-        <div><span>Name:</span> <InlineInput defaultValue={blankMode ? '' : (packetData ? packetData.patientName : 'aa jj')} readOnly={readOnly} className="w-28" /></div>
-        <div><span>DOB:</span> <InlineInput defaultValue={blankMode ? '' : (packetData ? (packetData.patientDob || packetData.patient?.dob || '1988-06-20') : '1988-06-20')} readOnly={readOnly} className="w-24" /></div>
-        <div><span>SEX:</span> <InlineInput defaultValue={blankMode ? '' : (packetData ? (packetData.patientSex || packetData.patient?.sex || 'M') : 'M')} readOnly={readOnly} className="w-8" /></div>
-        <div><span>DATE:</span> <InlineInput defaultValue={blankMode ? '' : (dos || packetData?.accidentDate || '01/22/2026')} readOnly={readOnly} className="w-24" /></div>
+        <div><span>Name:</span> <InlineInput defaultValue={patientName} readOnly={readOnly} className="w-28" /></div>
+        <div><span>DOB:</span> <InlineInput defaultValue={patientDob} readOnly={readOnly} className="w-24" /></div>
+        <div><span>SEX:</span> <InlineInput defaultValue={patientSex} readOnly={readOnly} className="w-8" /></div>
+        <div><span>DATE:</span> <InlineInput defaultValue={procedureDos} readOnly={readOnly} className="w-24" /></div>
       </div>
 
       {/* Intro Consent & Vitals */}
@@ -51,13 +133,13 @@ export const AnikLaserProcedureForm = ({ dos = '01/22/2026', readOnly = false, b
         </p>
 
         <div className="flex justify-between items-center text-xs py-1 border-b border-slate-300">
-          <div><strong>ALLERGIES:</strong> <InlineInput defaultValue="NONE" readOnly={readOnly} className="w-20" /></div>
-          <div><strong>BP:</strong> <InlineInput defaultValue="115/70 mmHg" readOnly={readOnly} className="w-24" /></div>
-          <div><strong>HR:</strong> <InlineInput defaultValue="90 bpm" readOnly={readOnly} className="w-16" /></div>
-          <div><strong>SESSIONS:</strong> <InlineInput defaultValue="3" readOnly={readOnly} className="w-8 border border-slate-800 px-1 text-center font-bold" /></div>
+          <div><strong>ALLERGIES:</strong> <InlineInput defaultValue={allergies} readOnly={readOnly} className="w-20" /></div>
+          <div><strong>BP:</strong> <InlineInput defaultValue={bp} readOnly={readOnly} className="w-24" /></div>
+          <div><strong>HR:</strong> <InlineInput defaultValue={hr} readOnly={readOnly} className="w-16" /></div>
+          <div><strong>SESSIONS:</strong> <InlineInput defaultValue={sessions} readOnly={readOnly} className="w-8 border border-slate-800 px-1 text-center font-bold" /></div>
         </div>
 
-        {/* -- 3-COLUMN FINDINGS & ANATOMICAL BODY DIAGRAM (Exact match to sample PDF) -- */}
+        {/* -- 3-COLUMN FINDINGS & ANATOMICAL BODY DIAGRAM -- */}
         <div className="border-2 border-slate-800 rounded-lg overflow-hidden grid grid-cols-12 text-xs">
           
           {/* Column 1: Human Body Anatomical Diagram */}
@@ -71,23 +153,21 @@ export const AnikLaserProcedureForm = ({ dos = '01/22/2026', readOnly = false, b
               {/* Front Figure */}
               <div className="flex flex-col items-center">
                 <svg viewBox="0 0 100 220" className="w-20 h-44 stroke-slate-800 stroke-2 fill-none">
-                  {/* Head */}
                   <circle cx="50" cy="18" r="12" />
                   <circle cx="46" cy="17" r="1.5" className="fill-slate-800" />
                   <circle cx="54" cy="17" r="1.5" className="fill-slate-800" />
-                  {/* Neck */}
                   <line x1="46" y1="30" x2="46" y2="38" />
                   <line x1="54" y1="30" x2="54" y2="38" />
-                  {/* Torso & Shoulders */}
                   <path d="M 46 38 Q 20 44 14 75 L 10 120 Q 12 126 18 122 L 24 82 L 30 115 L 30 135 L 70 135 L 70 115 L 76 82 L 82 122 Q 88 126 90 120 L 86 75 Q 80 44 54 38 Z" />
-                  {/* Chest / Rib contours */}
                   <path d="M 36 60 Q 50 66 64 60" className="stroke-1 stroke-slate-400" />
                   <path d="M 40 85 Q 50 90 60 85" className="stroke-1 stroke-slate-400" />
-                  {/* Legs */}
                   <path d="M 32 135 L 30 190 Q 28 205 24 212 L 42 212 L 46 190 L 50 145 L 54 190 L 58 212 L 76 212 Q 72 205 70 190 L 68 135 Z" />
-                  {/* Treatment Target Markers (Low Back / Left Ankle Highlight) */}
-                  <circle cx="50" cy="105" r="4" className="fill-amber-500/60 stroke-amber-700 stroke-1" />
-                  <circle cx="70" cy="205" r="4" className="fill-teal-500/60 stroke-teal-700 stroke-1" />
+                  {hasTargetMarkers && (
+                    <>
+                      <circle cx="50" cy="105" r="4" className="fill-amber-500/60 stroke-amber-700 stroke-1" />
+                      <circle cx="70" cy="205" r="4" className="fill-teal-500/60 stroke-teal-700 stroke-1" />
+                    </>
+                  )}
                 </svg>
                 <span className="text-[9px] font-bold text-slate-500 mt-1">Right (Front)</span>
               </div>
@@ -95,24 +175,21 @@ export const AnikLaserProcedureForm = ({ dos = '01/22/2026', readOnly = false, b
               {/* Back Figure */}
               <div className="flex flex-col items-center">
                 <svg viewBox="0 0 100 220" className="w-20 h-44 stroke-slate-800 stroke-2 fill-none">
-                  {/* Head */}
                   <circle cx="50" cy="18" r="12" />
-                  {/* Neck */}
                   <line x1="46" y1="30" x2="46" y2="38" />
                   <line x1="54" y1="30" x2="54" y2="38" />
-                  {/* Spine & Scapulae */}
                   <line x1="50" y1="38" x2="50" y2="125" className="stroke-1 stroke-slate-400 stroke-dasharray-2" />
                   <path d="M 32 48 Q 40 54 42 68" className="stroke-1 stroke-slate-400" />
                   <path d="M 68 48 Q 60 54 58 68" className="stroke-1 stroke-slate-400" />
-                  {/* Torso */}
                   <path d="M 46 38 Q 20 44 14 75 L 10 120 Q 12 126 18 122 L 24 82 L 30 115 L 30 135 L 70 135 L 70 115 L 76 82 L 82 122 Q 88 126 90 120 L 86 75 Q 80 44 54 38 Z" />
-                  {/* Gluteal Crease */}
                   <path d="M 30 135 Q 50 148 70 135" className="stroke-1 stroke-slate-400" />
-                  {/* Legs */}
                   <path d="M 32 135 L 30 190 Q 28 205 24 212 L 42 212 L 46 190 L 50 145 L 54 190 L 58 212 L 76 212 Q 72 205 70 190 L 68 135 Z" />
-                  {/* Paraspinal / Neck Treatment Marker */}
-                  <circle cx="50" cy="42" r="4" className="fill-teal-500/60 stroke-teal-700 stroke-1" />
-                  <circle cx="50" cy="98" r="4" className="fill-teal-500/60 stroke-teal-700 stroke-1" />
+                  {hasTargetMarkers && (
+                    <>
+                      <circle cx="50" cy="42" r="4" className="fill-teal-500/60 stroke-teal-700 stroke-1" />
+                      <circle cx="50" cy="98" r="4" className="fill-teal-500/60 stroke-teal-700 stroke-1" />
+                    </>
+                  )}
                 </svg>
                 <span className="text-[9px] font-bold text-slate-500 mt-1">Left (Back)</span>
               </div>
@@ -129,32 +206,34 @@ export const AnikLaserProcedureForm = ({ dos = '01/22/2026', readOnly = false, b
           <div className="col-span-4 border-r-2 border-slate-800 p-3 space-y-2.5 bg-white">
             <div>
               <span className="font-bold block text-slate-900">Nerve Block Injections:</span>
-              <span className="font-semibold text-slate-700">YES / <strong className="underline">NO</strong></span>
+              <span className="font-semibold text-slate-700">
+                {nerveBlockVal === 'YES' ? <strong className="underline">YES</strong> : 'YES'} / {nerveBlockVal === 'NO' ? <strong className="underline">NO</strong> : 'NO'}
+              </span>
             </div>
 
             <div>
               <span className="font-bold block text-slate-900">Treatment Area(s):</span>
               <p className="font-semibold text-slate-800 underline">
-                {blankMode || !packetData ? 'Low back, Neck, Left ankle' : (packetData.injuryBodyParts || packetData.chiefComplaint || 'Low back, Neck, Left ankle')}
+                {treatmentAreas}
               </p>
             </div>
 
             <div className="space-y-1.5 pt-1">
               <div>
                 <span className="font-bold text-slate-900">Wavelength:</span>
-                <span className="ml-2 font-mono underline">800 nm</span>
+                <span className="ml-2 font-mono underline">{wavelength ? `${wavelength} nm` : ''}</span>
               </div>
               <div>
                 <span className="font-bold text-slate-900">total mins:</span>
-                <span className="ml-2 font-mono underline">900s</span>
+                <span className="ml-2 font-mono underline">{totalMins ? `${totalMins}s` : ''}</span>
               </div>
               <div>
                 <span className="font-bold text-slate-900">Dose:</span>
-                <span className="ml-2 font-mono underline">10.5w</span>
+                <span className="ml-2 font-mono underline">{dose ? `${dose}w` : ''}</span>
               </div>
               <div className="pt-2 border-t border-slate-200">
                 <span className="font-bold block text-slate-900">Total energy:</span>
-                <span className="font-mono text-sm font-black text-teal-800 underline">236250</span>
+                <span className="font-mono text-sm font-black text-teal-800 underline">{totalEnergy}</span>
               </div>
             </div>
           </div>
@@ -167,31 +246,31 @@ export const AnikLaserProcedureForm = ({ dos = '01/22/2026', readOnly = false, b
             <div className="space-y-1.5 text-xs font-mono">
               <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
                 <span>NAD</span>
-                <span className="font-bold text-teal-700 font-sans">✓</span>
+                {isFindingChecked('NAD') ? <span className="font-bold text-teal-700 font-sans">✓</span> : <span className="text-slate-300">—</span>}
               </div>
               <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
                 <span>AAO X3</span>
-                <span className="font-bold text-teal-700 font-sans">✓</span>
+                {isFindingChecked('AAO_X3') || isFindingChecked('AAO X3') ? <span className="font-bold text-teal-700 font-sans">✓</span> : <span className="text-slate-300">—</span>}
               </div>
               <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
                 <span>Treatment A1</span>
-                <span className="font-bold text-teal-700 font-sans">✓</span>
+                {isFindingChecked('Treatment_A1') || isFindingChecked('Treatment A1') ? <span className="font-bold text-teal-700 font-sans">✓</span> : <span className="text-slate-300">—</span>}
               </div>
               <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
                 <span>Treatment A2</span>
-                <span className="font-bold text-teal-700 font-sans">✓</span>
+                {isFindingChecked('Treatment_A2') || isFindingChecked('Treatment A2') ? <span className="font-bold text-teal-700 font-sans">✓</span> : <span className="text-slate-300">—</span>}
               </div>
               <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
                 <span>Treatment A3</span>
-                <span className="font-bold text-teal-700 font-sans">✓</span>
+                {isFindingChecked('Treatment_A3') || isFindingChecked('Treatment A3') ? <span className="font-bold text-teal-700 font-sans">✓</span> : <span className="text-slate-300">—</span>}
               </div>
               <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
                 <span>Treatment A4</span>
-                <span className="text-slate-300">—</span>
+                {isFindingChecked('Treatment_A4') || isFindingChecked('Treatment A4') ? <span className="font-bold text-teal-700 font-sans">✓</span> : <span className="text-slate-300">—</span>}
               </div>
               <div className="flex items-center justify-between">
                 <span>Treatment A5</span>
-                <span className="text-slate-300">—</span>
+                {isFindingChecked('Treatment_A5') || isFindingChecked('Treatment A5') ? <span className="font-bold text-teal-700 font-sans">✓</span> : <span className="text-slate-300">—</span>}
               </div>
             </div>
           </div>
@@ -202,14 +281,14 @@ export const AnikLaserProcedureForm = ({ dos = '01/22/2026', readOnly = false, b
         <div className="grid grid-cols-2 gap-4 py-2 font-bold text-xs">
           <div className="flex items-center gap-3">
             <span>PROCEDURE TOLERATE:</span>
-            <span className="border border-slate-700 px-2 py-0.5 bg-teal-50 text-teal-900">YES [✓]</span>
-            <span className="border border-slate-300 px-2 py-0.5 text-slate-400">NO [ ]</span>
+            <span className={`border px-2 py-0.5 ${procedureTolerated === 'YES' ? 'border-slate-700 bg-teal-50 text-teal-900' : 'border-slate-300 text-slate-400'}`}>YES [{procedureTolerated === 'YES' ? '✓' : ' '}]</span>
+            <span className={`border px-2 py-0.5 ${procedureTolerated === 'NO' ? 'border-slate-700 bg-rose-50 text-rose-900' : 'border-slate-300 text-slate-400'}`}>NO [{procedureTolerated === 'NO' ? '✓' : ' '}]</span>
           </div>
 
           <div className="flex items-center gap-3">
             <span>DURATION COMPLETED:</span>
-            <span className="border border-slate-700 px-2 py-0.5 bg-teal-50 text-teal-900">YES [✓]</span>
-            <span className="border border-slate-300 px-2 py-0.5 text-slate-400">NO [ ]</span>
+            <span className={`border px-2 py-0.5 ${durationCompletedVal === 'YES' ? 'border-slate-700 bg-teal-50 text-teal-900' : 'border-slate-300 text-slate-400'}`}>YES [{durationCompletedVal === 'YES' ? '✓' : ' '}]</span>
+            <span className={`border px-2 py-0.5 ${durationCompletedVal === 'NO' ? 'border-slate-700 bg-rose-50 text-rose-900' : 'border-slate-300 text-slate-400'}`}>NO [{durationCompletedVal === 'NO' ? '✓' : ' '}]</span>
           </div>
         </div>
 
@@ -222,11 +301,11 @@ export const AnikLaserProcedureForm = ({ dos = '01/22/2026', readOnly = false, b
         <div className="pt-6 flex justify-between items-end text-xs font-mono">
           <div>
             <span>Health Care Provider Signature:</span>
-            <p className="font-bold text-sm text-slate-900 mt-2 underline">ALEX</p>
+            <p className="font-bold text-sm text-slate-900 mt-2 underline">{providerSignature}</p>
           </div>
           <div>
             <span>Date:</span>
-            <p className="font-bold text-sm text-slate-900 mt-2">{dos}</p>
+            <p className="font-bold text-sm text-slate-900 mt-2">{signatureDate}</p>
           </div>
         </div>
 
