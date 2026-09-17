@@ -18,7 +18,7 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
 
   const [formData, setFormData] = useState({
     providerId: 'prov-counselor',
-    caseId: selectedCaseId || 'case-001',
+    caseId: selectedCaseId || '',
     patientName: '',
     dos: new Date().toISOString().split('T')[0],
     cptCode: '90834',
@@ -41,12 +41,20 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
       apiCaseService.getCases().then(res => {
         if (res && res.length > 0) {
           setCasesList(res);
-          const initialCase = res.find(c => c.id === selectedCaseId || c.caseId === selectedCaseId) || res[0];
-          setFormData(prev => ({
-            ...prev,
-            caseId: initialCase.id || 'case-001',
-            patientName: initialCase.patientName || 'Accident Patient'
-          }));
+          const initialCase = selectedCaseId
+            ? res.find(c => c.id === selectedCaseId || c.caseId === selectedCaseId)
+            : null;
+          if (initialCase) {
+            setFormData(prev => ({
+              ...prev,
+              caseId: initialCase.id || initialCase.caseId,
+              patientName: initialCase.patientName || `${initialCase.patient?.firstName || ''} ${initialCase.patient?.lastName || ''}`.trim() || 'Accident Patient'
+            }));
+          } else if (selectedCaseId) {
+            setFormData(prev => ({ ...prev, caseId: selectedCaseId }));
+          } else {
+            setFormData(prev => ({ ...prev, caseId: '', patientName: '' }));
+          }
         }
       }).catch(() => { });
 
@@ -77,6 +85,10 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.caseId) {
+      addToast('Please select a valid clinical patient case before initializing a bill.', 'warning');
+      return;
+    }
     setIsLoading(true);
     try {
       let targetBillId = `bill-${formData.providerId.replace('prov-', '')}-${formData.caseId}`;
@@ -183,6 +195,7 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
               }}
               className={inputCls}
             >
+              <option value="">-- Select Patient Accident Case --</option>
               {casesList.map(c => (
                 <option key={c.id} value={c.id}>
                   {c.caseId || c.id} — {c.patientName}

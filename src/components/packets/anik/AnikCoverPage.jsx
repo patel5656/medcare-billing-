@@ -2,8 +2,87 @@
 import React from 'react';
 import { PaperTextField } from '../common/PaperTextField';
 
-export const AnikCoverPage = ({ packetData, onFieldChange, readOnly, blankMode = false }) => {
-  const val = (v) => blankMode ? '' : v;
+export const AnikCoverPage = ({ 
+  packetData = null, 
+  bill = null, 
+  serviceLines = [], 
+  cmsClaims = [], 
+  onFieldChange, 
+  readOnly, 
+  blankMode = false 
+}) => {
+  const getPatientName = () => {
+    if (blankMode || !packetData) return '';
+    return packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '';
+  };
+
+  const getPatientSystemId = () => {
+    if (blankMode || !packetData) return '';
+    return packetData.patient?.patientId || packetData.patientId || packetData.patientSystemId || packetData.patient?.id || '';
+  };
+
+  const getAccidentDate = () => {
+    if (blankMode || !packetData) return '';
+    return packetData.accidentDate || packetData.dateOfAccident || packetData.patient?.accidentDate || '';
+  };
+
+  const getAttorneyInfo = () => {
+    if (blankMode || !packetData) return '';
+    const name = packetData.attorneyName || packetData.attorney || '';
+    const firm = packetData.lawFirm || packetData.lawFirmName || '';
+    if (name && firm) return `${name} (${firm})`;
+    if (name) return name;
+    if (firm) return firm;
+    return '';
+  };
+
+  const getTreatingClinic = () => {
+    if (blankMode) return '';
+    return packetData?.treatingClinic || packetData?.clinicName || packetData?.facilityName || packetData?.providerName || bill?.providerName || bill?.provider?.name || '';
+  };
+
+  const getCaseStatus = () => {
+    if (blankMode || !packetData) return '';
+    return packetData.status || packetData.caseStatus || '';
+  };
+
+  const getServiceDates = () => {
+    if (blankMode) return [];
+    
+    const dates = new Set();
+    
+    const lines = (serviceLines && serviceLines.length > 0) 
+      ? serviceLines 
+      : (bill?.items || bill?.lineItems || bill?.serviceLines || packetData?.serviceLines || packetData?.items || []);
+    
+    if (Array.isArray(lines) && lines.length > 0) {
+      lines.forEach(item => {
+        const d = item.dos || item.dateOfService || item.date;
+        if (d) dates.add(d);
+      });
+    }
+    
+    if (dates.size === 0 && Array.isArray(cmsClaims) && cmsClaims.length > 0) {
+      cmsClaims.forEach(claim => {
+        if (claim.dos) dates.add(claim.dos);
+      });
+    }
+    
+    if (dates.size === 0 && bill?.statementDate) {
+      dates.add(bill.statementDate);
+    }
+
+    return Array.from(dates);
+  };
+
+  const patientName = getPatientName();
+  const patientSystemId = getPatientSystemId();
+  const accidentDate = getAccidentDate();
+  const attorneyInfo = getAttorneyInfo();
+  const treatingClinic = getTreatingClinic();
+  const caseStatus = getCaseStatus();
+  const dosList = getServiceDates();
+  const dosText = dosList.length > 0 ? ` (DOS: ${dosList.join(', ')})` : '';
 
   return (
     <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-12 space-y-8 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px' }}>
@@ -22,37 +101,39 @@ export const AnikCoverPage = ({ packetData, onFieldChange, readOnly, blankMode =
         <div className="grid grid-cols-2 gap-4 text-xs font-mono">
           <div>
             <span className="text-slate-500 block font-bold">PATIENT NAME:</span>
-            {blankMode || !packetData
+            {!patientName
               ? <div className="border-b border-slate-400 mt-1 w-40">&nbsp;</div>
-              : <strong className="text-slate-900 text-sm">{packetData.patientName || 'N/A'}</strong>}
+              : <strong className="text-slate-900 text-sm">{patientName}</strong>}
           </div>
           <div>
             <span className="text-slate-500 block font-bold">PATIENT SYSTEM ID:</span>
-            {blankMode || !packetData
+            {!patientSystemId
               ? <div className="border-b border-slate-400 mt-1 w-32">&nbsp;</div>
-              : <strong className="text-slate-900 text-sm">{packetData.patient?.patientId || packetData.patientId || 'N/A'}</strong>}
+              : <strong className="text-slate-900 text-sm">{patientSystemId}</strong>}
           </div>
           <div>
             <span className="text-slate-500 block font-bold">DATE OF ACCIDENT:</span>
-            {blankMode || !packetData
+            {!accidentDate
               ? <div className="border-b border-slate-400 mt-1 w-28">&nbsp;</div>
-              : <strong className="text-slate-900">{packetData.accidentDate || 'N/A'}</strong>}
+              : <strong className="text-slate-900">{accidentDate}</strong>}
           </div>
           <div>
             <span className="text-slate-500 block font-bold">ATTORNEY / LAW FIRM:</span>
-            {blankMode || !packetData
+            {!attorneyInfo
               ? <div className="border-b border-slate-400 mt-1 w-40">&nbsp;</div>
-              : <strong className="text-slate-900">{packetData.attorneyName ? `${packetData.attorneyName} (${packetData.lawFirm || ''})` : 'N/A'}</strong>}
+              : <strong className="text-slate-900">{attorneyInfo}</strong>}
           </div>
           <div>
             <span className="text-slate-500 block font-bold">TREATING CLINIC:</span>
-            <strong className="text-slate-900">ANIK LASER THERAPY</strong>
+            {!treatingClinic
+              ? <div className="border-b border-slate-400 mt-1 w-36">&nbsp;</div>
+              : <strong className="text-slate-900">{treatingClinic}</strong>}
           </div>
           <div>
             <span className="text-slate-500 block font-bold">CASE STATUS:</span>
-            {blankMode || !packetData
+            {!caseStatus
               ? <div className="border-b border-slate-400 mt-1 w-28">&nbsp;</div>
-              : <strong className="text-teal-700 text-base font-black">{packetData.status || 'ACTIVE'}</strong>}
+              : <strong className="text-teal-700 text-base font-black">{caseStatus}</strong>}
           </div>
         </div>
       </div>
@@ -63,7 +144,7 @@ export const AnikCoverPage = ({ packetData, onFieldChange, readOnly, blankMode =
           <li>1. Patient & Case Cover Page</li>
           <li>2. Provider Billing Statement (Page 1 - Summary)</li>
           <li>3. Provider Billing Statement (Page 2 - Service Line Ledger)</li>
-          <li>4–6. CMS-1500 Health Insurance Claim Forms (DOS: 01/22/2026, 01/24/2026, 01/26/2026)</li>
+          <li>4–6. CMS-1500 Health Insurance Claim Forms{dosText}</li>
           <li>7. ANIK Therapy Assessment Form</li>
           <li>8–10. High-Intensity Laser Therapy Procedure Log Forms</li>
           <li>11–13. Initial Clinical Narrative Evaluation Report</li>
@@ -74,3 +155,4 @@ export const AnikCoverPage = ({ packetData, onFieldChange, readOnly, blankMode =
     </div>
   );
 };
+

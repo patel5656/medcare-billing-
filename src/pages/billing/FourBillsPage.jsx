@@ -33,12 +33,20 @@ export const FourBillsPage = () => {
         setCasesList(res);
         const queryId = searchParams.get('caseId');
         const matched = res.find(c => c.id === queryId || c.caseId === queryId);
-        const targetCase = matched || res[0];
-        setSelectedCaseId(targetCase.id || targetCase.caseId);
-        setCaseData(targetCase);
+        if (matched) {
+          setSelectedCaseId(matched.id || matched.caseId);
+          setCaseData(matched);
+        } else {
+          setSelectedCaseId('');
+          setCaseData(null);
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
       }
     }).catch(err => {
       console.error('Failed to fetch cases list:', err);
+      setIsLoading(false);
     });
   }, []);
 
@@ -179,6 +187,7 @@ export const FourBillsPage = () => {
             onChange={(e) => handleCaseChange(e.target.value)}
             className="px-3 py-2 bg-white text-slate-900 text-xs font-bold rounded-xl border border-slate-200 shadow-sm min-w-[220px] max-w-full truncate cursor-pointer outline-none focus:border-teal-600"
           >
+            <option value="">-- Select Patient Case --</option>
             {casesList.length > 0 ? (
               casesList.map((c) => (
                 <option key={c.id || c.caseId} value={c.id || c.caseId}>
@@ -198,7 +207,13 @@ export const FourBillsPage = () => {
             <FileSpreadsheet className="w-4 h-4 text-teal-600" /> Export Case Bills
           </button>
           <button
-            onClick={() => setShowCreateBillModal(true)}
+            onClick={() => {
+              if (!selectedCaseId) {
+                addToast('Please select a clinical patient case first.', 'warning');
+                return;
+              }
+              setShowCreateBillModal(true);
+            }}
             className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
           >
             <PlusCircle className="w-4 h-4" /> Create Provider Bill
@@ -259,7 +274,19 @@ export const FourBillsPage = () => {
       )}
 
       {/* -- Dynamic Provider Bill Statements -- */}
-      {bills.length === 0 ? (
+      {!selectedCaseId ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto border border-teal-100">
+            <User className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Select a Clinical Patient Case</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+              Please select an active clinical patient case from the dropdown menu above to view or generate provider billing statements.
+            </p>
+          </div>
+        </div>
+      ) : bills.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4 shadow-sm">
           <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto border border-teal-100">
             <Receipt className="w-7 h-7" />

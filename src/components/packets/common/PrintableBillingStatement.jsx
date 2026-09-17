@@ -3,17 +3,17 @@ import React from 'react';
 import { formatCurrency } from '../../../utils/billingCalculations';
 import { useSettings } from '../../../utils/settingsCache';
 
-export const PrintableBillingStatement = ({ bill, pageIndex = 0, selectedCase = null }) => {
+export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selectedCase = null }) => {
   const settings = useSettings();
 
   // Extract patient info from bill or selectedCase
-  const pt = selectedCase?.patient || {};
-  const patientName = bill?.patientName || selectedCase?.patientName || (pt.firstName ? `${pt.firstName || ''} ${pt.lastName || ''}`.trim() : '');
+  const pt = selectedCase?.patient || bill?.patient || {};
+  const patientName = bill?.patientName || selectedCase?.patientName || (pt.firstName ? `${pt.firstName || ''} ${pt.lastName || ''}`.trim() : '') || pt.name || '';
   
-  const ptStreet = pt.street || pt.addressLine1 || '';
+  const ptStreet = pt.street || pt.addressLine1 || pt.address || '';
   const ptCity = pt.city || '';
   const ptState = pt.state || '';
-  const ptZip = pt.zipCode || '';
+  const ptZip = pt.zipCode || pt.zip || '';
   const casePtAddress = [ptStreet, ptCity, ptState, ptZip].filter(Boolean).join(', ');
   const patientAddress = bill?.patientAddress || casePtAddress || '';
 
@@ -27,32 +27,46 @@ export const PrintableBillingStatement = ({ bill, pageIndex = 0, selectedCase = 
     return '';
   };
 
-  const billToName = bill?.billToName || selectedCase?.attorneyName || selectedCase?.lawFirm || '';
-  const billToAddress = bill?.billToAddress || selectedCase?.attorneyAddress || '';
+  const getBillToName = () => {
+    if (bill?.billToName) return bill.billToName;
+    if (!selectedCase) return '';
+    const att = selectedCase.attorneyName || selectedCase.attorney || '';
+    const firm = selectedCase.lawFirm || selectedCase.lawFirmName || '';
+    if (att && firm) {
+      if (att.includes(firm)) return att;
+      return `${att} (${firm})`;
+    }
+    return att || firm || '';
+  };
 
-  const providerName = bill?.providerName || 'JOSMIC WELLNESS CENTER';
-  const providerAddress = bill?.providerAddress || '10101 HARWIN DR. SUITE 274, HOUSTON, TX 77036';
-  const providerPhone = bill?.providerPhone || '713-485-5712';
-  const statementNumber = bill?.statementNumber || '';
-  const statementDate = bill?.statementDate || '';
+  const billToName = getBillToName();
+  const billToAddress = bill?.billToAddress || selectedCase?.attorneyAddress || selectedCase?.lawFirmAddress || '';
 
-  const rawLines = bill?.lineItems || bill?.serviceLines || [];
+  const providerName = bill?.providerName || bill?.provider?.name || selectedCase?.providerName || selectedCase?.treatingClinic || '';
+  const providerAddress = bill?.providerAddress || bill?.provider?.address || selectedCase?.providerAddress || '';
+  const providerPhone = bill?.providerPhone || bill?.provider?.phone || selectedCase?.providerPhone || '';
+  const statementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || '';
+  const statementDate = bill?.statementDate || bill?.date || '';
+
+  const rawLines = bill?.serviceLines || bill?.lineItems || bill?.items || selectedCase?.serviceLines || selectedCase?.items || [];
   
   const displayItems = (rawLines.length > 8
     ? (pageIndex === 0 ? rawLines.slice(0, 8) : rawLines.slice(8))
-    : rawLines).map(item => {
+    : (pageIndex === 0 ? rawLines : [])).map(item => {
       const charge = Number(item.charge) || 0;
-      const insPay = Number(item.payments?.insurance || item.insurancePayment) || 0;
-      const patPay = Number(item.payments?.patient || item.patientPayment) || 0;
-      const adj = Number(item.adjustments) || 0;
+      const insPay = Number(item.payments?.insurance || item.insurancePayment || item.insPay) || 0;
+      const patPay = Number(item.payments?.patient || item.patientPayment || item.patPay) || 0;
+      const adj = Number(item.adjustments || item.adjustment || item.adj) || 0;
       const lineBal = item.lineBalance !== undefined && item.lineBalance !== null
         ? Number(item.lineBalance)
-        : Math.max(0, charge - (insPay + patPay + adj));
+        : (item.balance !== undefined && item.balance !== null
+            ? Number(item.balance)
+            : Math.max(0, charge - (insPay + patPay + adj)));
       return {
         ...item,
-        dos: item.dos || item.dateOfService || '',
-        cptCode: item.cptCode || '',
-        description: item.description || '',
+        dos: item.dos || item.dateOfService || item.date || '',
+        cptCode: item.cptCode || item.cpt || '',
+        description: item.description || item.serviceDescription || '',
         charge,
         insPay,
         patPay,
@@ -62,14 +76,16 @@ export const PrintableBillingStatement = ({ bill, pageIndex = 0, selectedCase = 
     });
 
   const totalCharges = rawLines.reduce((sum, i) => sum + (Number(i.charge) || 0), 0);
-  const totalInsPay = rawLines.reduce((sum, i) => sum + (Number(i.payments?.insurance || i.insurancePayment) || 0), 0);
-  const totalPatPay = rawLines.reduce((sum, i) => sum + (Number(i.payments?.patient || i.patientPayment) || 0), 0);
-  const totalAdj = rawLines.reduce((sum, i) => sum + (Number(i.adjustments) || 0), 0);
+  const totalInsPay = rawLines.reduce((sum, i) => sum + (Number(i.payments?.insurance || i.insurancePayment || i.insPay) || 0), 0);
+  const totalPatPay = rawLines.reduce((sum, i) => sum + (Number(i.payments?.patient || i.patientPayment || i.patPay) || 0), 0);
+  const totalAdj = rawLines.reduce((sum, i) => sum + (Number(i.adjustments || i.adjustment || i.adj) || 0), 0);
 
   const calculatedBalance = Math.max(0, totalCharges - (totalInsPay + totalPatPay + totalAdj));
   const balanceDue = bill?.totals?.balanceDue !== undefined && bill?.totals?.balanceDue !== null && bill?.totals?.balanceDue > 0
     ? Number(bill.totals.balanceDue)
-    : calculatedBalance;
+    : (bill?.balanceDue !== undefined && bill?.balanceDue !== null && bill?.balanceDue > 0
+        ? Number(bill.balanceDue)
+        : calculatedBalance);
 
   const agingCurrent = Number(bill?.aging?.current) || 0;
   const aging30 = Number(bill?.aging?.past30) || 0;
@@ -78,6 +94,7 @@ export const PrintableBillingStatement = ({ bill, pageIndex = 0, selectedCase = 
 
   const sumAging = agingCurrent + aging30 + aging60 + aging90;
   const finalCurrentDue = (sumAging === 0 && balanceDue > 0) ? balanceDue : agingCurrent;
+  const totalPages = Math.max(pageIndex + 1, rawLines.length > 8 ? 2 : 1);
 
   return (
     <div
@@ -89,13 +106,13 @@ export const PrintableBillingStatement = ({ bill, pageIndex = 0, selectedCase = 
         <div>
           <h1 className="text-xl font-extrabold text-slate-900 tracking-tight uppercase">{providerName}</h1>
           <p className="text-xs text-slate-600 mt-1">{providerAddress}</p>
-          <p className="text-xs text-slate-600">TEL / CELL: {providerPhone} | FAX: 832-416-1502</p>
+          <p className="text-xs text-slate-600">{providerPhone ? `TEL / CELL: ${providerPhone} | ` : ''}FAX: 832-416-1502</p>
         </div>
         <div className="text-right font-mono">
           <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Billing Statement</h2>
           <p className="text-xs font-bold text-slate-700 mt-1">Statement No: <span className="text-slate-900">{statementNumber}</span></p>
           <p className="text-xs font-semibold text-slate-600">Statement Date: {statementDate}</p>
-          <p className="text-[10px] text-slate-500 font-bold mt-1">PAGE {pageIndex + 1} OF {rawLines.length > 8 ? 2 : 1}</p>
+          <p className="text-[10px] text-slate-500 font-bold mt-1">PAGE {pageIndex + 1} OF {totalPages}</p>
         </div>
       </div>
 
@@ -190,3 +207,4 @@ export const PrintableBillingStatement = ({ bill, pageIndex = 0, selectedCase = 
     </div>
   );
 };
+
