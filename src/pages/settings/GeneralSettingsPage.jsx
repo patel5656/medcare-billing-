@@ -6,6 +6,8 @@ import { getGeneralSettings, updateGeneralSettings } from '../../services/api/ap
 import { apiProviderService } from '../../services/api/apiProviderService';
 import { apiModalityService } from '../../services/api/apiModalityService';
 import { apiCptService } from '../../services/api/apiCptService';
+import { getAllICDCodes, createICDCode, updateICDCode, deleteICDCode } from '../../services/api/apiIcdService';
+import { apiModifierService } from '../../services/api/apiModifierService';
 import { refreshSettingsCache } from '../../utils/settingsCache';
 import { formatFeeString } from '../../utils/billingCalculations';
 import { API_BASE_URL } from '../../config/api';
@@ -124,9 +126,13 @@ export const GeneralSettingsPage = () => {
 
   const [showAddIcdModal, setShowAddIcdModal] = useState(false);
   const [newIcd, setNewIcd] = useState({ code: '', description: '', category: 'Pain/Orthopedic' });
+  const [editIcdIdx, setEditIcdIdx] = useState(null);
+  const [icdCodes, setIcdCodes] = useState([]);
 
   const [showAddModModal, setShowAddModModal] = useState(false);
   const [newMod, setNewMod] = useState({ code: '', description: '' });
+  const [editModIdx, setEditModIdx] = useState(null);
+  const [modifiers, setModifiers] = useState([]);
 
   const loadProvidersList = async () => {
     try {
@@ -165,19 +171,35 @@ export const GeneralSettingsPage = () => {
       }
     };
 
+    const loadIcdCodes = async () => {
+      try {
+        const data = await getAllICDCodes();
+        setIcdCodes(data);
+      } catch (err) {
+        addToast('Failed to load ICD codes', 'error');
+      }
+    };
+
+    const loadModifiers = async () => {
+      try {
+        const data = await apiModifierService.getModifiers();
+        setModifiers(data);
+      } catch (err) {
+        addToast('Failed to load Modifiers', 'error');
+      }
+    };
+
     fetchSettings();
     loadProvidersList();
     loadModalitiesList();
     loadCptCodes();
+    loadIcdCodes();
+    loadModifiers();
   }, []);
 
   const set = (field, val) => {
     setSettings(p => {
       const next = { ...p, [field]: val };
-      try {
-        localStorage.setItem('medcare_practice_settings', JSON.stringify(next));
-      } catch (e) {}
-      refreshSettingsCache(next);
       return next;
     });
   };
@@ -186,12 +208,18 @@ export const GeneralSettingsPage = () => {
     e?.preventDefault();
     setIsSaving(true);
     try {
-      localStorage.setItem('medcare_practice_settings', JSON.stringify(settings));
-      await refreshSettingsCache(settings);
-      await updateGeneralSettings(settings).catch(() => {});
-      addToast('General practice settings updated successfully!', 'success');
+      // Persist to backend first
+      await updateGeneralSettings(settings);
+      
+      // Update local storage and cache after successful backend save
+      try {
+        localStorage.setItem('medcare_practice_settings', JSON.stringify(settings));
+      } catch (e) {}
+      refreshSettingsCache(settings);
+      
+      addToast('Practice Identity & General Settings saved to database!', 'success');
     } catch (error) {
-      addToast('Failed to save settings', 'error');
+      addToast('Failed to save settings: ' + error.message, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -300,48 +328,98 @@ export const GeneralSettingsPage = () => {
     setShowAddCptModal(true);
   };
 
-  const handleAddIcdCode = (e) => {
+  const handleAddIcdCode = async (e) => {
     e?.preventDefault();
     if (!newIcd.code || !newIcd.description) {
       addToast('ICD Code and Description are required', 'error');
       return;
     }
-    const currentIcd = Array.isArray(settings.icdCatalog) ? settings.icdCatalog : [
-      { code: 'M54.50', description: 'Low back pain, unspecified', category: 'Orthopedic' },
-      { code: 'M54.2', description: 'Cervicalgia (Neck pain)', category: 'Orthopedic' },
-      { code: 'S13.4XXA', description: 'Sprain of ligaments of cervical spine, initial encounter', category: 'Trauma/MVA' },
-      { code: 'S39.012A', description: 'Strain of muscle/tendon of lower back, initial encounter', category: 'Trauma/MVA' },
-      { code: 'F43.10', description: 'Post-traumatic stress disorder, unspecified', category: 'Mental Health' },
-      { code: 'M25.572', description: 'Pain in left ankle and foot', category: 'Extremity' }
-    ];
 
-    const updated = [...currentIcd, newIcd];
-    set('icdCatalog', updated);
-    addToast(`ICD-10 Code ${newIcd.code} added to practice catalog!`, 'success');
-    setShowAddIcdModal(false);
-    setNewIcd({ code: '', description: '', category: 'Pain/Orthopedic' });
+    try {
+      if (editIcdIdx !== null) {
+        const item = icdCodes[editIcdIdx];
+        await updateICDCode(item.id, newIcd);
+        addToast(`ICD-10 Code ${newIcd.code} updated!`, 'success');
+      } else {
+        await createICDCode(newIcd);
+        addToast(`ICD-10 Code ${newIcd.code} added to practice catalog!`, 'success');
+      }
+
+      setShowAddIcdModal(false);
+      setEditIcdIdx(null);
+      setNewIcd({ code: '', description: '', category: 'Pain/Orthopedic' });
+      
+      const data = await getAllICDCodes();
+      setIcdCodes(data);
+    } catch (err) {
+      addToast(err.message || 'Failed to save ICD Code', 'error');
+    }
   };
 
-  const handleAddModifier = (e) => {
+  const handleDeleteIcdCode = async (idx) => {
+    if (!window.confirm(`Are you sure you want to delete ICD Code ${icdCodes[idx].code}?`)) return;
+    try {
+      await deleteICDCode(icdCodes[idx].id);
+      addToast('ICD Code deleted.', 'success');
+      const data = await getAllICDCodes();
+      setIcdCodes(data);
+    } catch (err) {
+      addToast(err.message || 'Failed to delete ICD code', 'error');
+    }
+  };
+
+  const handleEditIcdCode = (idx) => {
+    const item = icdCodes[idx];
+    setNewIcd(item);
+    setEditIcdIdx(idx);
+    setShowAddIcdModal(true);
+  };
+
+  const handleAddModifier = async (e) => {
     e?.preventDefault();
     if (!newMod.code || !newMod.description) {
       addToast('Modifier Code and Description are required', 'error');
       return;
     }
-    const currentMods = Array.isArray(settings.modifiersCatalog) ? settings.modifiersCatalog : [
-      { code: '25', description: 'Significant, Separately Identifiable E&M Service on Same Day' },
-      { code: '59', description: 'Distinct Procedural Service' },
-      { code: 'RT', description: 'Right Side' },
-      { code: 'LT', description: 'Left Side' },
-      { code: 'GP', description: 'Services Delivered Under Physical Therapy Plan of Care' },
-      { code: 'TC', description: 'Technical Component' }
-    ];
 
-    const updated = [...currentMods, newMod];
-    set('modifiersCatalog', updated);
-    addToast(`Modifier ${newMod.code} added to practice catalog!`, 'success');
-    setShowAddModModal(false);
-    setNewMod({ code: '', description: '' });
+    try {
+      if (editModIdx !== null) {
+        const item = modifiers[editModIdx];
+        await apiModifierService.updateModifier(item.id, newMod);
+        addToast(`Modifier ${newMod.code} updated!`, 'success');
+      } else {
+        await apiModifierService.createModifier(newMod);
+        addToast(`Modifier ${newMod.code} added to practice catalog!`, 'success');
+      }
+
+      setShowAddModModal(false);
+      setEditModIdx(null);
+      setNewMod({ code: '', description: '' });
+
+      const data = await apiModifierService.getModifiers();
+      setModifiers(data);
+    } catch (err) {
+      addToast(err.message || 'Failed to save Modifier', 'error');
+    }
+  };
+
+  const handleDeleteModifier = async (idx) => {
+    if (!window.confirm(`Are you sure you want to delete Modifier ${modifiers[idx].code}?`)) return;
+    try {
+      await apiModifierService.deleteModifier(modifiers[idx].id);
+      addToast('Modifier deleted.', 'success');
+      const data = await apiModifierService.getModifiers();
+      setModifiers(data);
+    } catch (err) {
+      addToast(err.message || 'Failed to delete modifier', 'error');
+    }
+  };
+
+  const handleEditModifier = (idx) => {
+    const item = modifiers[idx];
+    setNewMod(item);
+    setEditModIdx(idx);
+    setShowAddModModal(true);
   };
 
   const handleAddModality = async (e) => {
@@ -671,26 +749,26 @@ export const GeneralSettingsPage = () => {
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                   <tr>
-                    <th className="p-2 text-left">ICD Code</th>
-                    <th className="p-2 text-left">Diagnosis Description</th>
-                    <th className="p-2 text-left">Category</th>
+                    <th className="p-2.5 text-left w-24">ICD Code</th>
+                    <th className="p-2.5 text-left">Diagnosis Description</th>
+                    <th className="p-2.5 text-left w-32">Category</th>
+                    <th className="p-2.5 text-center w-24">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-800">
-                  {(Array.isArray(settings.icdCatalog) && settings.icdCatalog.length > 0 ? settings.icdCatalog : [
-                    { code: 'M54.50', description: 'Low back pain, unspecified', category: 'Orthopedic' },
-                    { code: 'M54.2', description: 'Cervicalgia (Neck pain)', category: 'Orthopedic' },
-                    { code: 'S13.4XXA', description: 'Sprain of ligaments of cervical spine', category: 'Trauma/MVA' },
-                    { code: 'S39.012A', description: 'Strain of muscle/tendon of lower back', category: 'Trauma/MVA' },
-                    { code: 'F43.10', description: 'Post-traumatic stress disorder', category: 'Mental Health' },
-                    { code: 'M25.572', description: 'Pain in left ankle and foot', category: 'Extremity' }
-                  ]).map((icd, i) => (
-                    <tr key={icd.code + i} className="hover:bg-slate-50 transition">
-                      <td className="p-2 font-mono font-bold text-teal-800">{icd.code}</td>
-                      <td className="p-2 font-bold text-slate-900">{icd.description}</td>
-                      <td className="p-2 text-slate-600">{icd.category}</td>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                  {icdCodes.map((icd, i) => (
+                    <tr key={icd.code + i} className="hover:bg-slate-50 transition group">
+                      <td className="p-2.5 font-mono font-bold text-teal-800">{icd.code}</td>
+                      <td className="p-2.5 font-bold text-slate-900">{icd.description}</td>
+                      <td className="p-2.5 text-xs text-slate-500">{icd.category}</td>
+                      <td className="p-2.5">
+                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" onClick={() => handleEditIcdCode(i)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition"><Edit3 className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDeleteIcdCode(i)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -721,24 +799,24 @@ export const GeneralSettingsPage = () => {
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                   <tr>
-                    <th className="p-2 text-center">Modifier</th>
-                    <th className="p-2 text-left">Modifier Description &amp; Usage</th>
+                    <th className="p-2.5 text-center w-24">Modifier</th>
+                    <th className="p-2.5 text-left">Modifier Description & Usage</th>
+                    <th className="p-2.5 text-center w-24">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-800">
-                  {(Array.isArray(settings.modifiersCatalog) && settings.modifiersCatalog.length > 0 ? settings.modifiersCatalog : [
-                    { code: '25', description: 'Significant, Separately Identifiable E&M Service on Same Day' },
-                    { code: '59', description: 'Distinct Procedural Service' },
-                    { code: 'RT', description: 'Right Side' },
-                    { code: 'LT', description: 'Left Side' },
-                    { code: 'GP', description: 'Services Delivered Under Physical Therapy Plan of Care' },
-                    { code: 'TC', description: 'Technical Component' }
-                  ]).map((mod, i) => (
-                    <tr key={mod.code + i} className="hover:bg-slate-50 transition">
-                      <td className="p-2 text-center font-mono font-bold text-teal-800">{mod.code}</td>
-                      <td className="p-2 font-medium text-slate-900">{mod.description}</td>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                  {modifiers.map((mod, i) => (
+                    <tr key={mod.code + i} className="hover:bg-slate-50 transition group">
+                      <td className="p-2.5 text-center font-mono font-bold text-teal-800">{mod.code}</td>
+                      <td className="p-2.5 font-bold text-slate-900">{mod.description}</td>
+                      <td className="p-2.5">
+                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" onClick={() => handleEditModifier(i)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition"><Edit3 className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDeleteModifier(i)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
