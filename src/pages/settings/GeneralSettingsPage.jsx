@@ -8,6 +8,8 @@ import { apiModalityService } from '../../services/api/apiModalityService';
 import { apiCptService } from '../../services/api/apiCptService';
 import { getAllICDCodes, createICDCode, updateICDCode, deleteICDCode } from '../../services/api/apiIcdService';
 import { apiModifierService } from '../../services/api/apiModifierService';
+import { apiHolidayService } from '../../services/api/apiHolidayService';
+import { setUSHolidays } from '../../constants/usHolidays';
 import { refreshSettingsCache } from '../../utils/settingsCache';
 import { formatFeeString } from '../../utils/billingCalculations';
 import { API_BASE_URL } from '../../config/api';
@@ -134,6 +136,11 @@ export const GeneralSettingsPage = () => {
   const [editModIdx, setEditModIdx] = useState(null);
   const [modifiers, setModifiers] = useState([]);
 
+  const [holidaysData, setHolidaysData] = useState([]);
+  const [showAddHolidayModal, setShowAddHolidayModal] = useState(false);
+  const [newHoliday, setNewHoliday] = useState({ name: '', type: 'FIXED', month: '1', day: '1', nth: '1', dayOfWeek: '1', last: false });
+  const [editHolidayId, setEditHolidayId] = useState(null);
+
   const loadProvidersList = async () => {
     try {
       const data = await apiProviderService.getProviders();
@@ -189,12 +196,23 @@ export const GeneralSettingsPage = () => {
       }
     };
 
+    const loadHolidays = async () => {
+      try {
+        const data = await apiHolidayService.getHolidays();
+        setHolidaysData(data);
+        setUSHolidays(data);
+      } catch (err) {
+        addToast('Failed to load Holidays', 'error');
+      }
+    };
+
     fetchSettings();
     loadProvidersList();
     loadModalitiesList();
     loadCptCodes();
     loadIcdCodes();
     loadModifiers();
+    loadHolidays();
   }, []);
 
   const set = (field, val) => {
@@ -448,7 +466,60 @@ export const GeneralSettingsPage = () => {
       setModalitiesList(prev => prev.filter((_, i) => i !== idx));
       addToast(`Modality ${srv.name} deleted successfully!`, 'success');
     } catch (err) {
-      addToast(`Failed to delete ${srv.name}`, 'error');
+      addToast('Failed to delete CPT Code', 'error');
+    }
+  };
+
+  const handleAddHoliday = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      if (editHolidayId) {
+        await apiHolidayService.updateHoliday(editHolidayId, newHoliday);
+        addToast('Holiday updated successfully!', 'success');
+      } else {
+        await apiHolidayService.createHoliday(newHoliday);
+        addToast('Holiday created successfully!', 'success');
+      }
+      
+      const updated = await apiHolidayService.getHolidays();
+      setHolidaysData(updated);
+      setUSHolidays(updated);
+      
+      setShowAddHolidayModal(false);
+      setNewHoliday({ name: '', type: 'FIXED', month: '1', day: '1', nth: '1', dayOfWeek: '1', last: false });
+      setEditHolidayId(null);
+    } catch (err) {
+      addToast('Failed to save Holiday', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditHoliday = (hol) => {
+    setNewHoliday({
+      name: hol.name,
+      type: hol.type,
+      month: String(hol.month),
+      day: hol.day ? String(hol.day) : '',
+      nth: hol.nth ? String(hol.nth) : (hol.last ? '' : '1'),
+      dayOfWeek: hol.dayOfWeek !== null ? String(hol.dayOfWeek) : '1',
+      last: hol.last || false
+    });
+    setEditHolidayId(hol.id);
+    setShowAddHolidayModal(true);
+  };
+
+  const handleDeleteHoliday = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this holiday?')) return;
+    try {
+      await apiHolidayService.deleteHoliday(id);
+      addToast('Holiday deleted successfully!', 'success');
+      const updated = await apiHolidayService.getHolidays();
+      setHolidaysData(updated);
+      setUSHolidays(updated);
+    } catch (err) {
+      addToast('Failed to delete Holiday', 'error');
     }
   };
 
@@ -965,9 +1036,14 @@ export const GeneralSettingsPage = () => {
           </div>
 
           <div className="pt-3 border-t border-outline-variant/50 space-y-2">
-            <h4 className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-              <span>🇺🇸</span> Official US Federal Holidays (Auto Holiday Off Calendar)
-            </h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                <span>🇺🇸</span> Official US Federal Holidays (Auto Holiday Off Calendar)
+              </h4>
+              <button type="button" onClick={() => { setEditHolidayId(null); setNewHoliday({ name: '', type: 'FIXED', month: '1', day: '1', nth: '1', dayOfWeek: '1', last: false }); setShowAddHolidayModal(true); }} className="px-3 py-1.5 bg-teal-50 text-teal-700 hover:bg-teal-100 text-[11px] font-bold rounded-lg border border-teal-200 transition flex items-center gap-1 cursor-pointer">
+                <Plus className="w-3.5 h-3.5" /> Add Holiday
+              </button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
@@ -976,21 +1052,31 @@ export const GeneralSettingsPage = () => {
                     <th className="p-2 text-left">Calendar Date (2026)</th>
                     <th className="p-2 text-left">Observed Date</th>
                     <th className="p-2 text-center">Practice Availability</th>
+                    <th className="p-2 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {getUSHolidaysForYear(2026).map(h => (
-                    <tr key={h.id} className="hover:bg-slate-50">
-                      <td className="p-2 font-bold text-slate-900">{h.name}</td>
-                      <td className="p-2 font-mono text-slate-700">{h.date}</td>
-                      <td className="p-2 font-mono text-slate-700">{h.observedDate} {h.isObservedDiff && '(Observed)'}</td>
-                      <td className="p-2 text-center">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
-                          Auto Off (Clinic Closed)
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {getUSHolidaysForYear(2026).map(h => {
+                    const rawHol = holidaysData.find(hd => hd.id === h.id);
+                    return (
+                      <tr key={h.id} className="hover:bg-slate-50 group">
+                        <td className="p-2 font-bold text-slate-900">{h.name}</td>
+                        <td className="p-2 font-mono text-slate-700">{h.date}</td>
+                        <td className="p-2 font-mono text-slate-700">{h.observedDate} {h.isObservedDiff && '(Observed)'}</td>
+                        <td className="p-2 text-center">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                            Auto Off (Clinic Closed)
+                          </span>
+                        </td>
+                        <td className="p-2 text-right">
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button type="button" onClick={() => handleEditHoliday(rawHol)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition" title="Edit Holiday"><Edit3 className="w-3.5 h-3.5" /></button>
+                            <button type="button" onClick={() => handleDeleteHoliday(h.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete Holiday"><Trash2 className="w-3.5 h-3.5" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1237,6 +1323,82 @@ export const GeneralSettingsPage = () => {
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => setShowAddIcdModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">Add ICD Code</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add Holiday */}
+      {showAddHolidayModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 text-xs animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Tag className="w-4 h-4 text-teal-600" /> {editHolidayId ? 'Edit Holiday' : 'Add Holiday'}
+              </h3>
+              <button type="button" onClick={() => setShowAddHolidayModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+            </div>
+            <form onSubmit={handleAddHoliday} className="space-y-3">
+              <div><label className={labelCls}>Holiday Name *</label><input required className={inputCls} value={newHoliday.name} onChange={e => setNewHoliday(p => ({...p, name: e.target.value}))} placeholder="e.g. Independence Day" /></div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Type</label>
+                  <select className={inputCls} value={newHoliday.type} onChange={e => setNewHoliday(p => ({...p, type: e.target.value}))}>
+                    <option value="FIXED">Fixed Date</option>
+                    <option value="FLOATING">Floating Date</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Month</label>
+                  <select className={inputCls} value={newHoliday.month} onChange={e => setNewHoliday(p => ({...p, month: e.target.value}))}>
+                    {Array.from({length: 12}, (_, i) => i + 1).map(m => (
+                      <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' })}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {newHoliday.type === 'FIXED' ? (
+                <div>
+                  <label className={labelCls}>Day of Month</label>
+                  <input type="number" min="1" max="31" required className={inputCls} value={newHoliday.day} onChange={e => setNewHoliday(p => ({...p, day: e.target.value}))} placeholder="e.g. 4" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-1">
+                    <label className={labelCls}>Occurrence</label>
+                    <select className={inputCls} value={newHoliday.last ? 'last' : newHoliday.nth} onChange={e => {
+                      const val = e.target.value;
+                      if (val === 'last') setNewHoliday(p => ({...p, last: true, nth: ''}));
+                      else setNewHoliday(p => ({...p, last: false, nth: val}));
+                    }}>
+                      <option value="1">1st</option>
+                      <option value="2">2nd</option>
+                      <option value="3">3rd</option>
+                      <option value="4">4th</option>
+                      <option value="last">Last</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className={labelCls}>Day of Week</label>
+                    <select className={inputCls} value={newHoliday.dayOfWeek} onChange={e => setNewHoliday(p => ({...p, dayOfWeek: e.target.value}))}>
+                      <option value="0">Sunday</option>
+                      <option value="1">Monday</option>
+                      <option value="2">Tuesday</option>
+                      <option value="3">Wednesday</option>
+                      <option value="4">Thursday</option>
+                      <option value="5">Friday</option>
+                      <option value="6">Saturday</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={() => setShowAddHolidayModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
+                <button type="submit" disabled={isSaving} className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">Save Holiday</button>
               </div>
             </form>
           </div>

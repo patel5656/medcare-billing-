@@ -1,6 +1,6 @@
 // src/constants/usHolidays.js
 
-export const US_FEDERAL_HOLIDAYS = [
+export let US_FEDERAL_HOLIDAYS = [
   { id: 'hol-new-year', name: "New Year's Day", month: 1, day: 1, type: 'FIXED' },
   { id: 'hol-mlk', name: 'Martin Luther King Jr. Day', month: 1, nth: 3, dayOfWeek: 1, type: 'FLOATING' }, // 3rd Mon in Jan
   { id: 'hol-presidents', name: "Presidents' Day (Washington's Birthday)", month: 2, nth: 3, dayOfWeek: 1, type: 'FLOATING' }, // 3rd Mon in Feb
@@ -13,6 +13,11 @@ export const US_FEDERAL_HOLIDAYS = [
   { id: 'hol-thanksgiving', name: 'Thanksgiving Day', month: 11, nth: 4, dayOfWeek: 4, type: 'FLOATING' }, // 4th Thurs in Nov
   { id: 'hol-christmas', name: 'Christmas Day', month: 12, day: 25, type: 'FIXED' },
 ];
+
+// Setter for dynamically updating holidays from the database
+export const setUSHolidays = (holidays) => {
+  US_FEDERAL_HOLIDAYS = holidays;
+};
 
 // Helper to format Date object to YYYY-MM-DD
 const formatDateStr = (dateObj) => {
