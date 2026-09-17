@@ -119,8 +119,8 @@ export const CaseDetailsModal = ({ isOpen, onClose, caseItem, onCaseUpdated }) =
           <div className="flex items-center gap-3 sm:text-right border-t sm:border-t-0 border-slate-800 pt-3 sm:pt-0">
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold block">Case Total Billing</span>
-              <strong className="text-white text-base sm:text-lg font-mono">$24,960.00</strong>
-              <p className="text-[10px] text-teal-300">4 Connected Provider Ledgers</p>
+              <strong className="text-white text-base sm:text-lg font-mono">{formatCurrency(caseItem.caseTotalBilling || 0)}</strong>
+              <p className="text-[10px] text-teal-300">{caseItem.connectedProviderLedgersCount || 0} Connected Provider Ledgers</p>
             </div>
           </div>
         </div>
@@ -381,8 +381,8 @@ export const CaseDetailsModal = ({ isOpen, onClose, caseItem, onCaseUpdated }) =
             </div>
 
             <div className="p-3.5 bg-slate-900 text-white rounded-2xl flex items-center justify-between font-bold">
-              <span>Grand Total 4-Provider Practice Ledger:</span>
-              <span className="text-base font-mono text-teal-300">$24,960.00</span>
+              <span>Grand Total {caseItem.connectedProviderLedgersCount || 0}-Provider Practice Ledger:</span>
+              <span className="text-base font-mono text-teal-300">{formatCurrency(caseItem.caseTotalBilling || 0)}</span>
             </div>
           </div>
         )}

@@ -253,6 +253,8 @@ export const ScheduleAppointmentModal = ({
                 if (pid === 'prov-davs') { aptType = 'ESWT Shockwave Session 1'; }
                 if (pid === 'prov-anik') { aptType = 'Laser Therapy Session 1'; }
                 if (pid === 'prov-counselor') { aptType = 'Counseling Psychotherapy (45m)'; }
+                if (pid === 'prov-tpi') { aptType = 'Trigger Point Injection'; }
+                if (pid === 'prov-tecar') { aptType = 'TECAR Therapy Session'; }
                 setFormData(p => ({ ...p, providerId: pid, appointmentType: aptType }));
               }}
               className={inputCls}
@@ -261,6 +263,8 @@ export const ScheduleAppointmentModal = ({
               <option value="prov-davs">DAV'S Anatomy (Shockwave ESWT)</option>
               <option value="prov-anik">ANIK Laser Therapy (Laser Session)</option>
               <option value="prov-counselor">Counselor Practice (Behavioral Health &amp; PTSD)</option>
+              <option value="prov-tpi">Trigger Point Injection Clinic (Pain Management & Injections)</option>
+              <option value="prov-tecar">TECAR Therapy Clinic (Deep Tissue Radiofrequency)</option>
             </select>
           </div>
 
