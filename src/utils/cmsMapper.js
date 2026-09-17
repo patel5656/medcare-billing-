@@ -1,5 +1,53 @@
 // src/utils/cmsMapper.js
 
+// Helper functions for CMS Box 6, 8, 10 dynamic mappings based on real DB data
+
+const mapBox6Relation = (relation) => {
+  if (!relation) return '';
+  const r = String(relation).trim();
+  const lower = r.toLowerCase();
+  if (lower === 'self') return 'Self';
+  if (lower === 'spouse') return 'Spouse';
+  if (lower === 'child') return 'Child';
+  if (lower === 'other') return 'Other';
+  return '';
+};
+
+const mapBox8MaritalStatus = (maritalStatus) => {
+  if (!maritalStatus) return '';
+  const m = String(maritalStatus).trim().toUpperCase();
+  if (m === 'SINGLE') return 'Single';
+  if (m === 'MARRIED') return 'Married';
+  if (['DIVORCED', 'WIDOWED', 'SEPARATED', 'DOMESTIC_PARTNER', 'OTHER'].includes(m)) return 'Other';
+  return '';
+};
+
+const mapBox8EmploymentStatus = (employmentStatus) => {
+  if (!employmentStatus) return '';
+  const emp = String(employmentStatus).trim().toUpperCase().replace(/[\s-]/g, '_');
+  if (emp.includes('FULL_TIME_STUDENT')) return 'Full-Time Student';
+  if (emp.includes('PART_TIME_STUDENT')) return 'Part-Time Student';
+  if (emp === 'STUDENT') return 'Full-Time Student';
+  if (emp.includes('EMPLOYED') || emp === 'SELF_EMPLOYED') return 'Employed';
+  return '';
+};
+
+const mapBox10Conditions = (accidentType) => {
+  if (!accidentType) {
+    return {
+      box10Employment: '',
+      box10AutoAccident: '',
+      box10OtherAccident: ''
+    };
+  }
+  const acc = String(accidentType).trim().toUpperCase().replace(/[\s-]/g, '_');
+  return {
+    box10Employment: acc === 'WORKERS_COMP' ? 'YES' : 'NO',
+    box10AutoAccident: acc === 'AUTO_ACCIDENT' ? 'YES' : 'NO',
+    box10OtherAccident: ['SLIP_AND_FALL', 'GENERAL_PERSONAL_INJURY', 'OTHER', 'SLIP_AND_FALL_ACCIDENT'].includes(acc) ? 'YES' : 'NO'
+  };
+};
+
 /**
  * Maps a bill statement and case to date-grouped CMS-1500 claims.
  * All field values are sourced from real database records — no hardcoded placeholders.
@@ -53,6 +101,50 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   const patientZip = bill.patientZip || ptObj.zipCode || ptAddrObj.zipCode || patientCase?.patientZip || '';
   const patientPhone = bill.patientPhone || ptObj.phone || ptAddrObj.phone || patientCase?.patientPhone || '';
   const primaryGroupNumber = bill.primaryGroupNumber || ptObj.primaryGroupNumber || patientCase?.patient?.primaryGroupNumber || patientCase?.primaryGroupNumber || '';
+
+  // Box 6, Box 8 & Box 10 dynamic mappings from real DB fields
+  const box6Relation = mapBox6Relation(ptObj.relationshipToInsured || bill.relationshipToInsured || patientCase?.relationshipToInsured || patientCase?.patient?.relationshipToInsured);
+  const box8Status = mapBox8MaritalStatus(ptObj.maritalStatus || bill.maritalStatus || patientCase?.maritalStatus || patientCase?.patient?.maritalStatus);
+  const box8EmploymentStatus = mapBox8EmploymentStatus(ptObj.employmentStatus || bill.employmentStatus || patientCase?.employmentStatus || patientCase?.patient?.employmentStatus);
+  const accidentType = patientCase?.accidentType || bill.accidentType || '';
+  const box10 = mapBox10Conditions(accidentType);
+  const box10State = bill.accidentState || patientCase?.accidentState || '';
+
+  // Box 11a: Insured's DOB & Sex based strictly on box6Relation
+  let box11InsuredDob = { mm: '', dd: '', yy: '' };
+  let box11InsuredSex = '';
+
+  if (box6Relation === 'Self') {
+    box11InsuredDob = { mm, dd, yy };
+    box11InsuredSex = patientSex;
+  } else if (['Spouse', 'Child', 'Other'].includes(box6Relation)) {
+    const rawHolderDob = ptObj.policyHolderDob || bill.policyHolderDob || patientCase?.policyHolderDob || patientCase?.patient?.policyHolderDob || '';
+    if (rawHolderDob) {
+      const holderParts = String(rawHolderDob).split(/[-/]/);
+      box11InsuredDob = {
+        mm: holderParts[0] || '',
+        dd: holderParts[1] || '',
+        yy: holderParts[2] || ''
+      };
+    }
+    const rawHolderSex = ptObj.policyHolderSex || bill.policyHolderSex || patientCase?.policyHolderSex || patientCase?.patient?.policyHolderSex || '';
+    box11InsuredSex = rawHolderSex;
+  }
+
+  // Box 11d: Is There Another Health Benefit Plan?
+  const secComp = (ptObj.secondaryInsuranceCompany || bill.secondaryInsuranceCompany || patientCase?.secondaryInsuranceCompany || patientCase?.patient?.secondaryInsuranceCompany || '').trim();
+  const secPolicy = (ptObj.secondaryPolicyNumber || bill.secondaryPolicyNumber || patientCase?.secondaryPolicyNumber || patientCase?.patient?.secondaryPolicyNumber || '').trim();
+  const primCompany = (bill.insuranceCompany || patientCase?.insuranceCompany || ptObj.primaryInsuranceCompany || patientCase?.patient?.primaryInsuranceCompany || '').trim();
+  const primPolicy = (bill.insurancePolicyNumber || patientCase?.insurancePolicyNumber || ptObj.primaryPolicyNumber || patientCase?.patient?.primaryPolicyNumber || primaryGroupNumber || '').trim();
+
+  let box11d = '';
+  if (secComp || secPolicy) {
+    box11d = 'YES';
+  } else if ((primCompany || primPolicy) && !secComp && !secPolicy) {
+    box11d = 'NO';
+  } else {
+    box11d = '';
+  }
 
   // --- Provider identifiers from real DB data ---
   const providerNpi = bill.providerNpi || providerConfig?.identifiers?.npi || bill.identifiers?.npi || '';
@@ -172,27 +264,30 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box5State: patientState,
       box5Zip: patientZip,
       box5Phone: patientPhone,
-      box6Relation: 'Self',
+      box6Relation,
       box7Address: patientStreet,
       box7City: patientCity,
       box7State: patientState,
       box7Zip: patientZip,
       box7Phone: patientPhone,
-      box8Status: 'Single',
+      box8Status,
+      box8EmploymentStatus,
       box9a: '',
       box9bDob: { mm: '', dd: '', yy: '' },
       box9bSex: '',
       box9c: '',
       box9d: '',
-      box10AutoAccident: 'YES',
-      box10State: bill.accidentState || patientCase?.accidentState || patientState,
+      box10Employment: box10.box10Employment,
+      box10AutoAccident: box10.box10AutoAccident,
+      box10OtherAccident: box10.box10OtherAccident,
+      box10State,
       box10d: '',
       box11: primaryGroupNumber,
-      box11InsuredDob: { mm, dd, yy },
-      box11InsuredSex: patientSex,
+      box11InsuredDob,
+      box11InsuredSex,
       box11b: '',
       box11c: bill.insuranceCompany || patientCase?.insuranceCompany || '',
-      box11d: '',
+      box11d,
       box12Signature: 'SIGNATURE ON FILE',
       box12Date: dosKey,
       box13Signature: 'SIGNATURE ON FILE',
@@ -280,6 +375,42 @@ export const mapAppointmentToCmsClaim = (appointment) => {
   const apptZip = appointment.patientZip || apptPt.zipCode || apptPtAddr.zipCode || '';
   const apptPhone = appointment.patientPhone || apptPt.phone || apptPtAddr.phone || '';
 
+  const box6Relation = mapBox6Relation(apptPt.relationshipToInsured || appointment.relationshipToInsured);
+  const box8Status = mapBox8MaritalStatus(apptPt.maritalStatus || appointment.maritalStatus);
+  const box8EmploymentStatus = mapBox8EmploymentStatus(apptPt.employmentStatus || appointment.employmentStatus);
+  const box10 = mapBox10Conditions(appointment.accidentType || apptPt.accidentType);
+  const box10State = appointment.accidentState || apptPt.accidentState || '';
+
+  let box11InsuredDob = { mm: '', dd: '', yy: '' };
+  let box11InsuredSex = '';
+
+  if (box6Relation === 'Self') {
+    const apptDobParts = apptPt.dob ? String(apptPt.dob).split(/[-/]/) : [];
+    box11InsuredDob = { mm: apptDobParts[0] || '', dd: apptDobParts[1] || '', yy: apptDobParts[2] || '' };
+    box11InsuredSex = apptPt.sex || appointment.sex || '';
+  } else if (['Spouse', 'Child', 'Other'].includes(box6Relation)) {
+    const rawHolderDob = apptPt.policyHolderDob || appointment.policyHolderDob || '';
+    if (rawHolderDob) {
+      const holderParts = String(rawHolderDob).split(/[-/]/);
+      box11InsuredDob = { mm: holderParts[0] || '', dd: holderParts[1] || '', yy: holderParts[2] || '' };
+    }
+    box11InsuredSex = apptPt.policyHolderSex || appointment.policyHolderSex || '';
+  }
+
+  const apptSecComp = (apptPt.secondaryInsuranceCompany || appointment.secondaryInsuranceCompany || '').trim();
+  const apptSecPolicy = (apptPt.secondaryPolicyNumber || appointment.secondaryPolicyNumber || '').trim();
+  const apptPrimCompany = (appointment.insuranceCompany || appointment.insuranceCarrier || apptPt.primaryInsuranceCompany || '').trim();
+  const apptPrimPolicy = (appointment.insurancePolicyNumber || appointment.policyNumber || '').trim();
+
+  let box11d = '';
+  if (apptSecComp || apptSecPolicy) {
+    box11d = 'YES';
+  } else if ((apptPrimCompany || apptPrimPolicy) && !apptSecComp && !apptSecPolicy) {
+    box11d = 'NO';
+  } else {
+    box11d = '';
+  }
+
   return {
     claimId: `cms-appt-${appointment.id}`,
     appointmentId: appointment.id,
@@ -297,27 +428,30 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     box5State: apptState,
     box5Zip: apptZip,
     box5Phone: apptPhone,
-    box6Relation: 'Self',
+    box6Relation,
     box7Address: apptStreet,
     box7City: apptCity,
     box7State: apptState,
     box7Zip: apptZip,
     box7Phone: apptPhone,
-    box8Status: 'Single',
+    box8Status,
+    box8EmploymentStatus,
     box9a: '',
     box9bDob: { mm: '', dd: '', yy: '' },
     box9bSex: '',
     box9c: '',
     box9d: '',
-    box10AutoAccident: 'YES',
-    box10State: '',
+    box10Employment: box10.box10Employment,
+    box10AutoAccident: box10.box10AutoAccident,
+    box10OtherAccident: box10.box10OtherAccident,
+    box10State,
     box10d: '',
     box11: appointment.insurancePolicyNumber || appointment.policyNumber || '',
-    box11InsuredDob: { mm: '', dd: '', yy: '' },
-    box11InsuredSex: '',
+    box11InsuredDob,
+    box11InsuredSex,
     box11b: '',
     box11c: appointment.insuranceCompany || appointment.insuranceCarrier || '',
-    box11d: '',
+    box11d,
     box12Signature: 'SIGNATURE ON FILE',
     box12Date: dos,
     box13Signature: 'SIGNATURE ON FILE',

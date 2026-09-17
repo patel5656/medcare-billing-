@@ -93,6 +93,7 @@ const INITIAL_FORM_DATA = {
   dob: '',
   sex: '',
   maritalStatus: 'SINGLE',
+  relationshipToInsured: '',
   ssn: '',
   driversLicense: '',
   driversLicenseState: 'TX',
@@ -505,6 +506,16 @@ export const AddPatientPage = () => {
                     <option value="WIDOWED">Widowed</option>
                     <option value="SEPARATED">Separated</option>
                     <option value="DOMESTIC_PARTNER">Domestic Partner</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Relationship to Insured</label>
+                  <select className={inputCls()} value={formData.relationshipToInsured} onChange={e => set('relationshipToInsured', e.target.value)}>
+                    <option value="">-- Select Relationship --</option>
+                    <option value="Self">Self</option>
+                    <option value="Spouse">Spouse</option>
+                    <option value="Child">Child</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
               </div>

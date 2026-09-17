@@ -36,7 +36,7 @@ export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packe
   const treatmentPlanText = blankMode || !packetData ? '' : (packetData.tecarTreatmentPlan || packetData.treatmentPlan || packetData.plan || '');
 
   return (
-    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '48px 56px' }}>
+    <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       {/* Header */}
       <div className="border-b-2 border-slate-800 pb-4 mb-6 text-center">
         <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>TECAR THERAPY ASSESSMENT</h1>
@@ -81,54 +81,48 @@ export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packe
       {/* Objective */}
       <div className="mb-6">
         <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">2. Objective Assessment</h2>
-        <div className="grid grid-cols-2 gap-4 text-xs font-mono px-2">
+        <div className="space-y-4 text-xs font-mono px-2">
           <div>
-            <span className="font-bold block mb-2">Tissue Status:</span>
-            <ul className="space-y-1 text-slate-700">
-              {[
-                'Superficial Inflammation (Capacitive indication)',
-                'Deep Tissue Stiffness (Resistive indication)',
-                'Joint Effusion',
-                'Ligament/Tendon involvement'
-              ].map(label => {
-                const isChecked = !blankMode && isTissueStatusChecked(label, packetData);
-                return (
-                  <li key={label} className="flex items-center gap-2">
-                    <div className={`w-3 h-3 border border-slate-400 ${isChecked ? 'bg-slate-800' : ''}`}></div>
-                    {label}
-                  </li>
-                );
-              })}
-            </ul>
+            <span className="font-bold block mb-2">Tissue Status Checklist:</span>
+            <div className="grid grid-cols-3 gap-2 border border-slate-300 p-3 bg-slate-50">
+              {['Edema / Swelling', 'Muscle Spasm / Hypertonicity', 'Fibrotic Tissue / Adhesions', 'Localized Inflammation', 'Trigger Points', 'Ischemia / Poor Perfusion'].map((item) => (
+                <label key={item} className="flex items-center gap-2 cursor-default">
+                  <input type="checkbox" checked={isTissueStatusChecked(item, packetData)} readOnly className="rounded border-slate-400 text-teal-600" />
+                  <span className="text-[11px]">{item}</span>
+                </label>
+              ))}
+            </div>
           </div>
           <div>
-            <span className="font-bold block mb-2">Palpation &amp; ROM:</span>
-            <div className="text-slate-700 border border-slate-300 p-2 min-h-[80px] bg-slate-50">
+            <span className="font-bold block mb-1">Palpation &amp; ROM Findings:</span>
+            <div className="border border-slate-300 p-2 min-h-[60px] text-slate-700 bg-slate-50">
               {palpationRomText}
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Plan */}
       <div className="mb-6">
-        <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">3. Treatment Plan (TECAR)</h2>
+        <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">3. Plan of Care</h2>
         <div className="text-xs font-mono px-2">
-          <div className="text-slate-700 border border-slate-300 p-2 min-h-[60px] bg-slate-50">
+          <span className="font-bold block mb-1">TECAR Protocol &amp; Frequency:</span>
+          <div className="border border-slate-300 p-2 min-h-[60px] text-slate-700 bg-slate-50">
             {treatmentPlanText}
           </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="absolute bottom-12 left-14 right-14 border-t border-slate-300 pt-4 text-xs font-mono flex justify-between">
-        <div>
-          <div className="border-b border-slate-400 pb-1 mb-1 w-48 font-bold">{providerNameVal}&nbsp;</div>
-          <p className="text-slate-600">Provider Signature</p>
-        </div>
-        <div>
-          <div className="border-b border-slate-400 pb-1 mb-1 w-32">{signatureDateVal}&nbsp;</div>
-          <p className="text-slate-600">Date</p>
+      {/* Signature */}
+      <div className="border-t border-slate-300 pt-4 font-mono text-xs mt-auto">
+        <div className="flex justify-between items-end">
+          <div>
+            <p className="font-bold text-slate-900">Evaluated By: <span className="underline ml-1">{providerNameVal}</span></p>
+            <p className="text-[10px] text-slate-500 mt-1">TECAR Therapy Center</p>
+          </div>
+          <div className="text-right">
+            <p className="font-bold text-slate-900">Date: <span className="underline ml-1">{signatureDateVal}</span></p>
+          </div>
         </div>
       </div>
     </div>
