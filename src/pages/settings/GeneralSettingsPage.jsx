@@ -117,7 +117,7 @@ export const GeneralSettingsPage = () => {
   const [showAddModalityModal, setShowAddModalityModal] = useState(false);
   const [newModality, setNewModality] = useState({ name: '', cptCode: '', fee: '', duration: '', template: '', providerId: '', enabled: true, status: 'COMPLETE' });
   const [showAddProvModal, setShowAddProvModal] = useState(false);
-  const [newProv, setNewProv] = useState({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', city: 'Houston', state: 'TX', zipCode: '77036' });
+  const [newProv, setNewProv] = useState({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', suite: '', city: 'Houston', state: 'TX', zipCode: '77036' });
 
   const [showAddCptModal, setShowAddCptModal] = useState(false);
   const [newCpt, setNewCpt] = useState({ code: '', description: '', defaultFee: '250.00', category: 'General', modifiers: '' });
@@ -269,12 +269,13 @@ export const GeneralSettingsPage = () => {
     try {
       await apiProviderService.addProvider({
         ...newProv,
+        businessName: newProv.businessName.trim() || newProv.name.trim(),
         renderingName: newProv.name,
         renderingCredentials: 'MD'
       });
       addToast(`Provider ${newProv.name} registered successfully!`, 'success');
       setShowAddProvModal(false);
-      setNewProv({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', city: 'Houston', state: 'TX', zipCode: '77036' });
+      setNewProv({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', suite: '', city: 'Houston', state: 'TX', zipCode: '77036' });
       loadProvidersList();
     } catch (err) {
       addToast(err.message || 'Failed to add provider', 'error');
