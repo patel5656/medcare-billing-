@@ -5,6 +5,9 @@ import { getUSHolidaysForYear } from '../../constants/usHolidays';
 import { getGeneralSettings, updateGeneralSettings } from '../../services/api/apiSettingsService';
 import { apiProviderService } from '../../services/api/apiProviderService';
 import { apiModalityService } from '../../services/api/apiModalityService';
+import { apiCptService } from '../../services/api/apiCptService';
+import { getAllICDCodes, createICDCode, updateICDCode, deleteICDCode } from '../../services/api/apiIcdService';
+import { apiModifierService } from '../../services/api/apiModifierService';
 import { refreshSettingsCache } from '../../utils/settingsCache';
 import { formatFeeString } from '../../utils/billingCalculations';
 import { API_BASE_URL } from '../../config/api';
@@ -114,16 +117,22 @@ export const GeneralSettingsPage = () => {
   const [showAddModalityModal, setShowAddModalityModal] = useState(false);
   const [newModality, setNewModality] = useState({ name: '', cptCode: '', fee: '', duration: '', template: '', providerId: '', enabled: true, status: 'COMPLETE' });
   const [showAddProvModal, setShowAddProvModal] = useState(false);
-  const [newProv, setNewProv] = useState({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', city: 'Houston', state: 'TX', zipCode: '77036' });
+  const [newProv, setNewProv] = useState({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', suite: '', city: 'Houston', state: 'TX', zipCode: '77036' });
 
   const [showAddCptModal, setShowAddCptModal] = useState(false);
   const [newCpt, setNewCpt] = useState({ code: '', description: '', defaultFee: '250.00', category: 'General', modifiers: '' });
+  const [editCptIdx, setEditCptIdx] = useState(null);
+  const [cptCodes, setCptCodes] = useState([]);
 
   const [showAddIcdModal, setShowAddIcdModal] = useState(false);
   const [newIcd, setNewIcd] = useState({ code: '', description: '', category: 'Pain/Orthopedic' });
+  const [editIcdIdx, setEditIcdIdx] = useState(null);
+  const [icdCodes, setIcdCodes] = useState([]);
 
   const [showAddModModal, setShowAddModModal] = useState(false);
   const [newMod, setNewMod] = useState({ code: '', description: '' });
+  const [editModIdx, setEditModIdx] = useState(null);
+  const [modifiers, setModifiers] = useState([]);
 
   const loadProvidersList = async () => {
     try {
@@ -152,18 +161,45 @@ export const GeneralSettingsPage = () => {
         setIsLoading(false);
       }
     };
+
+    const loadCptCodes = async () => {
+      try {
+        const data = await apiCptService.getCptCodes();
+        setCptCodes(data);
+      } catch (err) {
+        addToast('Failed to load CPT codes', 'error');
+      }
+    };
+
+    const loadIcdCodes = async () => {
+      try {
+        const data = await getAllICDCodes();
+        setIcdCodes(data);
+      } catch (err) {
+        addToast('Failed to load ICD codes', 'error');
+      }
+    };
+
+    const loadModifiers = async () => {
+      try {
+        const data = await apiModifierService.getModifiers();
+        setModifiers(data);
+      } catch (err) {
+        addToast('Failed to load Modifiers', 'error');
+      }
+    };
+
     fetchSettings();
     loadProvidersList();
     loadModalitiesList();
+    loadCptCodes();
+    loadIcdCodes();
+    loadModifiers();
   }, []);
 
   const set = (field, val) => {
     setSettings(p => {
       const next = { ...p, [field]: val };
-      try {
-        localStorage.setItem('medcare_practice_settings', JSON.stringify(next));
-      } catch (e) {}
-      refreshSettingsCache(next);
       return next;
     });
   };
@@ -172,12 +208,18 @@ export const GeneralSettingsPage = () => {
     e?.preventDefault();
     setIsSaving(true);
     try {
-      localStorage.setItem('medcare_practice_settings', JSON.stringify(settings));
-      await refreshSettingsCache(settings);
-      await updateGeneralSettings(settings).catch(() => {});
-      addToast('General practice settings updated successfully!', 'success');
+      // Persist to backend first
+      await updateGeneralSettings(settings);
+      
+      // Update local storage and cache after successful backend save
+      try {
+        localStorage.setItem('medcare_practice_settings', JSON.stringify(settings));
+      } catch (e) {}
+      refreshSettingsCache(settings);
+      
+      addToast('Practice Identity & General Settings saved to database!', 'success');
     } catch (error) {
-      addToast('Failed to save settings', 'error');
+      addToast('Failed to save settings: ' + error.message, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -227,82 +269,158 @@ export const GeneralSettingsPage = () => {
     try {
       await apiProviderService.addProvider({
         ...newProv,
+        businessName: newProv.businessName.trim() || newProv.name.trim(),
         renderingName: newProv.name,
         renderingCredentials: 'MD'
       });
       addToast(`Provider ${newProv.name} registered successfully!`, 'success');
       setShowAddProvModal(false);
-      setNewProv({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', city: 'Houston', state: 'TX', zipCode: '77036' });
+      setNewProv({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', suite: '', city: 'Houston', state: 'TX', zipCode: '77036' });
       loadProvidersList();
     } catch (err) {
       addToast(err.message || 'Failed to add provider', 'error');
     }
   };
 
-  const handleAddCptCode = (e) => {
-    e?.preventDefault();
+  const handleAddCptCode = async (e) => {
+    e.preventDefault();
     if (!newCpt.code || !newCpt.description) {
       addToast('CPT Code and Description are required', 'error');
       return;
     }
-    const currentCatalog = Array.isArray(settings.cptCatalog) ? settings.cptCatalog : [
-      { code: '99204', description: 'Office/Outpatient Visit New (Complex)', fee: '$450.00', category: 'E&M', modifiers: '25, 59' },
-      { code: '99214', description: 'Office/Outpatient Visit Established (Moderate)', fee: '$275.00', category: 'E&M', modifiers: '25, 59' },
-      { code: '97039', description: 'Unlisted Physical Medicine (HILT Laser)', fee: '$2000.00', category: 'Therapy', modifiers: 'GP, RT' },
-      { code: '0101T', description: 'Extracorporeal Shock Wave Therapy (ESWT)', fee: '$1000.00', category: 'Therapy', modifiers: 'RT' },
-      { code: '20552', description: 'Trigger Point Injections (1-2 muscles)', fee: '$450.00', category: 'Injections', modifiers: '59' },
-      { code: '90834', description: 'Psychotherapy (45 Min)', fee: '$180.00', category: 'Mental Health', modifiers: '' }
-    ];
 
-    const updated = [...currentCatalog, { ...newCpt, fee: `$${parseFloat(newCpt.defaultFee || 0).toFixed(2)}` }];
-    set('cptCatalog', updated);
-    addToast(`CPT Code ${newCpt.code} added to practice catalog!`, 'success');
-    setShowAddCptModal(false);
-    setNewCpt({ code: '', description: '', defaultFee: '250.00', category: 'General', modifiers: '' });
+    try {
+      if (editCptIdx !== null) {
+        const item = cptCodes[editCptIdx];
+        await apiCptService.updateCptCode(item.id, { ...newCpt, fee: `$${parseFloat(newCpt.defaultFee || 0).toFixed(2)}` });
+        addToast(`CPT Code ${newCpt.code} updated!`, 'success');
+      } else {
+        await apiCptService.createCptCode({ ...newCpt, fee: `$${parseFloat(newCpt.defaultFee || 0).toFixed(2)}` });
+        addToast(`CPT Code ${newCpt.code} added to practice catalog!`, 'success');
+      }
+
+      setShowAddCptModal(false);
+      setEditCptIdx(null);
+      setNewCpt({ code: '', description: '', defaultFee: '250.00', category: 'General', modifiers: '' });
+      
+      const data = await apiCptService.getCptCodes();
+      setCptCodes(data);
+    } catch (err) {
+      addToast(err.message || 'Failed to save CPT Code', 'error');
+    }
   };
 
-  const handleAddIcdCode = (e) => {
+  const handleDeleteCptCode = async (idx) => {
+    if (!window.confirm(`Are you sure you want to delete CPT Code ${cptCodes[idx].code}?`)) return;
+    try {
+      await apiCptService.deleteCptCode(cptCodes[idx].id);
+      addToast('CPT Code deleted.', 'success');
+      const data = await apiCptService.getCptCodes();
+      setCptCodes(data);
+    } catch (err) {
+      addToast(err.message || 'Failed to delete CPT code', 'error');
+    }
+  };
+
+  const handleEditCptCode = (idx) => {
+    const item = cptCodes[idx];
+    setNewCpt({ ...item, defaultFee: (item.fee || '').replace(/[^0-9.]/g, '') });
+    setEditCptIdx(idx);
+    setShowAddCptModal(true);
+  };
+
+  const handleAddIcdCode = async (e) => {
     e?.preventDefault();
     if (!newIcd.code || !newIcd.description) {
       addToast('ICD Code and Description are required', 'error');
       return;
     }
-    const currentIcd = Array.isArray(settings.icdCatalog) ? settings.icdCatalog : [
-      { code: 'M54.50', description: 'Low back pain, unspecified', category: 'Orthopedic' },
-      { code: 'M54.2', description: 'Cervicalgia (Neck pain)', category: 'Orthopedic' },
-      { code: 'S13.4XXA', description: 'Sprain of ligaments of cervical spine, initial encounter', category: 'Trauma/MVA' },
-      { code: 'S39.012A', description: 'Strain of muscle/tendon of lower back, initial encounter', category: 'Trauma/MVA' },
-      { code: 'F43.10', description: 'Post-traumatic stress disorder, unspecified', category: 'Mental Health' },
-      { code: 'M25.572', description: 'Pain in left ankle and foot', category: 'Extremity' }
-    ];
 
-    const updated = [...currentIcd, newIcd];
-    set('icdCatalog', updated);
-    addToast(`ICD-10 Code ${newIcd.code} added to practice catalog!`, 'success');
-    setShowAddIcdModal(false);
-    setNewIcd({ code: '', description: '', category: 'Pain/Orthopedic' });
+    try {
+      if (editIcdIdx !== null) {
+        const item = icdCodes[editIcdIdx];
+        await updateICDCode(item.id, newIcd);
+        addToast(`ICD-10 Code ${newIcd.code} updated!`, 'success');
+      } else {
+        await createICDCode(newIcd);
+        addToast(`ICD-10 Code ${newIcd.code} added to practice catalog!`, 'success');
+      }
+
+      setShowAddIcdModal(false);
+      setEditIcdIdx(null);
+      setNewIcd({ code: '', description: '', category: 'Pain/Orthopedic' });
+      
+      const data = await getAllICDCodes();
+      setIcdCodes(data);
+    } catch (err) {
+      addToast(err.message || 'Failed to save ICD Code', 'error');
+    }
   };
 
-  const handleAddModifier = (e) => {
+  const handleDeleteIcdCode = async (idx) => {
+    if (!window.confirm(`Are you sure you want to delete ICD Code ${icdCodes[idx].code}?`)) return;
+    try {
+      await deleteICDCode(icdCodes[idx].id);
+      addToast('ICD Code deleted.', 'success');
+      const data = await getAllICDCodes();
+      setIcdCodes(data);
+    } catch (err) {
+      addToast(err.message || 'Failed to delete ICD code', 'error');
+    }
+  };
+
+  const handleEditIcdCode = (idx) => {
+    const item = icdCodes[idx];
+    setNewIcd(item);
+    setEditIcdIdx(idx);
+    setShowAddIcdModal(true);
+  };
+
+  const handleAddModifier = async (e) => {
     e?.preventDefault();
     if (!newMod.code || !newMod.description) {
       addToast('Modifier Code and Description are required', 'error');
       return;
     }
-    const currentMods = Array.isArray(settings.modifiersCatalog) ? settings.modifiersCatalog : [
-      { code: '25', description: 'Significant, Separately Identifiable E&M Service on Same Day' },
-      { code: '59', description: 'Distinct Procedural Service' },
-      { code: 'RT', description: 'Right Side' },
-      { code: 'LT', description: 'Left Side' },
-      { code: 'GP', description: 'Services Delivered Under Physical Therapy Plan of Care' },
-      { code: 'TC', description: 'Technical Component' }
-    ];
 
-    const updated = [...currentMods, newMod];
-    set('modifiersCatalog', updated);
-    addToast(`Modifier ${newMod.code} added to practice catalog!`, 'success');
-    setShowAddModModal(false);
-    setNewMod({ code: '', description: '' });
+    try {
+      if (editModIdx !== null) {
+        const item = modifiers[editModIdx];
+        await apiModifierService.updateModifier(item.id, newMod);
+        addToast(`Modifier ${newMod.code} updated!`, 'success');
+      } else {
+        await apiModifierService.createModifier(newMod);
+        addToast(`Modifier ${newMod.code} added to practice catalog!`, 'success');
+      }
+
+      setShowAddModModal(false);
+      setEditModIdx(null);
+      setNewMod({ code: '', description: '' });
+
+      const data = await apiModifierService.getModifiers();
+      setModifiers(data);
+    } catch (err) {
+      addToast(err.message || 'Failed to save Modifier', 'error');
+    }
+  };
+
+  const handleDeleteModifier = async (idx) => {
+    if (!window.confirm(`Are you sure you want to delete Modifier ${modifiers[idx].code}?`)) return;
+    try {
+      await apiModifierService.deleteModifier(modifiers[idx].id);
+      addToast('Modifier deleted.', 'success');
+      const data = await apiModifierService.getModifiers();
+      setModifiers(data);
+    } catch (err) {
+      addToast(err.message || 'Failed to delete modifier', 'error');
+    }
+  };
+
+  const handleEditModifier = (idx) => {
+    const item = modifiers[idx];
+    setNewMod(item);
+    setEditModIdx(idx);
+    setShowAddModModal(true);
   };
 
   const handleAddModality = async (e) => {
@@ -448,7 +566,7 @@ export const GeneralSettingsPage = () => {
                         {srv.enabled ? 'Active' : 'Disabled'}
                       </span>
                     </td>
-                    <td className="p-2.5 text-center font-mono font-medium text-slate-700">{srv.cpt}</td>
+                    <td className="p-2.5 text-center font-mono font-medium text-slate-700">{srv.cptCode}</td>
                     <td className="p-2.5 text-right font-mono font-bold text-slate-900">{formatFeeString(srv.fee)}</td>
                     <td className="p-2.5 text-center text-slate-600">{srv.duration}</td>
                     <td className="p-2.5 text-slate-700 font-medium">{srv.template}</td>
@@ -569,23 +687,37 @@ export const GeneralSettingsPage = () => {
                   <th className="p-2.5 text-left">Category</th>
                   <th className="p-2.5 text-right">Standard Fee ($)</th>
                   <th className="p-2.5 text-center">Default Modifiers</th>
+                  <th className="p-2.5 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                {(Array.isArray(settings.cptCatalog) && settings.cptCatalog.length > 0 ? settings.cptCatalog : [
-                  { code: '99204', description: 'Office/Outpatient Visit New (Complex)', fee: '$450.00', category: 'E&M', modifiers: '25, 59' },
-                  { code: '99214', description: 'Office/Outpatient Visit Established (Moderate)', fee: '$275.00', category: 'E&M', modifiers: '25, 59' },
-                  { code: '97039', description: 'Unlisted Physical Medicine (HILT Laser)', fee: '$2000.00', category: 'Therapy', modifiers: 'GP, RT' },
-                  { code: '0101T', description: 'Extracorporeal Shock Wave Therapy (ESWT)', fee: '$1000.00', category: 'Therapy', modifiers: 'RT' },
-                  { code: '20552', description: 'Trigger Point Injections (1-2 muscles)', fee: '$450.00', category: 'Injections', modifiers: '59' },
-                  { code: '90834', description: 'Psychotherapy (45 Min)', fee: '$180.00', category: 'Mental Health', modifiers: '' }
-                ]).map((cpt, i) => (
+                {cptCodes.map((cpt, i) => (
                   <tr key={cpt.code + i} className="hover:bg-slate-50 transition">
                     <td className="p-2.5 text-center font-mono font-bold text-teal-800">{cpt.code}</td>
                     <td className="p-2.5 font-bold text-slate-900">{cpt.description}</td>
                     <td className="p-2.5 text-slate-600">{cpt.category || 'General'}</td>
                     <td className="p-2.5 text-right font-mono font-bold text-slate-900">{cpt.fee}</td>
                     <td className="p-2.5 text-center font-mono text-slate-600">{cpt.modifiers || '—'}</td>
+                    <td className="p-2.5 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEditCptCode(i)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition cursor-pointer"
+                          title="Edit CPT Code"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCptCode(i)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                          title="Delete CPT Code"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -618,26 +750,26 @@ export const GeneralSettingsPage = () => {
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                   <tr>
-                    <th className="p-2 text-left">ICD Code</th>
-                    <th className="p-2 text-left">Diagnosis Description</th>
-                    <th className="p-2 text-left">Category</th>
+                    <th className="p-2.5 text-left w-24">ICD Code</th>
+                    <th className="p-2.5 text-left">Diagnosis Description</th>
+                    <th className="p-2.5 text-left w-32">Category</th>
+                    <th className="p-2.5 text-center w-24">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-800">
-                  {(Array.isArray(settings.icdCatalog) && settings.icdCatalog.length > 0 ? settings.icdCatalog : [
-                    { code: 'M54.50', description: 'Low back pain, unspecified', category: 'Orthopedic' },
-                    { code: 'M54.2', description: 'Cervicalgia (Neck pain)', category: 'Orthopedic' },
-                    { code: 'S13.4XXA', description: 'Sprain of ligaments of cervical spine', category: 'Trauma/MVA' },
-                    { code: 'S39.012A', description: 'Strain of muscle/tendon of lower back', category: 'Trauma/MVA' },
-                    { code: 'F43.10', description: 'Post-traumatic stress disorder', category: 'Mental Health' },
-                    { code: 'M25.572', description: 'Pain in left ankle and foot', category: 'Extremity' }
-                  ]).map((icd, i) => (
-                    <tr key={icd.code + i} className="hover:bg-slate-50 transition">
-                      <td className="p-2 font-mono font-bold text-teal-800">{icd.code}</td>
-                      <td className="p-2 font-bold text-slate-900">{icd.description}</td>
-                      <td className="p-2 text-slate-600">{icd.category}</td>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                  {icdCodes.map((icd, i) => (
+                    <tr key={icd.code + i} className="hover:bg-slate-50 transition group">
+                      <td className="p-2.5 font-mono font-bold text-teal-800">{icd.code}</td>
+                      <td className="p-2.5 font-bold text-slate-900">{icd.description}</td>
+                      <td className="p-2.5 text-xs text-slate-500">{icd.category}</td>
+                      <td className="p-2.5">
+                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" onClick={() => handleEditIcdCode(i)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition"><Edit3 className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDeleteIcdCode(i)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -668,24 +800,24 @@ export const GeneralSettingsPage = () => {
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                   <tr>
-                    <th className="p-2 text-center">Modifier</th>
-                    <th className="p-2 text-left">Modifier Description &amp; Usage</th>
+                    <th className="p-2.5 text-center w-24">Modifier</th>
+                    <th className="p-2.5 text-left">Modifier Description & Usage</th>
+                    <th className="p-2.5 text-center w-24">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-800">
-                  {(Array.isArray(settings.modifiersCatalog) && settings.modifiersCatalog.length > 0 ? settings.modifiersCatalog : [
-                    { code: '25', description: 'Significant, Separately Identifiable E&M Service on Same Day' },
-                    { code: '59', description: 'Distinct Procedural Service' },
-                    { code: 'RT', description: 'Right Side' },
-                    { code: 'LT', description: 'Left Side' },
-                    { code: 'GP', description: 'Services Delivered Under Physical Therapy Plan of Care' },
-                    { code: 'TC', description: 'Technical Component' }
-                  ]).map((mod, i) => (
-                    <tr key={mod.code + i} className="hover:bg-slate-50 transition">
-                      <td className="p-2 text-center font-mono font-bold text-teal-800">{mod.code}</td>
-                      <td className="p-2 font-medium text-slate-900">{mod.description}</td>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                  {modifiers.map((mod, i) => (
+                    <tr key={mod.code + i} className="hover:bg-slate-50 transition group">
+                      <td className="p-2.5 text-center font-mono font-bold text-teal-800">{mod.code}</td>
+                      <td className="p-2.5 font-bold text-slate-900">{mod.description}</td>
+                      <td className="p-2.5">
+                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" onClick={() => handleEditModifier(i)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition"><Edit3 className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => handleDeleteModifier(i)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -970,7 +1102,19 @@ export const GeneralSettingsPage = () => {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>CPT Code</label><input className={inputCls} value={newModality.cptCode} onChange={e => setNewModality(p => ({...p, cptCode: e.target.value}))} placeholder="e.g. 97110" /></div>
+                <div>
+                  <label className={labelCls}>CPT Code</label>
+                  <select className={inputCls} value={newModality.cptCode} onChange={e => {
+                    const val = e.target.value;
+                    const match = cptCodes.find(c => c.code === val);
+                    setNewModality(p => ({...p, cptCode: val, fee: match ? match.fee : p.fee}));
+                  }}>
+                    <option value="">-- Select CPT Code --</option>
+                    {cptCodes.map((cpt, i) => (
+                      <option key={cpt.code + i} value={cpt.code}>{cpt.code} - {cpt.description}</option>
+                    ))}
+                  </select>
+                </div>
                 <div><label className={labelCls}>Configured Fee</label><input className={inputCls} value={newModality.fee} onChange={e => setNewModality(p => ({...p, fee: e.target.value}))} placeholder="e.g. $150.00" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -1043,9 +1187,13 @@ export const GeneralSettingsPage = () => {
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 text-xs animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <FileCode className="w-4 h-4 text-teal-600" /> Add CPT Procedure Code
+                <FileCode className="w-4 h-4 text-teal-600" /> {editCptIdx !== null ? 'Edit CPT Procedure Code' : 'Add CPT Procedure Code'}
               </h3>
-              <button type="button" onClick={() => setShowAddCptModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+              <button type="button" onClick={() => {
+                setShowAddCptModal(false);
+                setEditCptIdx(null);
+                setNewCpt({ code: '', description: '', defaultFee: '250.00', category: 'General', modifiers: '' });
+              }} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
             </div>
             <form onSubmit={handleAddCptCode} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -1058,8 +1206,14 @@ export const GeneralSettingsPage = () => {
                 <div><label className={labelCls}>Standard Modifiers</label><input className={inputCls} value={newCpt.modifiers} onChange={e => setNewCpt(p => ({...p, modifiers: e.target.value}))} placeholder="e.g. 25, 59" /></div>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t">
-                <button type="button" onClick={() => setShowAddCptModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">Add CPT Code</button>
+                <button type="button" onClick={() => {
+                  setShowAddCptModal(false);
+                  setEditCptIdx(null);
+                  setNewCpt({ code: '', description: '', defaultFee: '250.00', category: 'General', modifiers: '' });
+                }} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">
+                  {editCptIdx !== null ? 'Save Changes' : 'Add CPT Code'}
+                </button>
               </div>
             </form>
           </div>
