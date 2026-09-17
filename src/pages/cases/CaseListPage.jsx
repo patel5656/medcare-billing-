@@ -1,7 +1,7 @@
 // src/pages/cases/CaseListPage.jsx
 import React, { useEffect, useState } from 'react';
 import { apiCaseService as mockCaseService } from '../../services/api/apiCaseService';
-import { FileText, PlusCircle, Search, ChevronRight, Eye, FileSpreadsheet, Scale, Calendar, Trash2, AlertTriangle } from 'lucide-react';
+import { FileText, PlusCircle, Search, ChevronRight, Eye, FileSpreadsheet, Scale, Calendar, Trash2, AlertTriangle, Edit3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AddCaseModal } from '../../components/modals/AddCaseModal';
 import { CaseDetailsModal } from '../../components/modals/CaseDetailsModal';
@@ -24,6 +24,7 @@ export const CaseListPage = () => {
   const [showAddAttorneyModal, setShowAddAttorneyModal] = useState(false);
   const [selectedCase, setSelectedCase] = useState(null);
   const [caseToDelete, setCaseToDelete] = useState(null);
+  const [caseToEdit, setCaseToEdit] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
 
@@ -166,6 +167,16 @@ export const CaseListPage = () => {
                           {c.status || 'ACTIVE'}
                         </span>
                       )}
+                      <button
+                        onClick={() => {
+                          setCaseToEdit(c);
+                          setShowAddModal(true);
+                        }}
+                        title="Edit Case"
+                        className="p-1 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => setCaseToDelete(c)}
                         title="Delete Case"
@@ -315,6 +326,16 @@ export const CaseListPage = () => {
                             </button>
                           )}
                           <button
+                            onClick={() => {
+                              setCaseToEdit(c);
+                              setShowAddModal(true);
+                            }}
+                            title="Edit Case"
+                            className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-xl transition cursor-pointer"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
                             onClick={() => setCaseToDelete(c)}
                             title="Delete Case"
                             className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer"
@@ -335,8 +356,12 @@ export const CaseListPage = () => {
       {/* Interactive Modals */}
       <AddCaseModal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => {
+          setShowAddModal(false);
+          setCaseToEdit(null);
+        }}
         onCaseAdded={() => loadCases()}
+        initialCase={caseToEdit}
       />
 
       <AddAttorneyModal
