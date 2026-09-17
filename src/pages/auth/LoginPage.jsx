@@ -61,19 +61,10 @@ export const LoginPage = () => {
     }
   };
 
-  const handleQuickRoleSelect = async (account) => {
-    setError('');
-    setIsSubmitting(true);
-    try {
-      const user = await switchRole(account.role);
-      addToast(`Authenticated as ${user.name} (${user.role})`, 'success');
-      navigate(`/dashboard/${(user.role || 'super-admin').toLowerCase().replace(/\s+/g, '-')}`);
-    } catch (err) {
-      console.error('Quick role switch error:', err);
-      setError('Failed to log in as selected role.');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleQuickRoleSelect = (account) => {
+    setEmail(account.email);
+    setPassword('password123');
+    addToast(`${account.role} credentials filled. Click Sign In to continue.`, 'success');
   };
 
   const handleForgotSubmit = async (e) => {
