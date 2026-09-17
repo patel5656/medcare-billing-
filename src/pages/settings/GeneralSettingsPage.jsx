@@ -972,20 +972,30 @@ export const GeneralSettingsPage = () => {
               </select>
             </div>
             <div><label className={labelCls}>Language</label>
-              <select className={inputCls} value={settings.language} onChange={e => {
+              <select className={inputCls} value={settings.language} onChange={async (e) => {
                 const newLang = e.target.value;
                 set('language', newLang);
                 
                 const langCode = newLang.split('-')[0];
                 
                 if (langCode === 'en') {
-                  // To revert to original English, we MUST clear cookies and reload 
-                  // because Google Translate permanently mutates the DOM.
+                  // We must save to the backend instantly before reloading, otherwise the 
+                  // backend will still send the old language and trap the user in a loop
+                  const nextSettings = { ...settings, language: newLang };
+                  try {
+                    // Temporarily using dynamic import or assuming updateGeneralSettings is in scope
+                    // It's imported at the top of the file: import { getGeneralSettings, updateGeneralSettings }
+                    await updateGeneralSettings(nextSettings);
+                    localStorage.setItem('medcare_practice_settings', JSON.stringify(nextSettings));
+                  } catch(err) {}
+
+                  // Clear the Google Translate cookies to revert the DOM
                   document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                   document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${window.location.hostname}; path=/;`;
+                  
                   window.location.reload();
                 } else {
-                  // For Spanish/French, we can instantly trigger the widget
+                  // For Spanish/French, we can instantly trigger the widget preview
                   const masterSelect = document.querySelector(".goog-te-combo");
                   if (masterSelect) {
                     masterSelect.value = langCode;

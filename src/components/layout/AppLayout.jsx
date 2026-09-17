@@ -6,10 +6,39 @@ import { Sidebar } from './Sidebar';
 import { ToastContainer } from '../common/ToastContainer';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
+import { useSettings } from '../../utils/settingsCache';
 
 export const AppLayout = () => {
   const { sidebarCollapsed, setSidebarCollapsed } = useUIStore();
   const location = useLocation();
+  const settings = useSettings();
+
+  // Enforce global language preference
+  useEffect(() => {
+    if (settings?.language) {
+      const langCode = settings.language.split('-')[0];
+      if (langCode !== 'en') {
+        const checkAndApply = () => {
+          const masterSelect = document.querySelector(".goog-te-combo");
+          if (masterSelect && masterSelect.value !== langCode) {
+            masterSelect.value = langCode;
+            masterSelect.dispatchEvent(new Event("change"));
+          } else if (!masterSelect) {
+            // Check again shortly if widget isn't fully loaded
+            setTimeout(checkAndApply, 500);
+          }
+        };
+        setTimeout(checkAndApply, 200);
+      } else {
+        // If English, and the googtrans cookie exists (meaning it was previously translated), we MUST clear and reload
+        if (document.cookie.includes('googtrans=')) {
+          document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${window.location.hostname}; path=/;`;
+          window.location.reload();
+        }
+      }
+    }
+  }, [settings?.language]);
 
   // Auto close sidebar on mobile navigation
   useEffect(() => {
