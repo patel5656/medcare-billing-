@@ -167,7 +167,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
     box14IllnessDate: { mm: '', dd: '', yy: '' }, box17ReferringName: '',
     box21Diagnoses: [], box24Lines: [], box25TaxId: '', box28TotalCharge: '',
     box29AmountPaid: '', box30BalanceDue: '', box31ProviderSignature: '',
-    box32Facility: '', box33BillingProvider: '', box33Phone: '', box33Npi: ''
+    box32Facility: '', box32Npi: '', box33BillingProvider: '', box33Phone: '', box33Npi: ''
   } : baseClaim;
 
   const cleanAmount = (val) => {
@@ -891,7 +891,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <FieldInput defaultValue={c(claim.box32Facility || 'ANIK LASER THERAPY\n10101 HARWIN DR,STE.320\nHOUSTON, TX 77036')} readOnly={readOnly} multiline={true} className="font-bold text-[8.5px] mt-0.5 leading-tight" />
             </div>
             <div className="flex justify-between text-[6.5px] mt-0.5 border-t border-[#b91c1c]/40 pt-0.5 absolute bottom-0 left-0 right-0 px-1">
-              <span>a.</span>
+              <span>a. <span className="font-mono text-slate-900 text-[7.5px]">{c(claim.box32Npi || claim.box32aNpi)}</span></span>
               <span>b.</span>
             </div>
           </div>

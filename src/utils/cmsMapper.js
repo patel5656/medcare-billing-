@@ -106,9 +106,9 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   const box6Relation = mapBox6Relation(ptObj.relationshipToInsured || bill.relationshipToInsured || patientCase?.relationshipToInsured || patientCase?.patient?.relationshipToInsured);
   const box8Status = mapBox8MaritalStatus(ptObj.maritalStatus || bill.maritalStatus || patientCase?.maritalStatus || patientCase?.patient?.maritalStatus);
   const box8EmploymentStatus = mapBox8EmploymentStatus(ptObj.employmentStatus || bill.employmentStatus || patientCase?.employmentStatus || patientCase?.patient?.employmentStatus);
-  const accidentType = patientCase?.accidentType || bill.accidentType || '';
+  const accidentType = patientCase?.accidentType || bill.accidentType || bill.case?.accidentType || '';
   const box10 = mapBox10Conditions(accidentType);
-  const box10State = bill.accidentState || patientCase?.accidentState || '';
+  const box10State = bill.accidentState || patientCase?.accidentState || bill.case?.accidentState || '';
 
   // Box 11a: Insured's DOB & Sex based strictly on box6Relation
   let box11InsuredDob = { mm: '', dd: '', yy: '' };
