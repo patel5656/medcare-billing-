@@ -494,6 +494,7 @@ export const TreatmentSessionsPage = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [selectedSessionForNote, setSelectedSessionForNote] = useState(null);
   const [sessions, setSessions] = useState([]);
+  const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const { activeProviderFilter } = useUIStore();
 
@@ -506,12 +507,15 @@ export const TreatmentSessionsPage = () => {
         filterObj.providerId = currentUser?.providerId || defaultProv;
       }
 
-      const [data, notesData] = await Promise.all([
+      const [data, notesData, provData] = await Promise.all([
         apiAppointmentService.getAllAppointments(filterObj),
-        apiClinicalNoteService.getNotes(filterObj).catch(() => [])
+        apiClinicalNoteService.getNotes(filterObj).catch(() => []),
+        apiProviderService.getProviders().catch(() => [])
       ]);
 
       const notesList = Array.isArray(notesData) ? notesData : (notesData?.notes || []);
+      const pList = provData?.providers ? provData.providers : (Array.isArray(provData) ? provData : Object.values(provData || {}));
+      setProviders(pList);
       
       const formatted = (Array.isArray(data) ? data : (data.appointments || [])).map(a => {
         let providerShort = 'OTHER';
@@ -551,6 +555,7 @@ export const TreatmentSessionsPage = () => {
           id: a.id,
           patientId: a.patientId,
           caseId: a.caseId,
+          providerId: a.providerId,
           date: a.date,
           dos: a.date,
           provider: a.providerName,
@@ -591,7 +596,9 @@ export const TreatmentSessionsPage = () => {
     }
 
     if (filterProvider !== 'ALL') {
-      matchProvider = matchProvider && (s.providerShort === filterProvider);
+      const selectedProv = providers.find(p => p.id === filterProvider);
+      const provNameMatch = selectedProv && s.provider === selectedProv.name;
+      matchProvider = matchProvider && (s.providerId === filterProvider || provNameMatch || s.providerShort === filterProvider);
     }
 
     return matchSearch && matchProvider;
@@ -664,19 +671,21 @@ export const TreatmentSessionsPage = () => {
               className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none transition font-medium"
             />
           </div>
-          <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
             <span className="text-xs font-bold text-slate-500 flex items-center gap-1 shrink-0">
               <Filter className="w-3.5 h-3.5 text-slate-400" /> Provider:
             </span>
-            {['ALL', 'JOSMIC', 'DAVS', 'ANIK', 'COUNSELOR'].map(f => (
-              <button
-                key={f}
-                onClick={() => setFilterProvider(f)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition cursor-pointer shrink-0 ${filterProvider === f ? 'bg-teal-600 text-white shadow-xs' : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'}`}
-              >
-                {f}
-              </button>
-            ))}
+            <select
+              value={filterProvider}
+              onChange={(e) => setFilterProvider(e.target.value)}
+              className="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 focus:bg-white focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none transition cursor-pointer min-w-[150px]"
+            >
+              {[{id: 'ALL', name: 'All Providers'}, ...providers].map(f => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

@@ -4,6 +4,7 @@ import { Settings, Save, Globe, Bell, Building, Clock, Activity, Loader2, Plus, 
 import { getUSHolidaysForYear } from '../../constants/usHolidays';
 import { getGeneralSettings, updateGeneralSettings } from '../../services/api/apiSettingsService';
 import { apiProviderService } from '../../services/api/apiProviderService';
+import { apiModalityService } from '../../services/api/apiModalityService';
 import { refreshSettingsCache } from '../../utils/settingsCache';
 import { formatFeeString } from '../../utils/billingCalculations';
 import { API_BASE_URL } from '../../config/api';
@@ -109,6 +110,9 @@ export const GeneralSettingsPage = () => {
   const { addToast } = useUIStore();
 
   const [providers, setProviders] = useState([]);
+  const [modalitiesList, setModalitiesList] = useState([]);
+  const [showAddModalityModal, setShowAddModalityModal] = useState(false);
+  const [newModality, setNewModality] = useState({ name: '', cptCode: '', fee: '', duration: '', template: '', providerId: '', enabled: true, status: 'COMPLETE' });
   const [showAddProvModal, setShowAddProvModal] = useState(false);
   const [newProv, setNewProv] = useState({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', city: 'Houston', state: 'TX', zipCode: '77036' });
 
@@ -128,6 +132,13 @@ export const GeneralSettingsPage = () => {
     } catch (e) {}
   };
 
+  const loadModalitiesList = async () => {
+    try {
+      const data = await apiModalityService.getModalities();
+      if (data) setModalitiesList(data);
+    } catch (e) {}
+  };
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -143,6 +154,7 @@ export const GeneralSettingsPage = () => {
     };
     fetchSettings();
     loadProvidersList();
+    loadModalitiesList();
   }, []);
 
   const set = (field, val) => {
@@ -204,18 +216,7 @@ export const GeneralSettingsPage = () => {
     );
   }
 
-  const DEFAULT_MODALITIES = [
-    { id: 'pain-mgmt', name: 'Pain Management', providerId: 'prov-josmic', providerName: 'JOSMIC Wellness Center', enabled: true, cpt: '99204 (Confirmed)', fee: '$1,214.00', duration: '60 min', template: 'JOSMIC Pain Evaluation', status: 'COMPLETE' },
-    { id: 'laser-therapy', name: 'Laser Therapy', providerId: 'prov-anik', providerName: 'ANIK Laser Therapy', enabled: true, cpt: '97039 (Confirmed)', fee: '$2,000.00', duration: '45 min', template: 'ANIK Laser Procedure Form', status: 'COMPLETE' },
-    { id: 'shockwave-therapy', name: 'Shockwave Therapy', providerId: 'prov-davs', providerName: "DAV'S Anatomy", enabled: true, cpt: '0101T (Confirmed)', fee: '$1,000.00', duration: '30 min', template: "DAV'S ESWT Therapy Record", status: 'COMPLETE' },
-    { id: 'trigger-point', name: 'Trigger Point Injection', providerId: '', providerName: 'Unassigned (Provider Assignment Required)', enabled: false, cpt: '20552 (Pending)', fee: 'Pricing Pending', duration: '30 min', template: 'Trigger Point Form (Pending)', status: 'CONFIGURATION_PENDING' },
-    { id: 'tecar-therapy', name: 'TECAR Therapy', providerId: '', providerName: 'Unassigned (Provider Assignment Required)', enabled: false, cpt: '97039-RF (Pending)', fee: 'Pricing Pending', duration: '45 min', template: 'TECAR Procedure Form (Pending)', status: 'CONFIGURATION_PENDING' },
-    { id: 'counseling', name: 'Counseling & Mental Health', providerId: 'prov-counselor', providerName: 'Counselor Practice (Hope Behavioral Health)', enabled: true, cpt: '90834 / 90791', fee: '$180.00 - $350.00', duration: '45 min', template: 'Behavioral Health Progress Note', status: 'COMPLETE' }
-  ];
 
-  const modalitiesList = Array.isArray(settings.modalities) && settings.modalities.length > 0
-    ? settings.modalities
-    : DEFAULT_MODALITIES;
 
   const handleAddProvider = async (e) => {
     e?.preventDefault();
@@ -304,14 +305,63 @@ export const GeneralSettingsPage = () => {
     setNewMod({ code: '', description: '' });
   };
 
-  const handleToggleModality = (idx) => {
-    const currentModalities = Array.isArray(settings.modalities) && settings.modalities.length > 0
-      ? settings.modalities
-      : DEFAULT_MODALITIES;
-    const updated = [...currentModalities];
-    updated[idx] = { ...updated[idx], enabled: !updated[idx].enabled };
-    set('modalities', updated);
-    addToast(`${updated[idx].name} has been ${updated[idx].enabled ? 'enabled' : 'disabled'}!`, 'info');
+  const handleAddModality = async (e) => {
+    e?.preventDefault();
+    if (!newModality.name) {
+      addToast('Modality Name is required.', 'error');
+      return;
+    }
+    try {
+      const created = await apiModalityService.createModality(newModality);
+      setModalitiesList(prev => [...prev, created]);
+      addToast(`Modality ${newModality.name} created successfully!`, 'success');
+      setShowAddModalityModal(false);
+      setNewModality({ name: '', cptCode: '', fee: '', duration: '', template: '', providerId: '', enabled: true, status: 'COMPLETE' });
+    } catch (err) {
+      addToast(err.message || 'Failed to add modality', 'error');
+    }
+  };
+
+  const handleDeleteModality = async (idx) => {
+    const srv = modalitiesList[idx];
+    if (!window.confirm(`Are you sure you want to delete ${srv.name}?`)) return;
+    try {
+      await apiModalityService.deleteModality(srv.id);
+      setModalitiesList(prev => prev.filter((_, i) => i !== idx));
+      addToast(`Modality ${srv.name} deleted successfully!`, 'success');
+    } catch (err) {
+      addToast(`Failed to delete ${srv.name}`, 'error');
+    }
+  };
+
+  const handleToggleModality = async (idx) => {
+    const srv = modalitiesList[idx];
+    try {
+      const updated = await apiModalityService.updateModality(srv.id, { enabled: !srv.enabled });
+      setModalitiesList(prev => {
+        const copy = [...prev];
+        copy[idx] = updated;
+        return copy;
+      });
+      addToast(`${srv.name} has been ${updated.enabled ? 'enabled' : 'disabled'}!`, 'info');
+    } catch (err) {
+      addToast(`Failed to toggle ${srv.name}`, 'error');
+    }
+  };
+
+  const handleProviderAssignmentChange = async (idx, providerId) => {
+    const srv = modalitiesList[idx];
+    try {
+      const updated = await apiModalityService.updateModality(srv.id, { providerId: providerId || null });
+      setModalitiesList(prev => {
+        const copy = [...prev];
+        copy[idx] = updated;
+        return copy;
+      });
+      addToast(`Provider assignment updated for ${srv.name}!`, 'info');
+    } catch (err) {
+      addToast(`Failed to update provider for ${srv.name}`, 'error');
+    }
   };
 
   return (
@@ -345,9 +395,18 @@ export const GeneralSettingsPage = () => {
                 <p className="text-[10px] text-on-surface-variant mt-0.5">Configure CPT codes, provider assignments, pricing and clinical form templates</p>
               </div>
             </div>
-            <span className="text-[10px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-full">
-              6 Practice Modalities Connected
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-1.5 rounded-lg">
+                {modalitiesList.length} Practice Modalities Connected
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAddModalityModal(true)}
+                className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Modality
+              </button>
+            </div>
           </div>
           
           <div className="overflow-x-auto">
@@ -368,7 +427,20 @@ export const GeneralSettingsPage = () => {
                 {modalitiesList.map((srv, idx) => (
                   <tr key={srv.id || srv.name} className="hover:bg-slate-50 transition">
                     <td className="p-2.5 font-bold text-slate-900">{srv.name}</td>
-                    <td className="p-2.5 text-slate-700 font-medium">{srv.providerName || srv.provider}</td>
+                    <td className="p-2.5 text-slate-700 font-medium">
+                      <select 
+                        value={srv.providerId || ''} 
+                        onChange={(e) => handleProviderAssignmentChange(idx, e.target.value)}
+                        className="w-full text-[11px] p-1.5 border border-slate-200 rounded-md bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
+                      >
+                        <option value="">-- Select Provider --</option>
+                        {providers.map(prov => (
+                          <option key={prov.id} value={prov.id}>
+                            {prov.name} {prov.businessName ? `(${prov.businessName})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="p-2.5 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         srv.enabled ? 'bg-teal-100 text-teal-800 border border-teal-200' : 'bg-slate-100 text-slate-500 border border-slate-200'
@@ -381,15 +453,25 @@ export const GeneralSettingsPage = () => {
                     <td className="p-2.5 text-center text-slate-600">{srv.duration}</td>
                     <td className="p-2.5 text-slate-700 font-medium">{srv.template}</td>
                     <td className="p-2.5 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleModality(idx)}
-                        className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${
-                          srv.enabled ? 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200' : 'bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200'
-                        }`}
-                      >
-                        {srv.enabled ? 'Disable' : 'Enable'}
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleModality(idx)}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                            srv.enabled ? 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200' : 'bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200'
+                          }`}
+                        >
+                          {srv.enabled ? 'Disable' : 'Enable'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteModality(idx)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                          title="Delete Modality"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -863,6 +945,59 @@ export const GeneralSettingsPage = () => {
           </button>
         </div>
       </form>
+
+      {/* Modal: Add New Modality */}
+      {showAddModalityModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4 text-xs animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-teal-600" /> Add New Practice Modality
+              </h3>
+              <button type="button" onClick={() => setShowAddModalityModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+            </div>
+            <form onSubmit={handleAddModality} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className={labelCls}>Modality Name *</label><input required className={inputCls} value={newModality.name} onChange={e => setNewModality(p => ({...p, name: e.target.value}))} placeholder="e.g. Physical Therapy" /></div>
+                <div>
+                  <label className={labelCls}>Assigned Provider</label>
+                  <select className={inputCls} value={newModality.providerId} onChange={e => setNewModality(p => ({...p, providerId: e.target.value}))}>
+                    <option value="">-- Unassigned --</option>
+                    {providers.map(prov => (
+                      <option key={prov.id} value={prov.id}>{prov.name} {prov.businessName ? `(${prov.businessName})` : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className={labelCls}>CPT Code</label><input className={inputCls} value={newModality.cptCode} onChange={e => setNewModality(p => ({...p, cptCode: e.target.value}))} placeholder="e.g. 97110" /></div>
+                <div><label className={labelCls}>Configured Fee</label><input className={inputCls} value={newModality.fee} onChange={e => setNewModality(p => ({...p, fee: e.target.value}))} placeholder="e.g. $150.00" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className={labelCls}>Duration</label><input className={inputCls} value={newModality.duration} onChange={e => setNewModality(p => ({...p, duration: e.target.value}))} placeholder="e.g. 30 min" /></div>
+                <div><label className={labelCls}>Clinical Template</label><input className={inputCls} value={newModality.template} onChange={e => setNewModality(p => ({...p, template: e.target.value}))} placeholder="e.g. PT Progress Note" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 items-center">
+                <div>
+                  <label className={labelCls}>Status</label>
+                  <select className={inputCls} value={newModality.status} onChange={e => setNewModality(p => ({...p, status: e.target.value}))}>
+                    <option value="COMPLETE">Complete</option>
+                    <option value="CONFIGURATION_PENDING">Configuration Pending</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 mt-4">
+                  <input type="checkbox" id="modEnabled" checked={newModality.enabled} onChange={e => setNewModality(p => ({...p, enabled: e.target.checked}))} className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-600 cursor-pointer" />
+                  <label htmlFor="modEnabled" className="text-xs font-bold text-slate-700 cursor-pointer">Enable Modality</label>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={() => setShowAddModalityModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">Save Modality</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Add New Provider */}
       {showAddProvModal && (

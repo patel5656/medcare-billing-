@@ -104,12 +104,12 @@ export const PatientProfilePage = () => {
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              MRN / ID: <strong className="text-slate-900 font-mono">{patient.patientId || patient.id}</strong> | DOB: <strong className="text-slate-900">{patient.dob || '1985-05-15'} ({patient.sex === 'F' ? 'Female' : 'Male'})</strong>
+              MRN / ID: <strong className="text-slate-900 font-mono">{patient.patientId || patient.id}</strong> | DOB: <strong className="text-slate-900">{patient.dob || 'N/A'} ({patient.sex === 'F' ? 'Female' : patient.sex === 'M' ? 'Male' : 'N/A'})</strong>
             </p>
             <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 mt-2">
-              <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-teal-600" /> {patient.phone || '713-555-0100'}</span>
-              <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-teal-600" /> {patient.email || 'patient@example.test'}</span>
-              <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-teal-600" /> {patient.address?.street || '10101 Harwin Dr.'}, {patient.address?.city || 'Houston'} {patient.address?.state || 'TX'}</span>
+              <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-teal-600" /> {patient.phone || 'N/A'}</span>
+              <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-teal-600" /> {patient.email || 'N/A'}</span>
+              <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-teal-600" /> {patient.address?.street || 'N/A'}, {patient.address?.city || 'N/A'} {patient.address?.state || ''}</span>
             </div>
           </div>
         </div>
@@ -184,12 +184,12 @@ export const PatientProfilePage = () => {
               </h2>
               <div className="space-y-2 text-xs text-slate-600">
                 <div className="flex justify-between"><span>Full Legal Name:</span><strong className="text-slate-900">{patient.firstName} {patient.middleName} {patient.lastName} {patient.suffix || ''}</strong></div>
-                <div className="flex justify-between"><span>Date of Birth:</span><strong className="text-slate-900">{patient.dob || '1985-05-15'}</strong></div>
-                <div className="flex justify-between"><span>Biological Sex:</span><strong className="text-slate-900">{patient.sex === 'F' ? 'Female' : 'Male'}</strong></div>
-                <div className="flex justify-between"><span>Marital Status:</span><strong className="text-slate-900">{patient.maritalStatus || 'Single'}</strong></div>
-                <div className="flex justify-between"><span>Driver's License #:</span><strong className="text-slate-900">{patient.driversLicense || 'TX-8921820'} ({patient.driversLicenseState || 'TX'})</strong></div>
-                <div className="flex justify-between"><span>Primary Language:</span><strong className="text-slate-900">{patient.language || 'English'}</strong></div>
-                <div className="flex justify-between"><span>Employment Status:</span><strong className="text-slate-900">{patient.employmentStatus || 'Employed Full-Time'}</strong></div>
+                <div className="flex justify-between"><span>Date of Birth:</span><strong className="text-slate-900">{patient.dob || 'N/A'}</strong></div>
+                <div className="flex justify-between"><span>Biological Sex:</span><strong className="text-slate-900">{patient.sex === 'F' ? 'Female' : patient.sex === 'M' ? 'Male' : 'N/A'}</strong></div>
+                <div className="flex justify-between"><span>Marital Status:</span><strong className="text-slate-900">{patient.maritalStatus || 'N/A'}</strong></div>
+                <div className="flex justify-between"><span>Driver's License #:</span><strong className="text-slate-900">{patient.driversLicense || 'N/A'} {patient.driversLicenseState ? `(${patient.driversLicenseState})` : ''}</strong></div>
+                <div className="flex justify-between"><span>Primary Language:</span><strong className="text-slate-900">{patient.language || 'N/A'}</strong></div>
+                <div className="flex justify-between"><span>Employment Status:</span><strong className="text-slate-900">{patient.employmentStatus || 'N/A'}</strong></div>
               </div>
             </div>
 
@@ -204,11 +204,11 @@ export const PatientProfilePage = () => {
                 </span>
               </div>
               <div className="space-y-2 text-xs text-slate-600">
-                <div className="flex justify-between"><span>Emergency Contact Name:</span><strong className="text-slate-900 font-bold">{patient.emergencyContactName || 'Jane Doe'}</strong></div>
-                <div className="flex justify-between"><span>Relationship to Patient:</span><strong className="text-slate-900">{patient.emergencyContactRelation || 'Spouse'}</strong></div>
-                <div className="flex justify-between"><span>Emergency Contact Phone:</span><strong className="text-teal-700 font-mono font-bold">{patient.emergencyContactPhone || '713-555-0102'}</strong></div>
+                <div className="flex justify-between"><span>Emergency Contact Name:</span><strong className="text-slate-900 font-bold">{patient.emergencyContactName || 'N/A'}</strong></div>
+                <div className="flex justify-between"><span>Relationship to Patient:</span><strong className="text-slate-900">{patient.emergencyContactRelation || 'N/A'}</strong></div>
+                <div className="flex justify-between"><span>Emergency Contact Phone:</span><strong className="text-teal-700 font-mono font-bold">{patient.emergencyContactPhone || 'N/A'}</strong></div>
                 <div className="flex justify-between"><span>Alternate Contact:</span><strong className="text-slate-700">{patient.alternatePhone || 'N/A'}</strong></div>
-                <div className="flex justify-between"><span>Notification Preference:</span><strong className="text-slate-900">{patient.communicationPref || 'SMS (Automated Text)'}</strong></div>
+                <div className="flex justify-between"><span>Notification Preference:</span><strong className="text-slate-900">{patient.communicationPref || 'N/A'}</strong></div>
               </div>
             </div>
           </div>
@@ -220,11 +220,11 @@ export const PatientProfilePage = () => {
                 <ShieldCheck className="w-4 h-4 text-teal-600" /> Insurance &amp; Coverage Information
               </h2>
               <div className="space-y-2 text-xs text-slate-600">
-                <div className="flex justify-between"><span>Insurance Carrier:</span><strong className="text-slate-900">{patient.primaryInsuranceCompany || 'Geico Auto Insurance'}</strong></div>
-                <div className="flex justify-between"><span>Policy / Claim Number:</span><strong className="text-slate-900 font-mono">{patient.primaryPolicyNumber || 'POL-TX-9921'}</strong></div>
-                <div className="flex justify-between"><span>Group Number:</span><strong className="text-slate-900">{patient.primaryGroupNumber || ''}</strong></div>
-                <div className="flex justify-between"><span>Member ID:</span><strong className="text-slate-900">{patient.primaryInsuranceMemberId || 'MEM-2026-991'}</strong></div>
-                <div className="flex justify-between"><span>Adjuster Contact:</span><strong className="text-slate-900">{patient.adjusterName || 'Marcus Vance'} ({patient.adjusterPhone || '800-555-0199'})</strong></div>
+                <div className="flex justify-between"><span>Insurance Carrier:</span><strong className="text-slate-900">{patient.primaryInsuranceCompany || 'N/A'}</strong></div>
+                <div className="flex justify-between"><span>Policy / Claim Number:</span><strong className="text-slate-900 font-mono">{patient.primaryPolicyNumber || 'N/A'}</strong></div>
+                <div className="flex justify-between"><span>Group Number:</span><strong className="text-slate-900">{patient.primaryGroupNumber || 'N/A'}</strong></div>
+                <div className="flex justify-between"><span>Member ID:</span><strong className="text-slate-900">{patient.primaryInsuranceMemberId || 'N/A'}</strong></div>
+                <div className="flex justify-between"><span>Adjuster Contact:</span><strong className="text-slate-900">{patient.adjusterName || 'N/A'} {patient.adjusterPhone ? `(${patient.adjusterPhone})` : ''}</strong></div>
               </div>
             </div>
 
@@ -251,13 +251,13 @@ export const PatientProfilePage = () => {
                 <div>
                   <span className="font-semibold text-slate-700 block mb-0.5">Current Medications:</span>
                   <p className="text-slate-900 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                    {patient.currentMedications || 'Ibuprofen 600mg PRN for pain, Cyclobenzaprine 10mg QHS'}
+                    {patient.currentMedications || 'N/A'}
                   </p>
                 </div>
                 <div>
                   <span className="font-semibold text-slate-700 block mb-0.5">Past Medical / Injury History:</span>
                   <p className="text-slate-900 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                    {patient.pastMedicalHistory || 'No prior motor vehicle accidents. Hypertension controlled.'}
+                    {patient.pastMedicalHistory || 'N/A'}
                   </p>
                 </div>
               </div>
@@ -306,31 +306,31 @@ export const PatientProfilePage = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <div>
                       <span className="text-slate-400 block text-[11px]">Date of Incident (DOI)</span>
-                      <strong className="text-slate-900">{c.accidentDate || '12/27/2025'}</strong>
+                      <strong className="text-slate-900">{c.accidentDate || 'N/A'}</strong>
                     </div>
                     <div>
                       <span className="text-slate-400 block text-[11px]">Incident Type</span>
-                      <strong className="text-slate-900">{c.accidentType || 'CLINICAL_VISIT'}</strong>
+                      <strong className="text-slate-900">{c.accidentType || 'N/A'}</strong>
                     </div>
                     <div>
                       <span className="text-slate-400 block text-[11px]">Mechanism of Injury</span>
-                      <strong className="text-slate-900 truncate block">{c.mechanismOfInjury || 'Rear-End MVA Collision'}</strong>
+                      <strong className="text-slate-900 truncate block">{c.mechanismOfInjury || 'N/A'}</strong>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-700">
                     <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
                       <span className="font-bold text-slate-900 block border-b border-slate-100 pb-1">Attorney Representation (Lien)</span>
-                      <div className="flex justify-between"><span>Attorney:</span><strong>{c.attorneyName || 'OJ Lawal & Associates'}</strong></div>
-                      <div className="flex justify-between"><span>Law Firm:</span><strong>{c.lawFirm || 'OJ Law Firm LLC'}</strong></div>
-                      <div className="flex justify-between"><span>Phone:</span><strong>{c.attorneyPhone || '713-555-0188'}</strong></div>
+                      <div className="flex justify-between"><span>Attorney:</span><strong>{c.attorneyName || 'N/A'}</strong></div>
+                      <div className="flex justify-between"><span>Law Firm:</span><strong>{c.lawFirm || 'N/A'}</strong></div>
+                      <div className="flex justify-between"><span>Phone:</span><strong>{c.attorneyPhone || 'N/A'}</strong></div>
                     </div>
 
                     <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
                       <span className="font-bold text-slate-900 block border-b border-slate-100 pb-1">Auto Insurance Policy</span>
-                      <div className="flex justify-between"><span>Carrier:</span><strong>{c.insuranceCompany || 'Geico Auto Insurance'}</strong></div>
-                      <div className="flex justify-between"><span>Claim #:</span><strong>{c.insuranceClaimNumber || c.claimNumber || 'CLM-2025-88192'}</strong></div>
-                      <div className="flex justify-between"><span>Adjuster:</span><strong>{c.insuranceAdjuster || 'Marcus Vance'}</strong></div>
+                      <div className="flex justify-between"><span>Carrier:</span><strong>{c.insuranceCompany || 'N/A'}</strong></div>
+                      <div className="flex justify-between"><span>Claim #:</span><strong>{c.insuranceClaimNumber || c.claimNumber || 'N/A'}</strong></div>
+                      <div className="flex justify-between"><span>Adjuster:</span><strong>{c.insuranceAdjuster || 'N/A'}</strong></div>
                     </div>
                   </div>
                 </div>
