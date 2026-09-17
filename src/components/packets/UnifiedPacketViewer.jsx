@@ -155,13 +155,13 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     if (key === 'AnikCoverPage') return <AnikCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
     if (key === 'AnikTherapyAssessmentForm') return <AnikTherapyAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
     if (key === 'AnikLaserProcedureForm') return <AnikLaserProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} pageIndex={pageDef.pageNumber ? pageDef.pageNumber - 8 : 0} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} procedureData={selectedCase?.procedures?.[pageDef.pageNumber ? pageDef.pageNumber - 8 : 0]} />;
-    if (key === 'AnikNarrativeReport') return <AnikNarrativeReport reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={selectedCase} />;
-    if (key === 'AnikFinalReport') return <AnikFinalReport reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={selectedCase} />;
+    if (key === 'AnikNarrativeReport') return <AnikNarrativeReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
+    if (key === 'AnikFinalReport') return <AnikFinalReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
 
     // DAV'S Components
-    if (key === 'DavCoverPage') return <DavCoverPage blankMode={blankPracticeMode} packetData={selectedCase} />;
-    if (key === 'DavEswtProcedureForm') return <DavEswtProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} />;
-    if (key === 'DavProgressNote') return <DavProgressNote notePage={pageDef.notePage} blankMode={blankPracticeMode} packetData={selectedCase} />;
+    if (key === 'DavCoverPage') return <DavCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
+    if (key === 'DavEswtProcedureForm') return <DavEswtProcedureForm pageIndex={pageDef.pageIndex !== undefined ? pageDef.pageIndex : (pageDef.pageNumber ? pageDef.pageNumber - 9 : 0)} formPage={pageDef.formPage || (pageDef.pageIndex !== undefined ? pageDef.pageIndex + 1 : (pageDef.pageNumber ? pageDef.pageNumber - 8 : 1))} dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} procedureData={selectedCase?.procedures?.[pageDef.pageIndex !== undefined ? pageDef.pageIndex : 0]} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
+    if (key === 'DavProgressNote') return <DavProgressNote notePage={pageDef.notePage} blankMode={blankPracticeMode} packetData={selectedCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
     if (key === 'DavFinalNarrative') return <DavFinalNarrative reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={selectedCase} />;
 
     // JOSMIC Components

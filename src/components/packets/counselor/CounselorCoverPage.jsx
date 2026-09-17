@@ -28,7 +28,7 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null }) => 
   const npiLicText = blankMode || !packetData ? '' : ([npi ? `NPI: ${npi}` : '', lic ? `State Lic # ${lic}` : ''].filter(Boolean).join(' | '));
 
   return (
-    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '48px 56px' }}>
+    <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       {/* Header */}
       <div className="flex items-center justify-between border-b-2 border-slate-800 pb-5 mb-6">
         <div className="flex items-center gap-4">
