@@ -8,9 +8,10 @@ import { DynamicDiagnosisPicker } from '../common/DynamicDiagnosisPicker';
 import { AddAttorneyModal } from './AddAttorneyModal';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
+import { apiProviderService } from '../../services/api/apiProviderService';
 import { 
   FileSpreadsheet, Save, Shield, User, Stethoscope, Scale, 
-  PlusCircle, Calendar, AlertCircle, CheckCircle2, AlertTriangle, Clock, Lock, ChevronRight, ArrowLeft
+  PlusCircle, Calendar, AlertCircle, CheckCircle2, AlertTriangle, Clock, Lock, ChevronRight, ArrowLeft, Building2, Check
 } from 'lucide-react';
 
 const todayStr = new Date().toISOString().split('T')[0];
@@ -59,16 +60,17 @@ const INITIAL_CASE_DATA = {
   insuranceAdjuster: '',
   insuranceAdjusterPhone: '',
   liabilityStatus: 'PENDING_INVESTIGATION',
-  assignedProviderIds: ['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor'],
+  assignedProviderIds: [],
   caseNotes: ''
 };
 
-export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = null }) => {
+export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = null, initialCase = null }) => {
   const { addToast } = useUIStore();
   const { currentUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState('ACCIDENT'); // ACCIDENT | LEGAL | CLINICAL
   const [isLoading, setIsLoading] = useState(false);
   const [patients, setPatients] = useState([]);
+  const [availableProviders, setAvailableProviders] = useState([]);
   const [errors, setErrors] = useState({});
 
   const [formData, setFormData] = useState(() => {
@@ -94,20 +96,32 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
         setPatients([]);
       });
       loadAttorneys();
+      apiProviderService.getProviders().then(data => {
+        const list = Array.isArray(data) ? data : Object.values(data);
+        setAvailableProviders(list);
+      }).catch(() => {});
     }
   }, [isOpen]);
 
   // Bind initial patient if passed & auto-fill patient accident date if recorded
   useEffect(() => {
-    if (initialPatient && isOpen) {
+    if (initialCase && isOpen) {
+      setFormData({
+        ...INITIAL_CASE_DATA,
+        ...initialCase,
+        patientId: initialCase.patientId || initialCase.patientName || '',
+        id: initialCase.id || initialCase.caseId
+      });
+      setErrors({});
+    } else if (initialPatient && isOpen) {
       applyPatientData(initialPatient);
-    } else if (isOpen && !initialPatient) {
+    } else if (isOpen && !initialPatient && !initialCase) {
       const currentProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
       const allProviders = [...new Set([...INITIAL_CASE_DATA.assignedProviderIds, currentProviderId])];
       setFormData({ ...INITIAL_CASE_DATA, assignedProviderIds: allProviders });
       setErrors({});
     }
-  }, [initialPatient, isOpen]);
+  }, [initialPatient, initialCase, isOpen]);
 
   const applyPatientData = (patientObj) => {
     setFormData(prev => ({
@@ -141,6 +155,23 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
       setErrors(prev => {
         const next = { ...prev };
         delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const handleToggleProvider = (pid) => {
+    setFormData(prev => {
+      const exists = prev.assignedProviderIds.includes(pid);
+      const updated = exists 
+        ? prev.assignedProviderIds.filter(id => id !== pid)
+        : [...prev.assignedProviderIds, pid];
+      return { ...prev, assignedProviderIds: updated };
+    });
+    if (errors.assignedProviderIds) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next.assignedProviderIds;
         return next;
       });
     }
@@ -205,6 +236,7 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
   const isTab1Complete = !!(formData.patientName?.trim() && formData.accidentDate && formData.initialDate && !timelineCheck?.isInvalid);
   const isTab2Complete = !!((formData.attorneyName?.trim() || formData.lawFirm?.trim()) && formData.insuranceCompany?.trim() && (formData.insuranceClaimNumber?.trim() || formData.insurancePolicyNumber?.trim()));
   const isTab3Complete = !!(formData.chiefComplaint?.trim() && (formData.injuryBodyParts?.trim() || formData.diagnosisCodes?.length > 0) && (formData.diagnosisCodes && formData.diagnosisCodes.length > 0));
+  const isTab4Complete = formData.assignedProviderIds.length > 0;
 
   const validateStep1 = () => {
     const errs = {};
@@ -267,6 +299,26 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
         addToast(Object.values(s2Errs)[0], 'warning');
         return;
       }
+    } else if (targetTab === 'PROVIDERS') {
+      const s1Errs = validateStep1();
+      if (Object.keys(s1Errs).length > 0) {
+        setActiveTab('ACCIDENT');
+        setErrors(s1Errs);
+        addToast('Please complete Step 1 (Accident & Timeline) before moving to Step 4.', 'warning');
+        return;
+      }
+      const s2Errs = validateStep2();
+      if (Object.keys(s2Errs).length > 0) {
+        setActiveTab('LEGAL');
+        setErrors(s2Errs);
+        addToast(Object.values(s2Errs)[0], 'warning');
+        return;
+      }
+      if (!isTab3Complete) {
+        setActiveTab('CLINICAL');
+        addToast('Please complete Step 3 (Diagnoses & Notes) before moving to Step 4.', 'warning');
+        return;
+      }
     }
     setActiveTab(targetTab);
   };
@@ -283,6 +335,11 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
     if (!formData.diagnosisCodes || formData.diagnosisCodes.length === 0) {
       newErrors.diagnosisCodes = 'At least 1 ICD-10 diagnosis code is required in Section 3.';
     }
+    
+    // 4. Validate Section 4: Providers
+    if (formData.assignedProviderIds.length === 0) {
+      newErrors.assignedProviderIds = 'Please assign at least one practice clinic in Step 4.';
+    }
 
     setErrors(newErrors);
 
@@ -293,9 +350,12 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
       } else if (newErrors.attorneyName || newErrors.insuranceCompany || newErrors.insuranceClaimNumber) {
         setActiveTab('LEGAL');
         addToast(newErrors.attorneyName || newErrors.insuranceCompany || newErrors.insuranceClaimNumber, 'warning');
-      } else {
+      } else if (newErrors.chiefComplaint || newErrors.diagnosisCodes) {
         setActiveTab('CLINICAL');
         addToast(newErrors.chiefComplaint || newErrors.diagnosisCodes, 'warning');
+      } else {
+        setActiveTab('PROVIDERS');
+        addToast(newErrors.assignedProviderIds, 'warning');
       }
       return;
     }
@@ -312,15 +372,21 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
         patientId: finalPatientId || 'pat-001'
       };
 
-      const created = await apiCaseService.createCase(payload);
-      addToast(`Clinical Case ${created.caseId || 'CASE-2026'} created & saved to database!`, 'success');
-      if (onCaseAdded) onCaseAdded(created);
+      if (initialCase) {
+        await apiCaseService.updateCase(initialCase.id || initialCase.caseId, payload);
+        addToast(`Clinical Case ${initialCase.caseId} updated successfully!`, 'success');
+        if (onCaseAdded) onCaseAdded(payload);
+      } else {
+        const created = await apiCaseService.createCase(payload);
+        addToast(`Clinical Case ${created.caseId || 'CASE-2026'} created & saved to database!`, 'success');
+        if (onCaseAdded) onCaseAdded(created);
+      }
       onClose();
       setFormData(INITIAL_CASE_DATA);
       setErrors({});
     } catch (err) {
-      console.error('Failed to create case:', err);
-      addToast(err.message || 'Failed to create clinical case in database', 'error');
+      console.error('Failed to save case:', err);
+      addToast(err.message || 'Failed to save clinical case in database', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -353,11 +419,19 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
     setActiveTab('CLINICAL');
   };
 
+  const handleNextFromStep3 = () => {
+    if (!isTab3Complete) {
+      addToast('Please complete Step 3 Diagnoses & Notes first.', 'warning');
+      return;
+    }
+    setActiveTab('PROVIDERS');
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Create New Clinical Case"
+      title={initialCase ? "Edit Clinical Case" : "Create New Clinical Case"}
       subtitle="Register incident details, verify timeline &amp; link 4-provider legal ledgers"
       icon={FileSpreadsheet}
       size="2xl"
@@ -414,11 +488,30 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
               </button>
               <button
                 type="button"
+                onClick={handleNextFromStep3}
+                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+              >
+                Continue to Step 4: Assign Providers <ChevronRight className="w-4 h-4" />
+              </button>
+            </>
+          )}
+
+          {activeTab === 'PROVIDERS' && (
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveTab('CLINICAL')}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1 cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to Step 3
+              </button>
+              <button
+                type="button"
                 onClick={handleSubmit}
                 disabled={isLoading || (timelineCheck && timelineCheck.isInvalid)}
                 className="px-5 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer"
               >
-                <Save className="w-4 h-4" /> {isLoading ? 'Creating Case...' : 'Create Clinical Case'}
+                <Save className="w-4 h-4" /> {isLoading ? 'Saving...' : initialCase ? 'Save Changes' : 'Create Clinical Case'}
               </button>
             </>
           )}
@@ -483,6 +576,29 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
             )}
             3. Diagnoses (ICD-10) &amp; Notes
             {isTab3Complete ? (
+              <span className="w-4 h-4 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-[10px]">✓</span>
+            ) : (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabClick('PROVIDERS')}
+            className={`pb-2 px-3 text-xs font-bold transition border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
+              !isTab1Complete || !isTab2Complete || !isTab3Complete
+                ? 'border-transparent text-slate-400 cursor-not-allowed'
+                : activeTab === 'PROVIDERS'
+                ? 'border-teal-600 text-teal-600 cursor-pointer'
+                : 'border-transparent text-slate-500 hover:text-slate-700 cursor-pointer'
+            }`}
+          >
+            {!isTab1Complete || !isTab2Complete || !isTab3Complete ? (
+              <Lock className="w-3 h-3 text-slate-400" />
+            ) : (
+              <Building2 className="w-3.5 h-3.5" />
+            )}
+            4. Assign Providers
+            {isTab4Complete ? (
               <span className="w-4 h-4 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-[10px]">✓</span>
             ) : (
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
@@ -863,6 +979,57 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
                   onChange={e => set('caseNotes', e.target.value)}
                   placeholder="Enter initial attorney coordination notes, treatment goals, or liability updates..."
                 />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 4: Providers */}
+        {activeTab === 'PROVIDERS' && (
+          <div className="space-y-3.5 text-xs animate-in fade-in-50 duration-150">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-teal-600" /> Assign Practice Providers to Clinical Case
+                </span>
+                <span className="text-xs text-slate-500">
+                  Selected: <strong>{formData.assignedProviderIds.length} of {availableProviders.length} clinics</strong>
+                </span>
+              </div>
+              
+              {errors.assignedProviderIds && (
+                <div className="p-2.5 bg-rose-50 text-rose-700 rounded-xl border border-rose-200 font-semibold flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4" /> {errors.assignedProviderIds}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {availableProviders.map((prov) => {
+                  const isSelected = formData.assignedProviderIds.includes(prov.id);
+                  return (
+                    <div
+                      key={prov.id}
+                      onClick={() => handleToggleProvider(prov.id)}
+                      className={`p-3 rounded-xl border cursor-pointer transition flex items-start gap-3 ${
+                        isSelected
+                          ? 'bg-teal-50 border-teal-500 shadow-sm ring-1 ring-teal-500'
+                          : 'bg-white border-slate-200 hover:border-teal-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                        isSelected ? 'bg-teal-600 border-teal-600 text-white' : 'border-slate-300'
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                      <div>
+                        <h4 className={`font-bold text-xs ${isSelected ? 'text-teal-900' : 'text-slate-800'}`}>
+                          {prov.name}
+                        </h4>
+                        <p className="text-[10px] text-slate-500 mt-0.5">{prov.serviceCategory || 'Practice Provider'}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

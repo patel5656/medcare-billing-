@@ -49,17 +49,17 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
     box3Dob: { mm: '10', dd: '08', yy: '1974' },
     box3Sex: 'M',
     box4: 'SAMPLE, TESTING',
-    box5Address: '',
-    box5City: '',
-    box5State: '',
-    box5Zip: '',
-    box5Phone: '',
+    box5Address: '17650 carnation glen dr',
+    box5City: 'RICHMOND',
+    box5State: 'TX',
+    box5Zip: '77407',
+    box5Phone: '(713) 555-0100',
     box6Relation: 'Self',
-    box7Address: '',
-    box7City: '',
-    box7State: '',
-    box7Zip: '',
-    box7Phone: '',
+    box7Address: '17650 carnation glen dr',
+    box7City: 'RICHMOND',
+    box7State: 'TX',
+    box7Zip: '77407',
+    box7Phone: '(713) 555-0100',
     box8Status: 'Married',
     box8Employed: true,
     box10AutoAccident: 'YES',
@@ -165,7 +165,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
     box14IllnessDate: { mm: '', dd: '', yy: '' }, box17ReferringName: '',
     box21Diagnoses: [], box24Lines: [], box25TaxId: '', box28TotalCharge: '',
     box29AmountPaid: '', box30BalanceDue: '', box31ProviderSignature: '',
-    box32Facility: '', box32Npi: '', box33BillingProvider: '', box33Phone: '', box33Npi: ''
+    box32Facility: '', box33BillingProvider: '', box33Phone: '', box33Npi: ''
   } : baseClaim;
 
   const cleanAmount = (val) => {
@@ -292,7 +292,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <span className="font-normal">(For Program in Item 1)</span>
             </div>
             <div className="mt-0.5">
-              <FieldInput defaultValue={c(claim.box1a || '')} readOnly={readOnly} className="text-xs font-mono font-bold tracking-widest" />
+              <FieldInput defaultValue={c(claim.box1a || '0000000000')} readOnly={readOnly} className="text-xs font-mono font-bold tracking-widest" />
             </div>
           </div>
         </div>
@@ -334,21 +334,15 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div className="p-0.5 border-b border-[#b91c1c]">
               <span>5. PATIENT'S ADDRESS (No., Street)</span>
               <div className="mt-0.5">
-                <FieldInput defaultValue={c(claim.box5Address)} readOnly={readOnly} className="text-xs font-mono font-bold" />
+                <FieldInput defaultValue={c(claim.box5Address || '17650 carnation glen dr')} readOnly={readOnly} className="text-xs font-mono font-bold" />
               </div>
-              <div className="grid grid-cols-2 gap-x-2 font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
-                <div className="flex flex-col">
-                  <span>CITY:</span>
-                  <FieldInput defaultValue={c(claim.box5City)} readOnly={readOnly} className="text-[10px] font-mono font-bold block w-full min-h-[14px]" />
-                  <span>STATE:</span>
-                  <FieldInput defaultValue={c(claim.box5State)} readOnly={readOnly} className="text-[10px] font-mono font-bold block w-full min-h-[14px]" />
-                </div>
-                <div className="flex flex-col">
-                  <span>ZIP:</span>
-                  <FieldInput defaultValue={c(claim.box5Zip)} readOnly={readOnly} className="text-[10px] font-mono font-bold block w-full min-h-[14px]" />
-                  <span>TELEPHONE:</span>
-                  <FieldInput defaultValue={c(claim.box5Phone)} readOnly={readOnly} className="text-[10px] font-mono font-bold block w-full min-h-[14px]" />
-                </div>
+              <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
+                <span>CITY: <FieldInput defaultValue={c(claim.box5City || 'RICHMOND')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
+                <span>STATE: <FieldInput defaultValue={c(claim.box5State || 'TX')} readOnly={readOnly} className="w-6 inline-block text-[10px]" /></span>
+              </div>
+              <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
+                <span>ZIP: <FieldInput defaultValue={c(claim.box5Zip || '77407')} readOnly={readOnly} className="w-14 inline-block text-[10px]" /></span>
+                <span>TEL: <FieldInput defaultValue={c(claim.box5Phone || '( )')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
               </div>
             </div>
 
@@ -449,21 +443,15 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div className="p-0.5 border-b border-[#b91c1c]">
               <span>7. INSURED'S ADDRESS (No., Street)</span>
               <div className="mt-0.5">
-                <FieldInput defaultValue={c(claim.box7Address !== undefined ? claim.box7Address : claim.box5Address)} readOnly={readOnly} className="text-xs font-mono font-bold" />
+                <FieldInput defaultValue={c(claim.box7Address || claim.box5Address || '17650 carnation glen dr')} readOnly={readOnly} className="text-xs font-mono font-bold" />
               </div>
-              <div className="grid grid-cols-2 gap-x-2 font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
-                <div className="flex flex-col">
-                  <span>CITY:</span>
-                  <FieldInput defaultValue={c(claim.box7City !== undefined ? claim.box7City : claim.box5City)} readOnly={readOnly} className="text-[10px] font-mono font-bold block w-full min-h-[14px]" />
-                  <span>STATE:</span>
-                  <FieldInput defaultValue={c(claim.box7State !== undefined ? claim.box7State : claim.box5State)} readOnly={readOnly} className="text-[10px] font-mono font-bold block w-full min-h-[14px]" />
-                </div>
-                <div className="flex flex-col">
-                  <span>ZIP:</span>
-                  <FieldInput defaultValue={c(claim.box7Zip !== undefined ? claim.box7Zip : claim.box5Zip)} readOnly={readOnly} className="text-[10px] font-mono font-bold block w-full min-h-[14px]" />
-                  <span>TELEPHONE:</span>
-                  <FieldInput defaultValue={c(claim.box7Phone !== undefined ? claim.box7Phone : claim.box5Phone)} readOnly={readOnly} className="text-[10px] font-mono font-bold block w-full min-h-[14px]" />
-                </div>
+              <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
+                <span>CITY: <FieldInput defaultValue={c(claim.box7City || claim.box5City || 'RICHMOND')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
+                <span>STATE: <FieldInput defaultValue={c(claim.box7State || claim.box5State || 'TX')} readOnly={readOnly} className="w-6 inline-block text-[10px]" /></span>
+              </div>
+              <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
+                <span>ZIP: <FieldInput defaultValue={c(claim.box7Zip || claim.box5Zip || '77407')} readOnly={readOnly} className="w-14 inline-block text-[10px]" /></span>
+                <span>TEL: <FieldInput defaultValue={c(claim.box7Phone || '( )')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
               </div>
             </div>
 
@@ -589,6 +577,9 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
           <div className="w-[310px] border-r border-[#b91c1c]">
             <div className="p-0.5 border-b border-[#b91c1c] h-[24px]">
               <span>17. NAME OF REFERRING PROVIDER OR OTHER SOURCE</span>
+              <div className="mt-0.5 flex gap-1">
+                <FieldInput defaultValue="" readOnly={readOnly} className="text-xs font-mono font-bold uppercase flex-1" />
+              </div>
             </div>
             <div className="flex border-b border-[#b91c1c]">
               <div className="w-[12%] p-0.5 border-r border-[#b91c1c] text-center">17a.</div>
@@ -813,14 +804,14 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
 
                     {/* 24.H-J Rendering NPI & ID Qual */}
                     <div className="col-span-1 flex text-[8.5px] font-mono h-full items-center">
-                      <div className="flex-[0.8] border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
+                      <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
                         <FieldInput defaultValue="" readOnly={readOnly} className="w-full text-center" />
                       </div>
-                      <div className="flex-[0.8] border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
+                      <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
                         <FieldInput defaultValue={hasData ? 'NPI' : ''} readOnly={readOnly} className="w-full text-center text-[5.5px]" />
                       </div>
-                      <div className="flex-[2.4] h-full flex items-center justify-center overflow-hidden">
-                        <FieldInput defaultValue={hasData ? (line.renderingNpi || claim.box33Npi || '') : ''} readOnly={readOnly} className="w-full text-center text-[5px] px-0 tracking-tighter whitespace-nowrap font-bold" />
+                      <div className="flex-[2] h-full flex items-center justify-center">
+                        <FieldInput defaultValue={hasData ? (line.renderingNpi || claim.box33Npi || '') : ''} readOnly={readOnly} className="w-full text-center text-[6px] px-0 tracking-tighter" />
                       </div>
                     </div>
                   </div>
@@ -898,7 +889,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <FieldInput defaultValue={c(claim.box32Facility || 'ANIK LASER THERAPY\n10101 HARWIN DR,STE.320\nHOUSTON, TX 77036')} readOnly={readOnly} multiline={true} className="font-bold text-[8.5px] mt-0.5 leading-tight" />
             </div>
             <div className="flex justify-between text-[6.5px] mt-0.5 border-t border-[#b91c1c]/40 pt-0.5 absolute bottom-0 left-0 right-0 px-1">
-              <span>a. <span className="font-mono text-slate-900 text-[7.5px]">{c(claim.box32Npi)}</span></span>
+              <span>a.</span>
               <span>b.</span>
             </div>
           </div>
