@@ -10,6 +10,7 @@ import { Modal } from '../../components/modals/Modal';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { ROLES } from '../../constants/rolePermissions';
+import Pagination from '../../components/common/Pagination';
 
 export const CaseListPage = () => {
   const { addToast } = useUIStore();
@@ -20,6 +21,8 @@ export const CaseListPage = () => {
 
   const [cases, setCases] = useState([]);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddAttorneyModal, setShowAddAttorneyModal] = useState(false);
   const [selectedCase, setSelectedCase] = useState(null);
@@ -69,10 +72,21 @@ export const CaseListPage = () => {
     loadCases();
   }, [search]);
 
+  // Reset page to 1 when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, activeProviderFilter]);
+
   const filteredCases = cases.filter(c => {
     if (activeProviderFilter === 'ALL') return true;
     return c.assignedProviderIds?.includes(activeProviderFilter);
   });
+
+  const totalPages = Math.ceil(filteredCases.length / ITEMS_PER_PAGE);
+  const currentCases = filteredCases.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="space-y-5">
@@ -122,7 +136,7 @@ export const CaseListPage = () => {
           <>
             {/* 1. Mobile Cards View (< 768px) */}
             <div className="divide-y divide-slate-100 md:hidden">
-              {filteredCases.map((c) => (
+              {currentCases.map((c) => (
                 <div key={c.id} className="p-4 space-y-3 hover:bg-slate-50/70 transition">
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -241,7 +255,7 @@ export const CaseListPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredCases.map((c) => (
+                  {currentCases.map((c) => (
                     <tr key={c.id} className="hover:bg-slate-50/80 transition">
                       <td 
                         className="p-3.5 font-bold font-mono text-teal-700 hover:underline cursor-pointer"
@@ -349,6 +363,18 @@ export const CaseListPage = () => {
                 </tbody>
               </table>
             </div>
+            
+            {/* -- Pagination -- */}
+            {totalPages > 1 && (
+              <div className="border-t border-slate-200">
+                <Pagination
+                  currentPage={currentPage}
+                  pageSize={ITEMS_PER_PAGE}
+                  onPageChange={setCurrentPage}
+                  totalItems={filteredCases.length}
+                />
+              </div>
+            )}
           </>
         )}
       </div>
