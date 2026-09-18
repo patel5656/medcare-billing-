@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { apiAppointmentService as mockAppointmentService } from '../../services/api/apiAppointmentService';
 import { INITIAL_PROVIDER_CONFIGS } from '../../constants/providerConfigs';
-import { COMMON_CPT_CODES } from '../../constants/servicesCatalog';
+import { useSettingsStore } from '../../store/settingsStore';
 import { MultiLineCptTable } from '../common/MultiLineCptTable';
 import { isClinicClosed, getTodayDateStr } from '../../constants/usHolidays';
 import { useUIStore } from '../../store/uiStore';
@@ -16,7 +16,7 @@ const labelCls = 'block text-xs font-bold text-slate-800 mb-1';
  * Intelligent helper to reconstruct complete service lines from appointment object
  * Pre-populates standard clinical modifiers (25, 59, RT, GP) so boxes are never blank '--'
  */
-const parseServiceLinesFromAppointment = (appointment) => {
+const parseServiceLinesFromAppointment = (appointment, cptCodes = []) => {
   if (appointment?.serviceLines && Array.isArray(appointment.serviceLines) && appointment.serviceLines.length > 0) {
     return appointment.serviceLines.map((line, idx) => ({
       ...line,
@@ -43,12 +43,12 @@ const parseServiceLinesFromAppointment = (appointment) => {
   const pointerLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   return rawCodes.map((code, idx) => {
-    const matched = COMMON_CPT_CODES.find(c => c.code === code);
+    const matched = cptCodes.find(c => c.code === code);
     const desc = matched
       ? matched.description
       : (idx === 0 ? (appointment?.appointmentType || 'Comprehensive Pain Evaluation') : 'High Intensity Laser Therapy (HILT)');
     const defaultFee = matched
-      ? matched.defaultFee
+      ? (matched.defaultFee || matched.fee)
       : (code === '99204' ? 450.00 : code === '97039' ? 250.00 : code === '99214' ? 275.00 : 110.00);
 
     const modParts = rawModifiers[idx] ? rawModifiers[idx].split('-').filter(Boolean) : [];
@@ -71,6 +71,13 @@ const parseServiceLinesFromAppointment = (appointment) => {
 export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointmentUpdated }) => {
   const { addToast } = useUIStore();
   const [isLoading, setIsLoading] = useState(false);
+  const { cptCodes, fetchSettings } = useSettingsStore();
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchSettings();
+    }
+  }, [isOpen, fetchSettings]);
 
   const [formData, setFormData] = useState({
     patientName: '',
@@ -115,9 +122,9 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
       });
 
       // Intelligently parse and restore all service lines with their active modifiers
-      setServiceLines(parseServiceLinesFromAppointment(appointment));
+      setServiceLines(parseServiceLinesFromAppointment(appointment, cptCodes));
     }
-  }, [appointment]);
+  }, [appointment, cptCodes]);
 
   if (!appointment) return null;
 

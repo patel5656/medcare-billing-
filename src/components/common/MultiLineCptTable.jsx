@@ -2,7 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, Trash2, Tag, Info, Sparkles, ChevronDown, Check, Search, X } from 'lucide-react';
-import { COMMON_CPT_CODES, COMMON_MODIFIERS, createDefaultServiceLine } from '../../constants/servicesCatalog';
+import { createDefaultServiceLine } from '../../constants/servicesCatalog';
+import { useSettingsStore } from '../../store/settingsStore';
 
 /**
  * High-End Portal Modifier Dropdown:
@@ -15,6 +16,7 @@ const ModifierPortalDropdown = ({ value, onChange, placeholder = "--", title = "
   const [search, setSearch] = useState('');
   const buttonRef = useRef(null);
   const menuRef = useRef(null);
+  const { modifiers } = useSettingsStore();
 
   // Position calculation on open
   const updatePosition = () => {
@@ -75,7 +77,7 @@ const ModifierPortalDropdown = ({ value, onChange, placeholder = "--", title = "
     };
   }, [isOpen]);
 
-  const filteredModifiers = COMMON_MODIFIERS.filter(m => 
+  const filteredModifiers = modifiers.filter(m => 
     !search || 
     m.code.toLowerCase().includes(search.toLowerCase()) || 
     m.description.toLowerCase().includes(search.toLowerCase())
@@ -216,16 +218,17 @@ const ModifierPortalDropdown = ({ value, onChange, placeholder = "--", title = "
 };
 
 export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment CPT Billing Lines & Modifiers" }) => {
+  const { cptCodes } = useSettingsStore();
 
   const handleAddLine = () => {
     const nextLineNum = lines.length + 1;
     const defaultCpt = nextLineNum === 1 ? '99204' : nextLineNum === 2 ? '97039' : nextLineNum === 3 ? '0101T' : '97110';
-    const matched = COMMON_CPT_CODES.find(c => c.code === defaultCpt);
+    const matched = cptCodes.find(c => c.code === defaultCpt) || { description: 'Therapeutic Modality Session', defaultFee: 150.00 };
     const newLine = createDefaultServiceLine(
       nextLineNum,
       defaultCpt,
-      matched ? matched.description : 'Therapeutic Modality Session',
-      matched ? matched.defaultFee : 150.00
+      matched.description,
+      matched.defaultFee || matched.fee
     );
     const pointerLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
     newLine.diagnosisPointer = pointerLetters[(nextLineNum - 1) % pointerLetters.length] || 'A';
@@ -245,10 +248,10 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
       
       // Auto-fill description & standard fee if CPT code changes
       if (field === 'cptCode') {
-        const matched = COMMON_CPT_CODES.find(c => c.code === val);
+        const matched = cptCodes.find(c => c.code === val);
         if (matched) {
           updatedLine.description = matched.description;
-          updatedLine.charge = matched.defaultFee;
+          updatedLine.charge = matched.defaultFee || matched.fee;
         }
       }
       return updatedLine;
@@ -325,12 +328,12 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
                       onChange={(e) => handleUpdateLine(idx, 'cptCode', e.target.value)}
                       className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-teal-800 bg-teal-50/70 border border-teal-200 rounded-xl focus:bg-white focus:border-teal-600 outline-none cursor-pointer"
                     >
-                      {COMMON_CPT_CODES.map(c => (
+                      {cptCodes.map(c => (
                         <option key={c.code} value={c.code}>
-                          {c.code} - {c.description.substring(0, 22)}...
+                          {c.code} - {(c.description || '').substring(0, 22)}...
                         </option>
                       ))}
-                      {!COMMON_CPT_CODES.some(c => c.code === line.cptCode) && (
+                      {!cptCodes.some(c => c.code === line.cptCode) && (
                         <option value={line.cptCode}>{line.cptCode}</option>
                       )}
                     </select>
