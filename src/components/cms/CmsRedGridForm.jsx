@@ -131,7 +131,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
 
         <div className="flex-1 flex flex-col items-end relative">
           <div className="font-bold text-slate-900 whitespace-pre-line uppercase text-[10px] pt-1 pr-8 text-left w-full pl-6 leading-tight">
-            <FieldInput multiline={true} defaultValue={c(claim.carrierHeader || 'O.J LAWAL REMI ADESHOLA\n11711 BEDFORD ST. SUITE 01\nHOUSTON, TX 77031')} readOnly={readOnly} className="font-mono text-[10px]" />
+            <FieldInput multiline={true} defaultValue={c(claim.carrierHeader || '')} readOnly={readOnly} className="font-mono text-[10px]" />
           </div>
           
           {/* RIGHT MARGIN VERTICAL CARRIER TEXT */}
@@ -180,7 +180,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <span className="font-normal">(For Program in Item 1)</span>
             </div>
             <div className="mt-0.5">
-              <FieldInput defaultValue={c(claim.box1a || '0000000000')} readOnly={readOnly} className="text-xs font-mono font-bold tracking-widest" />
+              <FieldInput defaultValue={c(claim.box1a || '')} readOnly={readOnly} className="text-xs font-mono font-bold tracking-widest" />
             </div>
           </div>
         </div>
@@ -190,17 +190,17 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
           <div className="w-[310px] p-0.5 border-r border-[#b91c1c]">
             <span>2. PATIENT'S NAME (Last Name, First Name, Middle Initial)</span>
             <div className="mt-0.5">
-              <FieldInput defaultValue={c(claim.box2 || claim.patientName || 'SAMPLE, TESTING')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+              <FieldInput defaultValue={c(claim.box2 || claim.patientName || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
             </div>
           </div>
 
           <div className="w-[170px] p-0.5 border-r-2 border-[#b91c1c]">
             <span>3. PATIENT'S BIRTH DATE &bull; SEX</span>
             <div className="flex justify-between items-center mt-0.5 font-mono text-xs text-slate-900">
-              <FieldInput defaultValue={blankMode ? '' : `${claim.box3Dob?.mm || '10'} ${claim.box3Dob?.dd || '08'} ${claim.box3Dob?.yy || '1974'}`} readOnly={readOnly} className="w-22 text-xs font-mono font-bold" />
+              <FieldInput defaultValue={blankMode || !claim.box3Dob?.mm ? '' : `${claim.box3Dob.mm} ${claim.box3Dob.dd || ''} ${claim.box3Dob.yy || ''}`} readOnly={readOnly} className="w-22 text-xs font-mono font-bold" />
               <div className="flex gap-1.5 pr-1">
-                <span className="text-[7.5px]">M <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box3Sex !== 'F')}</span></span>
-                <span className="text-[7.5px]">F <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box3Sex === 'F')}</span></span>
+                <span className="text-[7.5px]">M <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk((claim.box3Sex || '').trim().toUpperCase() === 'M' || (claim.box3Sex || '').trim().toUpperCase() === 'MALE')}</span></span>
+                <span className="text-[7.5px]">F <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk((claim.box3Sex || '').trim().toUpperCase() === 'F' || (claim.box3Sex || '').trim().toUpperCase() === 'FEMALE')}</span></span>
               </div>
             </div>
           </div>
@@ -208,7 +208,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
           <div className="flex-1 p-0.5">
             <span>4. INSURED'S NAME (Last Name, First Name, Middle Initial)</span>
             <div className="mt-0.5">
-              <FieldInput defaultValue={c(claim.box4 || claim.box2 || 'SAMPLE, TESTING')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+              <FieldInput defaultValue={c(claim.box4 || claim.box2 || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
             </div>
           </div>
         </div>
@@ -222,14 +222,14 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div className="p-0.5 border-b border-[#b91c1c]">
               <span>5. PATIENT'S ADDRESS (No., Street)</span>
               <div className="mt-0.5">
-                <FieldInput defaultValue={c(claim.box5Address || '17650 carnation glen dr')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+                <FieldInput defaultValue={c(claim.box5Address || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
               </div>
               <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
-                <span>CITY: <FieldInput defaultValue={c(claim.box5City || 'RICHMOND')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
-                <span>STATE: <FieldInput defaultValue={c(claim.box5State || 'TX')} readOnly={readOnly} className="w-6 inline-block text-[10px]" /></span>
+                <span>CITY: <FieldInput defaultValue={c(claim.box5City || '')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
+                <span>STATE: <FieldInput defaultValue={c(claim.box5State || '')} readOnly={readOnly} className="w-6 inline-block text-[10px]" /></span>
               </div>
               <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
-                <span>ZIP: <FieldInput defaultValue={c(claim.box5Zip || '77407')} readOnly={readOnly} className="w-14 inline-block text-[10px]" /></span>
+                <span>ZIP: <FieldInput defaultValue={c(claim.box5Zip || '')} readOnly={readOnly} className="w-14 inline-block text-[10px]" /></span>
                 <span>TEL: <FieldInput defaultValue={c(claim.box5Phone || '( )')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
               </div>
             </div>
@@ -332,14 +332,14 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div className="p-0.5 border-b border-[#b91c1c]">
               <span>7. INSURED'S ADDRESS (No., Street)</span>
               <div className="mt-0.5">
-                <FieldInput defaultValue={c(claim.box7Address || claim.box5Address || '17650 carnation glen dr')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+                <FieldInput defaultValue={c(claim.box7Address || claim.box5Address || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
               </div>
               <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
-                <span>CITY: <FieldInput defaultValue={c(claim.box7City || claim.box5City || 'RICHMOND')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
-                <span>STATE: <FieldInput defaultValue={c(claim.box7State || claim.box5State || 'TX')} readOnly={readOnly} className="w-6 inline-block text-[10px]" /></span>
+                <span>CITY: <FieldInput defaultValue={c(claim.box7City || claim.box5City || '')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
+                <span>STATE: <FieldInput defaultValue={c(claim.box7State || claim.box5State || '')} readOnly={readOnly} className="w-6 inline-block text-[10px]" /></span>
               </div>
               <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
-                <span>ZIP: <FieldInput defaultValue={c(claim.box7Zip || claim.box5Zip || '77407')} readOnly={readOnly} className="w-14 inline-block text-[10px]" /></span>
+                <span>ZIP: <FieldInput defaultValue={c(claim.box7Zip || claim.box5Zip || '')} readOnly={readOnly} className="w-14 inline-block text-[10px]" /></span>
                 <span>TEL: <FieldInput defaultValue={c(claim.box7Phone || '( )')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
               </div>
             </div>
@@ -396,11 +396,11 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div className="flex justify-between items-end mt-1 font-mono text-xs text-slate-900">
               <div>
                 <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1">SIGNED</span>
-                <span className="font-bold border-b border-slate-400 pb-0.5">{c(claim.box12Signature || 'SIGNATURE ON FILE')}</span>
+                <span className="font-bold border-b border-slate-400 pb-0.5">{c(claim.box12Signature || '')}</span>
               </div>
               <div>
                 <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1">DATE</span>
-                <span className="font-bold">{c(claim.box12Date || '01/22/2026')}</span>
+                <span className="font-bold">{c(claim.box12Date || '')}</span>
               </div>
             </div>
           </div>
@@ -412,7 +412,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             </div>
             <div className="font-mono text-xs text-slate-900 mt-1">
               <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1">SIGNED</span>
-              <span className="font-bold border-b border-slate-400 pb-0.5">{c(claim.box13Signature || 'SIGNATURE ON FILE')}</span>
+              <span className="font-bold border-b border-slate-400 pb-0.5">{c(claim.box13Signature || '')}</span>
             </div>
           </div>
         </div>
@@ -423,9 +423,9 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <span className="leading-tight block uppercase text-[6.5px]">14. DATE OF CURRENT: ILLNESS(First symptom) OR INJURY (Accident) OR PREGNANCY(LMP)</span>
             <div className="flex gap-2 mt-0.5 items-center">
               <div className="flex gap-1 font-mono text-slate-900 ml-1">
-                <FieldInput defaultValue={blankMode ? '' : (claim.box14IllnessDate?.mm || '12')} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="MM" />
-                <FieldInput defaultValue={blankMode ? '' : (claim.box14IllnessDate?.dd || '27')} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="DD" />
-                <FieldInput defaultValue={blankMode ? '' : (claim.box14IllnessDate?.yy || '25')} readOnly={readOnly} className="w-8 text-xs text-center font-bold" placeholder="YY" />
+                <FieldInput defaultValue={blankMode || !claim.box14IllnessDate?.mm ? '' : claim.box14IllnessDate.mm} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="MM" />
+                <FieldInput defaultValue={blankMode || !claim.box14IllnessDate?.dd ? '' : claim.box14IllnessDate.dd} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="DD" />
+                <FieldInput defaultValue={blankMode || !claim.box14IllnessDate?.yy ? '' : claim.box14IllnessDate.yy} readOnly={readOnly} className="w-8 text-xs text-center font-bold" placeholder="YY" />
               </div>
             </div>
           </div>
@@ -715,7 +715,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
           <div className="col-span-3 p-0.5 border-r border-[#b91c1c]">
             <span>25. FEDERAL TAX I.D. NUMBER</span>
             <div className="flex items-center justify-between mt-0.5 font-mono text-xs text-slate-900 pr-1">
-              <FieldInput defaultValue={c(claim.box25TaxId || '993723387')} readOnly={readOnly} className="font-bold w-24" />
+              <FieldInput defaultValue={c(claim.box25TaxId || '')} readOnly={readOnly} className="font-bold w-24" />
               <div className="flex gap-1 text-[7px]">
                 <span>SSN <span className="inline-block w-3 h-3 border border-[#b91c1c]"></span></span>
                 <span>EIN <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(true)}</span></span>
@@ -740,21 +740,21 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
           <div className="col-span-1 p-0.5 border-r border-[#b91c1c] text-right">
             <span>28. TOTAL CHARGE</span>
             <div className="mt-0.5">
-              <FieldInput defaultValue={blankMode ? '' : `$${cleanAmount(claim.box28TotalCharge || '6140.00')}`} readOnly={readOnly} className="font-mono text-[10px] font-black text-right" />
+              <FieldInput defaultValue={blankMode || !claim.box28TotalCharge ? '' : `$${cleanAmount(claim.box28TotalCharge)}`} readOnly={readOnly} className="font-mono text-[10px] font-black text-right" />
             </div>
           </div>
 
           <div className="col-span-1 p-0.5 border-r border-[#b91c1c] text-right">
             <span>29. AMOUNT PAID</span>
             <div className="mt-0.5">
-              <FieldInput defaultValue={blankMode ? '' : `$${cleanAmount(claim.box29AmountPaid || '0.00')}`} readOnly={readOnly} className="font-mono text-[10px] font-bold text-right" />
+              <FieldInput defaultValue={blankMode || claim.box29AmountPaid === undefined || claim.box29AmountPaid === null || claim.box29AmountPaid === '' ? '' : `$${cleanAmount(claim.box29AmountPaid)}`} readOnly={readOnly} className="font-mono text-[10px] font-bold text-right" />
             </div>
           </div>
 
           <div className="col-span-2 p-0.5 text-right">
             <span>30. BALANCE DUE</span>
             <div className="mt-0.5">
-              <FieldInput defaultValue={blankMode ? '' : `$${cleanAmount(claim.box30BalanceDue || claim.box28TotalCharge || '6140.00')}`} readOnly={readOnly} className="font-mono text-[10px] font-black text-right" />
+              <FieldInput defaultValue={blankMode || (!claim.box30BalanceDue && !claim.box28TotalCharge) ? '' : `$${cleanAmount(claim.box30BalanceDue || claim.box28TotalCharge)}`} readOnly={readOnly} className="font-mono text-[10px] font-black text-right" />
             </div>
           </div>
         </div>
@@ -767,15 +767,15 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <span className="text-[5.5px] font-normal leading-tight block text-slate-500">(I certify that the statements on the reverse apply to this bill and are made a part thereof.)</span>
             </div>
             <div className="flex justify-between items-end mt-0.5">
-              <FieldInput defaultValue={c(claim.box31ProviderSignature || 'Adeoye, Segun')} readOnly={readOnly} className="font-bold text-[9px] w-2/3" />
-              <FieldInput defaultValue={blankMode ? '' : `DATE ${claim.box31Date || '04/13/2026'}`} readOnly={readOnly} className="text-[7.5px] text-slate-600 w-1/3 text-right" />
+              <FieldInput defaultValue={c(claim.box31ProviderSignature || '')} readOnly={readOnly} className="font-bold text-[9px] w-2/3" />
+              <FieldInput defaultValue={blankMode || !claim.box31Date ? '' : `DATE ${claim.box31Date}`} readOnly={readOnly} className="text-[7.5px] text-slate-600 w-1/3 text-right" />
             </div>
           </div>
 
           <div className="col-span-4 border-r border-[#b91c1c] px-1 flex flex-col justify-between p-0.5 relative">
             <div>
               <span className="text-[7px]">32. SERVICE FACILITY LOCATION INFORMATION</span>
-              <FieldInput defaultValue={c(claim.box32Facility || 'ANIK LASER THERAPY\n10101 HARWIN DR,STE.320\nHOUSTON, TX 77036')} readOnly={readOnly} multiline={true} className="font-bold text-[8.5px] mt-0.5 leading-tight" />
+              <FieldInput defaultValue={c(claim.box32Facility || '')} readOnly={readOnly} multiline={true} className="font-bold text-[8.5px] mt-0.5 leading-tight" />
             </div>
             <div className="flex justify-between text-[6.5px] mt-0.5 border-t border-[#b91c1c]/40 pt-0.5 absolute bottom-0 left-0 right-0 px-1">
               <span>a. <span className="font-mono text-slate-900 text-[7.5px]">{c(claim.box32Npi || claim.box32aNpi)}</span></span>
@@ -785,8 +785,8 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
 
           <div className="col-span-4 pl-1 flex flex-col justify-between p-0.5 relative">
             <div>
-              <span className="text-[7px]">33. BILLING PROVIDER INFO &amp; PH # {c(claim.box33Phone || '(832) 815 0959')}</span>
-              <FieldInput defaultValue={c(claim.box33BillingProvider || 'ANIK LASER THERAPY\n10101 HARWIN DR,STE.274\nHOUSTON, TX 77036')} readOnly={readOnly} multiline={true} className="font-bold text-[8.5px] mt-0.5 leading-tight" />
+              <span className="text-[7px]">33. BILLING PROVIDER INFO &amp; PH # {c(claim.box33Phone || '')}</span>
+              <FieldInput defaultValue={c(claim.box33BillingProvider || '')} readOnly={readOnly} multiline={true} className="font-bold text-[8.5px] mt-0.5 leading-tight" />
             </div>
             <div className="flex justify-between text-[6.5px] mt-0.5 border-t border-[#b91c1c]/40 pt-0.5 absolute bottom-0 left-0 right-0 px-1">
               <span>a. <span className="font-mono text-slate-900 text-[7.5px]">{c(claim.box33Npi)}</span></span>

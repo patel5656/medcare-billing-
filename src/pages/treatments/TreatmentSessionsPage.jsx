@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Calendar, Clock, User, CheckCircle, AlertCircle, Search, Filter, X, Save, Stethoscope, FileText, ChevronRight } from 'lucide-react';
+import { Activity, Calendar, Clock, User, CheckCircle, AlertCircle, Search, Filter, X, Save, Stethoscope, FileText, ChevronRight, Edit2, Trash2 } from 'lucide-react';
 import { apiAppointmentService } from '../../services/api/apiAppointmentService';
 import { apiCaseService } from '../../services/api/apiCaseService';
 import { apiProviderService } from '../../services/api/apiProviderService';
+import { apiCptService } from '../../services/api/apiCptService';
+import { getAllICDCodes } from '../../services/api/apiIcdService';
 import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
 import { useUIStore } from '../../store/uiStore';
 import { useNavigate } from 'react-router-dom';
@@ -32,25 +34,25 @@ const inputCls = 'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg
 const labelCls = 'block text-xs font-bold text-slate-900 mb-1';
 
 // --- Schedule Session Modal ---------------------------------------------------
-const ScheduleSessionModal = ({ onClose, onSuccess }) => {
+const ScheduleSessionModal = ({ onClose, onSuccess, editSession }) => {
   const [form, setForm] = useState({
-    patientName: '',
-    patientId: '',
-    caseId: '',
-    provider: '',
-    therapist: '',
-    sessionType: 'High-Intensity Laser Therapy (HILT)',
-    cptCode: '97039',
-    dos: new Date().toISOString().split('T')[0],
-    startTime: '09:00 AM',
-    endTime: '09:45 AM',
-    duration: '45',
-    room: 'Treatment Room 1',
-    location: '10101 Harwin Dr. Suite 274, Houston TX 77036',
+    patientName: editSession?.patientName || editSession?.patient || '',
+    patientId: editSession?.patientId || '',
+    caseId: editSession?.caseId || '',
+    provider: editSession?.providerId || editSession?.provider || '',
+    therapist: editSession?.therapist || '',
+    sessionType: editSession?.appointmentType || editSession?.type || 'High-Intensity Laser Therapy (HILT)',
+    cptCode: editSession?.cptCode || editSession?.cpt || '97039',
+    dos: editSession?.date || editSession?.dos || new Date().toISOString().split('T')[0],
+    startTime: editSession?.startTime || '09:00 AM',
+    endTime: editSession?.endTime || '09:45 AM',
+    duration: editSession?.duration ? editSession.duration.replace(' min', '') : '45',
+    room: editSession?.location || 'Treatment Room 1',
+    location: editSession?.location || '10101 Harwin Dr. Suite 274, Houston TX 77036',
     diagnosisCodes: '',
     units: 1,
-    charge: '6140.00',
-    status: 'Scheduled',
+    charge: editSession?.charge || '6140.00',
+    status: editSession?.status || 'Scheduled',
     billedToCase: true,
     sessionNotes: '',
     authNumber: '',
@@ -61,16 +63,24 @@ const ScheduleSessionModal = ({ onClose, onSuccess }) => {
   const [saving, setSaving] = useState(false);
   const [cases, setCases] = useState([]);
   const [providers, setProviders] = useState([]);
+  const [cptCodes, setCptCodes] = useState([]);
+  const [icdCodes, setIcdCodes] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [casesData, provData] = await Promise.all([
+        const [casesData, provData, cptData, icdData] = await Promise.all([
           apiCaseService.getCases(),
-          apiProviderService.getProviders()
+          apiProviderService.getProviders(),
+          apiCptService.getCptCodes(),
+          getAllICDCodes().catch(() => ({ icdCodes: [] }))
         ]);
         setCases(Array.isArray(casesData) ? casesData : (casesData.cases || []));
         setProviders(provData.providers ? provData.providers : (Array.isArray(provData) ? provData : Object.values(provData)));
+        setCptCodes(cptData.cptCodes || (Array.isArray(cptData) ? cptData : []));
+        
+        const extractedIcd = icdData.icdCodes || (Array.isArray(icdData) ? icdData : []);
+        setIcdCodes(extractedIcd);
       } catch (err) {
         console.error('Failed to load form data', err);
       }
@@ -163,16 +173,20 @@ const ScheduleSessionModal = ({ onClose, onSuccess }) => {
         startTime: form.startTime,
         endTime: form.endTime,
         location: form.location,
-        status: 'SCHEDULED',
+        status: editSession ? editSession.status : 'SCHEDULED',
         charge: parseFloat(form.charge) || 0
       };
 
-      await apiAppointmentService.createAppointment(payload);
+      if (editSession) {
+        await apiAppointmentService.updateAppointment(editSession.id, payload);
+      } else {
+        await apiAppointmentService.createAppointment(payload);
+      }
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      console.error('Failed to schedule session', err);
-      alert('Failed to schedule session: ' + err.message);
+      console.error('Failed to save session', err);
+      alert('Failed to save session: ' + err.message);
     } finally {
       setSaving(false);
     }
@@ -188,8 +202,8 @@ const ScheduleSessionModal = ({ onClose, onSuccess }) => {
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-extrabold text-slate-900">Schedule Treatment Session</h2>
-              <p className="text-xs text-slate-500">Book a new therapy session for a patient</p>
+              <h2 className="text-base font-extrabold text-slate-900">{editSession ? 'Edit Treatment Session' : 'Schedule Treatment Session'}</h2>
+              <p className="text-xs text-slate-500">{editSession ? 'Modify existing session details' : 'Book a new therapy session for a patient'}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-200/60 rounded-xl transition cursor-pointer">
@@ -203,7 +217,7 @@ const ScheduleSessionModal = ({ onClose, onSuccess }) => {
             <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5">Patient &amp; Case</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div><label className={labelCls}>Select Case / Patient *</label>
-                <select required className={inputCls} onChange={handleCaseChange} defaultValue="">
+                <select required className={inputCls} onChange={handleCaseChange} value={form.caseId || ""}>
                   <option value="" disabled>Select a Case</option>
                   {cases.map(c => (
                     <option key={c.id} value={c.id}>
@@ -233,7 +247,21 @@ const ScheduleSessionModal = ({ onClose, onSuccess }) => {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
               <div><label className={labelCls}>Session / Treatment Type *</label><input required className={inputCls} value={form.sessionType} onChange={e => set('sessionType', e.target.value)} /></div>
-              <div><label className={labelCls}>CPT Code</label><input className={inputCls} value={form.cptCode} onChange={e => set('cptCode', e.target.value)} /></div>
+              <div>
+                <label className={labelCls}>CPT Code</label>
+                <select className={inputCls} value={form.cptCode} onChange={e => set('cptCode', e.target.value)}>
+                  <option value="">Select CPT Code</option>
+                  {cptCodes.map(cpt => (
+                    <option key={cpt.id} value={cpt.code}>
+                      {cpt.code} - {cpt.name || cpt.description || 'Code'}
+                    </option>
+                  ))}
+                  {/* Fallback for existing codes not in DB */}
+                  {!cptCodes.find(c => c.code === form.cptCode) && form.cptCode && (
+                    <option value={form.cptCode}>{form.cptCode}</option>
+                  )}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -260,7 +288,20 @@ const ScheduleSessionModal = ({ onClose, onSuccess }) => {
           <div>
             <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5">Billing &amp; Authorization</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div><label className={labelCls}>ICD-10 Codes</label><input className={inputCls} value={form.diagnosisCodes} onChange={e => set('diagnosisCodes', e.target.value)} /></div>
+              <div>
+                <label className={labelCls}>ICD-10 Codes</label>
+                <select className={inputCls} value={form.diagnosisCodes} onChange={e => set('diagnosisCodes', e.target.value)}>
+                  <option value="">Select ICD-10 Code</option>
+                  {icdCodes.map(icd => (
+                    <option key={icd.id || icd.code} value={icd.code}>
+                      {icd.code} - {icd.description || icd.name || 'Code'}
+                    </option>
+                  ))}
+                  {!icdCodes.find(i => i.code === form.diagnosisCodes) && form.diagnosisCodes && (
+                    <option value={form.diagnosisCodes}>{form.diagnosisCodes}</option>
+                  )}
+                </select>
+              </div>
               <div><label className={labelCls}>Units</label><input type="number" min="1" className={inputCls} value={form.units} onChange={e => set('units', e.target.value)} /></div>
               <div><label className={labelCls}>Charge Amount ($)</label><input className={inputCls} value={form.charge} onChange={e => set('charge', e.target.value)} /></div>
             </div>
@@ -492,6 +533,7 @@ export const TreatmentSessionsPage = () => {
   const [search, setSearch] = useState('');
   const [filterProvider, setFilterProvider] = useState('ALL');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [sessionToEdit, setSessionToEdit] = useState(null);
   const [selectedSessionForNote, setSelectedSessionForNote] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [providers, setProviders] = useState([]);
@@ -581,7 +623,18 @@ export const TreatmentSessionsPage = () => {
 
   React.useEffect(() => {
     fetchSessions();
-  }, []);
+  }, [filterProvider, activeProviderFilter, currentUser]);
+
+  const handleDeleteSession = async (session) => {
+    if (window.confirm(`Are you sure you want to delete session ${formatSessionId(session.id)}? This action cannot be undone.`)) {
+      try {
+        await apiAppointmentService.deleteAppointment(session.id);
+        fetchSessions();
+      } catch (err) {
+        alert('Failed to delete session: ' + err.message);
+      }
+    }
+  };
 
   const filtered = sessions.filter(s => {
     const matchSearch = !search || s.patient?.toLowerCase().includes(search.toLowerCase()) || s.provider?.toLowerCase().includes(search.toLowerCase()) || s.type?.toLowerCase().includes(search.toLowerCase());
@@ -790,11 +843,27 @@ export const TreatmentSessionsPage = () => {
                         </span>
                       )}
                     </td>
-                    <td className="p-3.5 text-right whitespace-nowrap">
+                    <td className="p-3.5 text-right whitespace-nowrap space-x-1.5 flex justify-end items-center">
+                      <button
+                        type="button"
+                        onClick={() => setSessionToEdit(s)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        title="Edit Session"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSession(s)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                        title="Delete Session"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => setSelectedSessionForNote(s)}
-                        className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                        className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 transition cursor-pointer shadow-2xs ml-2"
                       >
                         <Stethoscope className="w-3.5 h-3.5 text-teal-600" />
                         {s.hasClinicalNote ? 'View Note' : 'Complete Form'}
@@ -818,6 +887,9 @@ export const TreatmentSessionsPage = () => {
 
       {/* Schedule Session Modal */}
       {showScheduleModal && <ScheduleSessionModal onClose={() => setShowScheduleModal(false)} onSuccess={fetchSessions} />}
+
+      {/* Edit Session Modal */}
+      {sessionToEdit && <ScheduleSessionModal editSession={sessionToEdit} onClose={() => setSessionToEdit(null)} onSuccess={fetchSessions} />}
       
       {/* Complete Clinical Note Modal */}
       {selectedSessionForNote && (
