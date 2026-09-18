@@ -1,58 +1,83 @@
 import React, { useState, useEffect } from 'react';
-import { Tag, X, Save, Edit3, Plus, Shield } from 'lucide-react';
+import { Tag, X, Save, Edit3, Plus, Shield, Loader2 } from 'lucide-react';
+import { apiCptService } from '../../services/api/apiCptService';
+import { useUIStore } from '../../store/uiStore';
 
 export const ServicesPage = () => {
-  const [services, setServices] = useState(() => {
-    try {
-      const saved = localStorage.getItem('medcare_services');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  const [services, setServices] = useState([]);
+  const { addToast } = useUIStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [viewingSvc, setViewingSvc] = useState(null);
-  const [form, setForm] = useState({ cptCode: '', description: '', fee: '', type: 'Standard' });
+  const [form, setForm] = useState({ code: '', description: '', fee: '', category: 'Standard', modifiers: '' });
+  const [isSaving, setIsSaving] = useState(false);
 
   const inputCls = 'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none transition';
   const labelCls = 'block text-xs font-bold text-slate-800 mb-1';
 
+  const fetchServices = async () => {
+    try {
+      const data = await apiCptService.getCptCodes();
+      setServices(data);
+    } catch (error) {
+      addToast('Failed to load services', 'error');
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('medcare_services', JSON.stringify(services));
-  }, [services]);
+    fetchServices();
+  }, []);
 
   const openAddModal = () => {
-    setForm({ cptCode: '', description: '', fee: '', type: 'Standard' });
+    setForm({ code: '', description: '', fee: '', category: 'Standard', modifiers: '' });
     setEditingId(null);
     setIsModalOpen(true);
   };
 
   const openEditModal = (svc) => {
     setForm({
-      cptCode: svc.cptCode,
+      code: svc.code,
       description: svc.description,
-      fee: svc.fee,
-      type: svc.type
+      fee: (svc.fee || '').replace(/[^0-9.]/g, ''),
+      category: svc.category || 'Standard',
+      modifiers: svc.modifiers || ''
     });
     setEditingId(svc.id);
     setIsModalOpen(true);
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (editingId) {
-      setServices(services.map(s => s.id === editingId ? { ...form, id: editingId } : s));
-    } else {
-      const newService = {
-        ...form,
-        id: Date.now().toString()
-      };
-      setServices([...services, newService]);
+    setIsSaving(true);
+    try {
+      const payload = { ...form, fee: `$${parseFloat(form.fee || 0).toFixed(2)}` };
+      if (editingId) {
+        await apiCptService.updateCptCode(editingId, payload);
+        addToast('Service updated successfully', 'success');
+      } else {
+        await apiCptService.createCptCode(payload);
+        addToast('Service created successfully', 'success');
+      }
+      setIsModalOpen(false);
+      setForm({ code: '', description: '', fee: '', category: 'Standard', modifiers: '' });
+      setEditingId(null);
+      fetchServices();
+    } catch (err) {
+      addToast(err.message || 'Failed to save service', 'error');
+    } finally {
+      setIsSaving(false);
     }
-    setIsModalOpen(false);
-    setForm({ cptCode: '', description: '', fee: '', type: 'Standard' });
-    setEditingId(null);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this service?')) return;
+    try {
+      await apiCptService.deleteCptCode(id);
+      addToast('Service deleted', 'success');
+      fetchServices();
+    } catch (err) {
+      addToast(err.message || 'Failed to delete service', 'error');
+    }
   };
 
   return (
@@ -83,35 +108,33 @@ export const ServicesPage = () => {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold text-[10px] border-b border-slate-200">
                 <tr>
-                  <th className="p-3.5">CPT Code</th>
-                  <th className="p-3.5">Description</th>
-                  <th className="p-3.5">Service Type</th>
-                  <th className="p-3.5 text-right">Standard Fee</th>
-                  <th className="p-3.5 text-center">Status</th>
-                  <th className="p-3.5 text-center">Action</th>
+                  <th className="p-3.5">CPT CODE</th>
+                  <th className="p-3.5">PROCEDURE DESCRIPTION</th>
+                  <th className="p-3.5">CATEGORY</th>
+                  <th className="p-3.5 text-right">STANDARD FEE (S)</th>
+                  <th className="p-3.5 text-center">DEFAULT MODIFIERS</th>
+                  <th className="p-3.5 text-center">ACTION</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {services.map((svc) => (
                   <tr key={svc.id} className="hover:bg-slate-50 transition">
                     <td className="p-3.5 font-bold text-slate-900">
-                      {svc.cptCode}
+                      {svc.code}
                     </td>
                     <td className="p-3.5 text-slate-600 font-medium">
                       {svc.description}
                     </td>
                     <td className="p-3.5">
                       <span className="px-2.5 py-1 bg-teal-50 text-teal-800 border border-teal-200 rounded-full font-bold text-[11px]">
-                        {svc.type}
+                        {svc.category || 'General'}
                       </span>
                     </td>
                     <td className="p-3.5 text-right font-mono font-bold text-slate-700">
-                      ${parseFloat(svc.fee || 0).toFixed(2)}
+                      {svc.fee}
                     </td>
-                    <td className="p-3.5 text-center">
-                      <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold rounded-full text-[10px]">
-                        Active
-                      </span>
+                    <td className="p-3.5 text-center text-slate-500 font-medium">
+                      {svc.modifiers || '-'}
                     </td>
                     <td className="p-3.5 text-center">
                       <div className="flex items-center justify-center gap-3">
@@ -128,7 +151,7 @@ export const ServicesPage = () => {
                           Edit
                         </button>
                         <button
-                          onClick={() => setServices(services.filter(s => s.id !== svc.id))}
+                          onClick={() => handleDelete(svc.id)}
                           className="text-red-600 hover:text-red-800 text-xs font-bold transition cursor-pointer"
                         >
                           Delete
@@ -168,14 +191,14 @@ export const ServicesPage = () => {
                   type="text"
                   required
                   placeholder="e.g. 99213"
-                  value={form.cptCode}
-                  onChange={e => setForm({ ...form, cptCode: e.target.value })}
+                  value={form.code}
+                  onChange={e => setForm({ ...form, code: e.target.value })}
                   className={inputCls}
                 />
               </div>
 
               <div>
-                <label className={labelCls}>Description *</label>
+                <label className={labelCls}>Procedure Description *</label>
                 <input
                   type="text"
                   required
@@ -188,7 +211,7 @@ export const ServicesPage = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls}>Standard Fee ($) *</label>
+                  <label className={labelCls}>Standard Fee (S) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -201,18 +224,32 @@ export const ServicesPage = () => {
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>Service Type</label>
+                  <label className={labelCls}>Category</label>
                   <select
-                    value={form.type}
-                    onChange={e => setForm({ ...form, type: e.target.value })}
+                    value={form.category}
+                    onChange={e => setForm({ ...form, category: e.target.value })}
                     className={inputCls}
                   >
-                    <option value="Standard">Standard</option>
+                    <option value="General">General</option>
+                    <option value="E&M">E&M</option>
                     <option value="Procedure">Procedure</option>
                     <option value="Evaluation">Evaluation</option>
                     <option value="Therapy">Therapy</option>
+                    <option value="Injections">Injections</option>
+                    <option value="Mental Health">Mental Health</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>Default Modifiers</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 25, 59"
+                  value={form.modifiers}
+                  onChange={e => setForm({ ...form, modifiers: e.target.value })}
+                  className={inputCls}
+                />
               </div>
 
               <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
@@ -225,9 +262,11 @@ export const ServicesPage = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 active:scale-95 rounded-xl flex items-center gap-2 shadow-md shadow-teal-500/20 transition cursor-pointer"
+                  disabled={isSaving}
+                  className="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 active:scale-95 rounded-xl flex items-center gap-2 shadow-md shadow-teal-500/20 transition cursor-pointer disabled:opacity-50"
                 >
-                  <Save className="w-4 h-4" /> Save Service
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} 
+                  Save Service
                 </button>
               </div>
             </form>
@@ -254,21 +293,25 @@ export const ServicesPage = () => {
             <div className="p-6 space-y-4 text-sm">
               <div>
                 <span className="block text-xs font-bold text-slate-500 mb-1">CPT Code</span>
-                <span className="font-medium text-slate-900">{viewingSvc.cptCode}</span>
+                <span className="font-medium text-slate-900">{viewingSvc.code}</span>
               </div>
               <div>
-                <span className="block text-xs font-bold text-slate-500 mb-1">Description</span>
+                <span className="block text-xs font-bold text-slate-500 mb-1">Procedure Description</span>
                 <span className="font-medium text-slate-900">{viewingSvc.description}</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="block text-xs font-bold text-slate-500 mb-1">Standard Fee</span>
-                  <span className="font-medium text-slate-900">${parseFloat(viewingSvc.fee || 0).toFixed(2)}</span>
+                  <span className="block text-xs font-bold text-slate-500 mb-1">Standard Fee (S)</span>
+                  <span className="font-medium text-slate-900">{viewingSvc.fee}</span>
                 </div>
                 <div>
-                  <span className="block text-xs font-bold text-slate-500 mb-1">Service Type</span>
-                  <span className="font-medium text-slate-900">{viewingSvc.type}</span>
+                  <span className="block text-xs font-bold text-slate-500 mb-1">Category</span>
+                  <span className="font-medium text-slate-900">{viewingSvc.category || 'General'}</span>
                 </div>
+              </div>
+              <div>
+                <span className="block text-xs font-bold text-slate-500 mb-1">Default Modifiers</span>
+                <span className="font-medium text-slate-900">{viewingSvc.modifiers || '-'}</span>
               </div>
               <div className="pt-4 border-t border-slate-100 flex justify-end">
                 <button
