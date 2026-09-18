@@ -21,12 +21,12 @@ export const DocumentListPage = () => {
   const navigate = useNavigate();
 
   // Import form states
-  const [newDocCaseId, setNewDocCaseId] = useState('case-001');
-  const [newDocName, setNewDocName] = useState('');
-  const [newDocProvider, setNewDocProvider] = useState('JOSMIC Wellness Center');
-  const [newDocType, setNewDocType] = useState('Medical Records');
+  const [newDocCaseId, setNewDocCaseId] = useState('');
+  const [newDocProvider, setNewDocProvider] = useState('JOSMIC Wellness Center (Pain Consult)');
+  const [newDocType, setNewDocType] = useState('Cover Page');
   const [newDocStatus, setNewDocStatus] = useState('COMPLETED');
-  const [newDocSize, setNewDocSize] = useState('1.5 MB');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isUploadingCloud, setIsUploadingCloud] = useState(false);
 
   useEffect(() => {
     apiDocumentService.getDocuments().then(setDocs).catch(console.error);
@@ -92,32 +92,50 @@ export const DocumentListPage = () => {
 
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
-    if (!newDocName.trim()) {
-      addToast('Please enter a document filename', 'error');
+    if (!selectedFile) {
+      addToast('Please select a PDF file to upload', 'error');
       return;
     }
 
     try {
+      setIsUploadingCloud(true);
+      
+      // Convert file to Base64 string
+      const toBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+
+      const base64String = await toBase64(selectedFile);
+      const realFileName = selectedFile.name;
+      const realFileSize = `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`;
+
+      // Save metadata + base64 string to our own backend
       const payload = {
-        name: newDocName.endsWith('.pdf') ? newDocName : `${newDocName}.pdf`,
+        name: realFileName,
         providerName: newDocProvider,
         type: newDocType,
         date: new Date().toISOString().split('T')[0],
-        size: newDocSize,
+        size: realFileSize,
         status: newDocStatus,
         caseId: newDocCaseId,
-        url: '#'
+        base64File: base64String
       };
+      
       await apiDocumentService.uploadDocument(payload);
       addToast(`Document "${payload.name}" imported and attached to case!`, 'success');
       setIsUploadModalOpen(false);
-      setNewDocName('');
+      setSelectedFile(null);
       // Refresh documents list
       const updatedDocs = await apiDocumentService.getDocuments();
       setDocs(updatedDocs);
     } catch (err) {
       console.error(err);
       addToast('Failed to import document', 'error');
+    } finally {
+      setIsUploadingCloud(false);
     }
   };
 
@@ -282,13 +300,12 @@ export const DocumentListPage = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Document File Name *</label>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Select PDF Document *</label>
                 <input
-                  type="text"
-                  placeholder="e.g. Police_Accident_Report_Houston_PD"
-                  value={newDocName}
-                  onChange={(e) => setNewDocName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer"
                   required
                 />
               </div>
@@ -341,13 +358,12 @@ export const DocumentListPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Simulated Size</label>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">File Size</label>
                   <input
                     type="text"
-                    value={newDocSize}
-                    onChange={(e) => setNewDocSize(e.target.value)}
-                    placeholder="e.g. 1.2 MB"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                    value={selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB` : '0.00 MB'}
+                    disabled
+                    className="w-full px-3 py-2 border border-slate-200 bg-slate-50 text-slate-500 rounded-lg text-xs focus:outline-none"
                   />
                 </div>
               </div>
@@ -362,9 +378,17 @@ export const DocumentListPage = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg shadow transition"
+                  disabled={isUploadingCloud}
+                  className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[140px]"
                 >
-                  Upload &amp; Import
+                  {isUploadingCloud ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Uploading...
+                    </>
+                  ) : (
+                    'Upload & Import'
+                  )}
                 </button>
               </div>
             </form>

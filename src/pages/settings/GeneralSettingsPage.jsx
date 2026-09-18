@@ -42,15 +42,13 @@ const ToggleRow = ({ label, description, checked, onChange }) => (
     <div
       role="switch"
       aria-checked={checked}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-        checked ? 'bg-teal-600 ring-2 ring-teal-600/20 shadow-sm' : 'bg-slate-300'
-      }`}
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${checked ? 'bg-teal-600 ring-2 ring-teal-600/20 shadow-sm' : 'bg-slate-300'
+        }`}
     >
       <span
         aria-hidden="true"
-        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-          checked ? 'translate-x-5' : 'translate-x-0'
-        }`}
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${checked ? 'translate-x-5' : 'translate-x-0'
+          }`}
       />
     </div>
   </div>
@@ -61,7 +59,7 @@ export const GeneralSettingsPage = () => {
     try {
       const saved = localStorage.getItem('medcare_practice_settings');
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) { }
     return {
       // Practice Identity
       appName: 'F&M Health & Wellness',
@@ -138,6 +136,20 @@ export const GeneralSettingsPage = () => {
   const [editModIdx, setEditModIdx] = useState(null);
   const [modifiers, setModifiers] = useState([]);
 
+  // Pagination state
+  const [cptPage, setCptPage] = useState(1);
+  const [icdPage, setIcdPage] = useState(1);
+  const [modPage, setModPage] = useState(1);
+  const CPT_PAGE_SIZE = 6;
+  const ICD_PAGE_SIZE = 10;
+  const MOD_PAGE_SIZE = 8;
+  const [modalityPage, setModalityPage] = useState(1);
+  const [providerPage, setProviderPage] = useState(1);
+  const [holidayPage, setHolidayPage] = useState(1);
+  const MODALITY_PAGE_SIZE = 8;
+  const PROVIDER_PAGE_SIZE = 6;
+  const HOLIDAY_PAGE_SIZE = 10;
+
   const [holidaysData, setHolidaysData] = useState([]);
   const [showAddHolidayModal, setShowAddHolidayModal] = useState(false);
   const [newHoliday, setNewHoliday] = useState({ name: '', type: 'FIXED', month: '1', day: '1', nth: '1', dayOfWeek: '1', last: false });
@@ -147,14 +159,14 @@ export const GeneralSettingsPage = () => {
     try {
       const data = await apiProviderService.getProviders();
       if (data) setProviders(Object.values(data));
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const loadModalitiesList = async () => {
     try {
       const data = await apiModalityService.getModalities();
       if (data) setModalitiesList(data);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   useEffect(() => {
@@ -230,13 +242,13 @@ export const GeneralSettingsPage = () => {
     try {
       // Persist to backend first
       await updateGeneralSettings(settings);
-      
+
       // Update local storage and cache after successful backend save
       try {
         localStorage.setItem('medcare_practice_settings', JSON.stringify(settings));
-      } catch (e) {}
+      } catch (e) { }
       refreshSettingsCache(settings);
-      
+
       addToast('Practice Identity & General Settings saved to database!', 'success');
     } catch (error) {
       addToast('Failed to save settings: ' + error.message, 'error');
@@ -322,7 +334,7 @@ export const GeneralSettingsPage = () => {
       setShowAddCptModal(false);
       setEditCptIdx(null);
       setNewCpt({ code: '', description: '', defaultFee: '250.00', category: 'General', modifiers: '' });
-      
+
       const data = await apiCptService.getCptCodes();
       setCptCodes(data);
       refreshGlobalStore();
@@ -371,7 +383,7 @@ export const GeneralSettingsPage = () => {
       setShowAddIcdModal(false);
       setEditIcdIdx(null);
       setNewIcd({ code: '', description: '', category: 'Pain/Orthopedic' });
-      
+
       const data = await getAllICDCodes();
       setIcdCodes(data);
       refreshGlobalStore();
@@ -491,11 +503,11 @@ export const GeneralSettingsPage = () => {
         await apiHolidayService.createHoliday(newHoliday);
         addToast('Holiday created successfully!', 'success');
       }
-      
+
       const updated = await apiHolidayService.getHolidays();
       setHolidaysData(updated);
       setUSHolidays(updated);
-      
+
       setShowAddHolidayModal(false);
       setNewHoliday({ name: '', type: 'FIXED', month: '1', day: '1', nth: '1', dayOfWeek: '1', last: false });
       setEditHolidayId(null);
@@ -609,8 +621,8 @@ export const GeneralSettingsPage = () => {
               </button>
             </div>
           </div>
-          
-          <div className="overflow-x-auto">
+
+          <div className="overflow-x-auto" style={{minHeight: '320px'}}>
             <table className="w-full text-xs">
               <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
                 <tr>
@@ -625,60 +637,77 @@ export const GeneralSettingsPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {modalitiesList.map((srv, idx) => (
-                  <tr key={srv.id || srv.name} className="hover:bg-slate-50 transition">
-                    <td className="p-2.5 font-bold text-slate-900">{srv.name}</td>
-                    <td className="p-2.5 text-slate-700 font-medium">
-                      <select 
-                        value={srv.providerId || ''} 
-                        onChange={(e) => handleProviderAssignmentChange(idx, e.target.value)}
-                        className="w-full text-[11px] p-1.5 border border-slate-200 rounded-md bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
-                      >
-                        <option value="">-- Select Provider --</option>
-                        {providers.map(prov => (
-                          <option key={prov.id} value={prov.id}>
-                            {prov.name} {prov.businessName ? `(${prov.businessName})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-2.5 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        srv.enabled ? 'bg-teal-100 text-teal-800 border border-teal-200' : 'bg-slate-100 text-slate-500 border border-slate-200'
-                      }`}>
-                        {srv.enabled ? 'Active' : 'Disabled'}
-                      </span>
-                    </td>
-                    <td className="p-2.5 text-center font-mono font-medium text-slate-700">{srv.cptCode}</td>
-                    <td className="p-2.5 text-right font-mono font-bold text-slate-900">{formatFeeString(srv.fee)}</td>
-                    <td className="p-2.5 text-center text-slate-600">{srv.duration}</td>
-                    <td className="p-2.5 text-slate-700 font-medium">{srv.template}</td>
-                    <td className="p-2.5 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleModality(idx)}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${
-                            srv.enabled ? 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200' : 'bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200'
-                          }`}
+                {modalitiesList.slice((modalityPage - 1) * MODALITY_PAGE_SIZE, modalityPage * MODALITY_PAGE_SIZE).map((srv, i) => {
+                  const idx = (modalityPage - 1) * MODALITY_PAGE_SIZE + i;
+                  return (
+                    <tr key={srv.id || srv.name} className="hover:bg-slate-50 transition">
+                      <td className="p-2.5 font-bold text-slate-900">{srv.name}</td>
+                      <td className="p-2.5 text-slate-700 font-medium">
+                        <select
+                          value={srv.providerId || ''}
+                          onChange={(e) => handleProviderAssignmentChange(idx, e.target.value)}
+                          className="w-full text-[11px] p-1.5 border border-slate-200 rounded-md bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
                         >
-                          {srv.enabled ? 'Disable' : 'Enable'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteModality(idx)}
-                          className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
-                          title="Delete Modality"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          <option value="">-- Select Provider --</option>
+                          {providers.map(prov => (
+                            <option key={prov.id} value={prov.id}>
+                              {prov.name} {prov.businessName ? `(${prov.businessName})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-2.5 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${srv.enabled ? 'bg-teal-100 text-teal-800 border border-teal-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+                          {srv.enabled ? 'Active' : 'Disabled'}
+                        </span>
+                      </td>
+                      <td className="p-2.5 text-center font-mono font-medium text-slate-700">{srv.cptCode}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-slate-900">{formatFeeString(srv.fee)}</td>
+                      <td className="p-2.5 text-center text-slate-600">{srv.duration}</td>
+                      <td className="p-2.5 text-slate-700 font-medium">{srv.template}</td>
+                      <td className="p-2.5 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleModality(idx)}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${srv.enabled ? 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200' : 'bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200'}`}
+                          >
+                            {srv.enabled ? 'Disable' : 'Enable'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteModality(idx)}
+                            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                            title="Delete Modality"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          {/* Modalities Pagination */}
+          {Math.ceil(modalitiesList.length / MODALITY_PAGE_SIZE) > 1 && (
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <span className="text-[10px] text-slate-500">
+                Showing {((modalityPage - 1) * MODALITY_PAGE_SIZE) + 1}–{Math.min(modalityPage * MODALITY_PAGE_SIZE, modalitiesList.length)} of {modalitiesList.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button type="button" disabled={modalityPage === 1} onClick={() => setModalityPage(p => p - 1)}
+                  className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">‹ Prev</button>
+                {Array.from({length: Math.ceil(modalitiesList.length / MODALITY_PAGE_SIZE)}, (_, i) => i + 1).map(pg => (
+                  <button key={pg} type="button" onClick={() => setModalityPage(pg)}
+                    className={`w-6 h-6 text-[10px] font-bold rounded-lg transition cursor-pointer ${modalityPage === pg ? 'bg-teal-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{pg}</button>
+                ))}
+                <button type="button" disabled={modalityPage === Math.ceil(modalitiesList.length / MODALITY_PAGE_SIZE)} onClick={() => setModalityPage(p => p + 1)}
+                  className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">Next ›</button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Healthcare Providers Management */}
@@ -702,7 +731,7 @@ export const GeneralSettingsPage = () => {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" style={{minHeight: '260px'}}>
             <table className="w-full text-xs">
               <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
                 <tr>
@@ -716,7 +745,7 @@ export const GeneralSettingsPage = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
                 {providers.length > 0 ? (
-                  providers.map(p => (
+                  providers.slice((providerPage - 1) * PROVIDER_PAGE_SIZE, providerPage * PROVIDER_PAGE_SIZE).map(p => (
                     <tr key={p.id} className="hover:bg-slate-50 transition">
                       <td className="p-2.5 font-bold text-slate-900">{p.name} <span className="text-[10px] text-slate-400 block font-normal">{p.businessName}</span></td>
                       <td className="p-2.5 text-slate-600">{p.serviceCategory || 'General Medicine'}</td>
@@ -738,6 +767,24 @@ export const GeneralSettingsPage = () => {
               </tbody>
             </table>
           </div>
+          {/* Providers Pagination */}
+          {Math.ceil(providers.length / PROVIDER_PAGE_SIZE) > 1 && (
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <span className="text-[10px] text-slate-500">
+                Showing {((providerPage - 1) * PROVIDER_PAGE_SIZE) + 1}–{Math.min(providerPage * PROVIDER_PAGE_SIZE, providers.length)} of {providers.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button type="button" disabled={providerPage === 1} onClick={() => setProviderPage(p => p - 1)}
+                  className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">‹ Prev</button>
+                {Array.from({length: Math.ceil(providers.length / PROVIDER_PAGE_SIZE)}, (_, i) => i + 1).map(pg => (
+                  <button key={pg} type="button" onClick={() => setProviderPage(pg)}
+                    className={`w-6 h-6 text-[10px] font-bold rounded-lg transition cursor-pointer ${providerPage === pg ? 'bg-teal-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{pg}</button>
+                ))}
+                <button type="button" disabled={providerPage === Math.ceil(providers.length / PROVIDER_PAGE_SIZE)} onClick={() => setProviderPage(p => p + 1)}
+                  className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">Next ›</button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* CPT Codes & Procedure Pricing Catalog */}
@@ -761,7 +808,7 @@ export const GeneralSettingsPage = () => {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" style={{minHeight: '320px'}}>
             <table className="w-full text-xs">
               <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
                 <tr>
@@ -774,38 +821,59 @@ export const GeneralSettingsPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                {cptCodes.map((cpt, i) => (
-                  <tr key={cpt.code + i} className="hover:bg-slate-50 transition">
-                    <td className="p-2.5 text-center font-mono font-bold text-teal-800">{cpt.code}</td>
-                    <td className="p-2.5 font-bold text-slate-900">{cpt.description}</td>
-                    <td className="p-2.5 text-slate-600">{cpt.category || 'General'}</td>
-                    <td className="p-2.5 text-right font-mono font-bold text-slate-900">{cpt.fee}</td>
-                    <td className="p-2.5 text-center font-mono text-slate-600">{cpt.modifiers || '—'}</td>
-                    <td className="p-2.5 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleEditCptCode(i)}
-                          className="p-1 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition cursor-pointer"
-                          title="Edit CPT Code"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCptCode(i)}
-                          className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
-                          title="Delete CPT Code"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {cptCodes.slice((cptPage - 1) * CPT_PAGE_SIZE, cptPage * CPT_PAGE_SIZE).map((cpt, i) => {
+                  const realIdx = (cptPage - 1) * CPT_PAGE_SIZE + i;
+                  return (
+                    <tr key={cpt.code + realIdx} className="hover:bg-slate-50 transition">
+                      <td className="p-2.5 text-center font-mono font-bold text-teal-800">{cpt.code}</td>
+                      <td className="p-2.5 font-bold text-slate-900">{cpt.description}</td>
+                      <td className="p-2.5 text-slate-600">{cpt.category || 'General'}</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-slate-900">{cpt.fee}</td>
+                      <td className="p-2.5 text-center font-mono text-slate-600">{cpt.modifiers || '—'}</td>
+                      <td className="p-2.5 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEditCptCode(realIdx)}
+                            className="p-1 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition cursor-pointer"
+                            title="Edit CPT Code"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCptCode(realIdx)}
+                            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                            title="Delete CPT Code"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          {/* CPT Pagination */}
+          {Math.ceil(cptCodes.length / CPT_PAGE_SIZE) > 1 && (
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <span className="text-[10px] text-slate-500">
+                Showing {((cptPage - 1) * CPT_PAGE_SIZE) + 1}–{Math.min(cptPage * CPT_PAGE_SIZE, cptCodes.length)} of {cptCodes.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button type="button" disabled={cptPage === 1} onClick={() => setCptPage(p => p - 1)}
+                  className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">‹ Prev</button>
+                {Array.from({length: Math.ceil(cptCodes.length / CPT_PAGE_SIZE)}, (_, i) => i + 1).map(pg => (
+                  <button key={pg} type="button" onClick={() => setCptPage(pg)}
+                    className={`w-6 h-6 text-[10px] font-bold rounded-lg transition cursor-pointer ${cptPage === pg ? 'bg-teal-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{pg}</button>
+                ))}
+                <button type="button" disabled={cptPage === Math.ceil(cptCodes.length / CPT_PAGE_SIZE)} onClick={() => setCptPage(p => p + 1)}
+                  className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">Next ›</button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ICD-10 Diagnosis Codes & Billing Modifiers Dual Section */}
@@ -831,7 +899,7 @@ export const GeneralSettingsPage = () => {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" style={{minHeight: '300px'}}>
               <table className="w-full text-xs">
                 <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                   <tr>
@@ -842,22 +910,43 @@ export const GeneralSettingsPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                  {icdCodes.map((icd, i) => (
-                    <tr key={icd.code + i} className="hover:bg-slate-50 transition group">
-                      <td className="p-2.5 font-mono font-bold text-teal-800">{icd.code}</td>
-                      <td className="p-2.5 font-bold text-slate-900">{icd.description}</td>
-                      <td className="p-2.5 text-xs text-slate-500">{icd.category}</td>
-                      <td className="p-2.5">
-                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button type="button" onClick={() => handleEditIcdCode(i)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition"><Edit3 className="w-4 h-4" /></button>
-                          <button type="button" onClick={() => handleDeleteIcdCode(i)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {icdCodes.slice((icdPage - 1) * ICD_PAGE_SIZE, icdPage * ICD_PAGE_SIZE).map((icd, i) => {
+                    const realIdx = (icdPage - 1) * ICD_PAGE_SIZE + i;
+                    return (
+                      <tr key={icd.code + realIdx} className="hover:bg-slate-50 transition group">
+                        <td className="p-2.5 font-mono font-bold text-teal-800">{icd.code}</td>
+                        <td className="p-2.5 font-bold text-slate-900">{icd.description}</td>
+                        <td className="p-2.5 text-xs text-slate-500">{icd.category}</td>
+                        <td className="p-2.5">
+                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button type="button" onClick={() => handleEditIcdCode(realIdx)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition"><Edit3 className="w-4 h-4" /></button>
+                            <button type="button" onClick={() => handleDeleteIcdCode(realIdx)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+            {/* ICD Pagination */}
+            {Math.ceil(icdCodes.length / ICD_PAGE_SIZE) > 1 && (
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <span className="text-[10px] text-slate-500">
+                  Showing {((icdPage - 1) * ICD_PAGE_SIZE) + 1}–{Math.min(icdPage * ICD_PAGE_SIZE, icdCodes.length)} of {icdCodes.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button type="button" disabled={icdPage === 1} onClick={() => setIcdPage(p => p - 1)}
+                    className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">‹ Prev</button>
+                  {Array.from({length: Math.ceil(icdCodes.length / ICD_PAGE_SIZE)}, (_, i) => i + 1).map(pg => (
+                    <button key={pg} type="button" onClick={() => setIcdPage(pg)}
+                      className={`w-6 h-6 text-[10px] font-bold rounded-lg transition cursor-pointer ${icdPage === pg ? 'bg-teal-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{pg}</button>
+                  ))}
+                  <button type="button" disabled={icdPage === Math.ceil(icdCodes.length / ICD_PAGE_SIZE)} onClick={() => setIcdPage(p => p + 1)}
+                    className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">Next ›</button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Billing Modifiers Catalog */}
@@ -881,7 +970,7 @@ export const GeneralSettingsPage = () => {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" style={{minHeight: '300px'}}>
               <table className="w-full text-xs">
                 <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                   <tr>
@@ -891,21 +980,42 @@ export const GeneralSettingsPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                  {modifiers.map((mod, i) => (
-                    <tr key={mod.code + i} className="hover:bg-slate-50 transition group">
-                      <td className="p-2.5 text-center font-mono font-bold text-teal-800">{mod.code}</td>
-                      <td className="p-2.5 font-bold text-slate-900">{mod.description}</td>
-                      <td className="p-2.5">
-                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button type="button" onClick={() => handleEditModifier(i)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition"><Edit3 className="w-4 h-4" /></button>
-                          <button type="button" onClick={() => handleDeleteModifier(i)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {modifiers.slice((modPage - 1) * MOD_PAGE_SIZE, modPage * MOD_PAGE_SIZE).map((mod, i) => {
+                    const realIdx = (modPage - 1) * MOD_PAGE_SIZE + i;
+                    return (
+                      <tr key={mod.code + realIdx} className="hover:bg-slate-50 transition group">
+                        <td className="p-2.5 text-center font-mono font-bold text-teal-800">{mod.code}</td>
+                        <td className="p-2.5 font-bold text-slate-900">{mod.description}</td>
+                        <td className="p-2.5">
+                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button type="button" onClick={() => handleEditModifier(realIdx)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition"><Edit3 className="w-4 h-4" /></button>
+                            <button type="button" onClick={() => handleDeleteModifier(realIdx)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+            {/* Modifiers Pagination */}
+            {Math.ceil(modifiers.length / MOD_PAGE_SIZE) > 1 && (
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <span className="text-[10px] text-slate-500">
+                  Showing {((modPage - 1) * MOD_PAGE_SIZE) + 1}–{Math.min(modPage * MOD_PAGE_SIZE, modifiers.length)} of {modifiers.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button type="button" disabled={modPage === 1} onClick={() => setModPage(p => p - 1)}
+                    className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">‹ Prev</button>
+                  {Array.from({length: Math.ceil(modifiers.length / MOD_PAGE_SIZE)}, (_, i) => i + 1).map(pg => (
+                    <button key={pg} type="button" onClick={() => setModPage(pg)}
+                      className={`w-6 h-6 text-[10px] font-bold rounded-lg transition cursor-pointer ${modPage === pg ? 'bg-teal-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{pg}</button>
+                  ))}
+                  <button type="button" disabled={modPage === Math.ceil(modifiers.length / MOD_PAGE_SIZE)} onClick={() => setModPage(p => p + 1)}
+                    className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">Next ›</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -987,9 +1097,9 @@ export const GeneralSettingsPage = () => {
               <select className={inputCls} value={settings.language} onChange={async (e) => {
                 const newLang = e.target.value;
                 set('language', newLang);
-                
+
                 const langCode = newLang.split('-')[0];
-                
+
                 if (langCode === 'en') {
                   // We must save to the backend instantly before reloading, otherwise the 
                   // backend will still send the old language and trap the user in a loop
@@ -999,12 +1109,12 @@ export const GeneralSettingsPage = () => {
                     // It's imported at the top of the file: import { getGeneralSettings, updateGeneralSettings }
                     await updateGeneralSettings(nextSettings);
                     localStorage.setItem('medcare_practice_settings', JSON.stringify(nextSettings));
-                  } catch(err) {}
+                  } catch (err) { }
 
                   // Clear the Google Translate cookies to revert the DOM
                   document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                   document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${window.location.hostname}; path=/;`;
-                  
+
                   window.location.reload();
                 } else {
                   // For Spanish/French, we can instantly trigger the widget preview
@@ -1022,7 +1132,7 @@ export const GeneralSettingsPage = () => {
             </div>
             <div><label className={labelCls}>Fiscal Year Start</label>
               <select className={inputCls} value={settings.fiscalYearStart} onChange={e => set('fiscalYearStart', e.target.value)}>
-                {['January','February','March','April','May','June','July','August','September','October','November','December'].map(m => (
+                {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
                   <option key={m} value={m.toUpperCase()}>{m}</option>
                 ))}
               </select>
@@ -1066,7 +1176,7 @@ export const GeneralSettingsPage = () => {
                 <Plus className="w-3.5 h-3.5" /> Add Holiday
               </button>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" style={{minHeight: '320px'}}>
               <table className="w-full text-xs">
                 <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
                   <tr>
@@ -1078,30 +1188,57 @@ export const GeneralSettingsPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {getUSHolidaysForYear(2026).map(h => {
-                    const rawHol = holidaysData.find(hd => hd.id === h.id);
-                    return (
-                      <tr key={h.id} className="hover:bg-slate-50 group">
-                        <td className="p-2 font-bold text-slate-900">{h.name}</td>
-                        <td className="p-2 font-mono text-slate-700">{h.date}</td>
-                        <td className="p-2 font-mono text-slate-700">{h.observedDate} {h.isObservedDiff && '(Observed)'}</td>
-                        <td className="p-2 text-center">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
-                            Auto Off (Clinic Closed)
-                          </span>
-                        </td>
-                        <td className="p-2 text-right">
-                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button type="button" onClick={() => handleEditHoliday(rawHol)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition" title="Edit Holiday"><Edit3 className="w-3.5 h-3.5" /></button>
-                            <button type="button" onClick={() => handleDeleteHoliday(h.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete Holiday"><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {(() => {
+                    const allHolidays = getUSHolidaysForYear(2026);
+                    const paged = allHolidays.slice((holidayPage - 1) * HOLIDAY_PAGE_SIZE, holidayPage * HOLIDAY_PAGE_SIZE);
+                    return paged.map(h => {
+                      const rawHol = holidaysData.find(hd => hd.id === h.id);
+                      return (
+                        <tr key={h.id} className="hover:bg-slate-50 group">
+                          <td className="p-2 font-bold text-slate-900">{h.name}</td>
+                          <td className="p-2 font-mono text-slate-700">{h.date}</td>
+                          <td className="p-2 font-mono text-slate-700">{h.observedDate} {h.isObservedDiff && '(Observed)'}</td>
+                          <td className="p-2 text-center">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                              Auto Off (Clinic Closed)
+                            </span>
+                          </td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button type="button" onClick={() => handleEditHoliday(rawHol)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition" title="Edit Holiday"><Edit3 className="w-3.5 h-3.5" /></button>
+                              <button type="button" onClick={() => handleDeleteHoliday(h.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete Holiday"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
+            {/* Holidays Pagination */}
+            {(() => {
+              const total = getUSHolidaysForYear(2026).length;
+              const totalPages = Math.ceil(total / HOLIDAY_PAGE_SIZE);
+              if (totalPages <= 1) return null;
+              return (
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <span className="text-[10px] text-slate-500">
+                    Showing {((holidayPage - 1) * HOLIDAY_PAGE_SIZE) + 1}–{Math.min(holidayPage * HOLIDAY_PAGE_SIZE, total)} of {total}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button type="button" disabled={holidayPage === 1} onClick={() => setHolidayPage(p => p - 1)}
+                      className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">‹ Prev</button>
+                    {Array.from({length: totalPages}, (_, i) => i + 1).map(pg => (
+                      <button key={pg} type="button" onClick={() => setHolidayPage(pg)}
+                        className={`w-6 h-6 text-[10px] font-bold rounded-lg transition cursor-pointer ${holidayPage === pg ? 'bg-teal-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{pg}</button>
+                    ))}
+                    <button type="button" disabled={holidayPage === totalPages} onClick={() => setHolidayPage(p => p + 1)}
+                      className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer">Next ›</button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -1198,10 +1335,10 @@ export const GeneralSettingsPage = () => {
             </div>
             <form onSubmit={handleAddModality} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>Modality Name *</label><input required className={inputCls} value={newModality.name} onChange={e => setNewModality(p => ({...p, name: e.target.value}))} placeholder="e.g. Physical Therapy" /></div>
+                <div><label className={labelCls}>Modality Name *</label><input required className={inputCls} value={newModality.name} onChange={e => setNewModality(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Physical Therapy" /></div>
                 <div>
                   <label className={labelCls}>Assigned Provider</label>
-                  <select className={inputCls} value={newModality.providerId} onChange={e => setNewModality(p => ({...p, providerId: e.target.value}))}>
+                  <select className={inputCls} value={newModality.providerId} onChange={e => setNewModality(p => ({ ...p, providerId: e.target.value }))}>
                     <option value="">-- Unassigned --</option>
                     {providers.map(prov => (
                       <option key={prov.id} value={prov.id}>{prov.name} {prov.businessName ? `(${prov.businessName})` : ''}</option>
@@ -1215,7 +1352,7 @@ export const GeneralSettingsPage = () => {
                   <select className={inputCls} value={newModality.cptCode} onChange={e => {
                     const val = e.target.value;
                     const match = cptCodes.find(c => c.code === val);
-                    setNewModality(p => ({...p, cptCode: val, fee: match ? match.fee : p.fee}));
+                    setNewModality(p => ({ ...p, cptCode: val, fee: match ? match.fee : p.fee }));
                   }}>
                     <option value="">-- Select CPT Code --</option>
                     {cptCodes.map((cpt, i) => (
@@ -1223,22 +1360,22 @@ export const GeneralSettingsPage = () => {
                     ))}
                   </select>
                 </div>
-                <div><label className={labelCls}>Configured Fee</label><input className={inputCls} value={newModality.fee} onChange={e => setNewModality(p => ({...p, fee: e.target.value}))} placeholder="e.g. $150.00" /></div>
+                <div><label className={labelCls}>Configured Fee</label><input className={inputCls} value={newModality.fee} onChange={e => setNewModality(p => ({ ...p, fee: e.target.value }))} placeholder="e.g. $150.00" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>Duration</label><input className={inputCls} value={newModality.duration} onChange={e => setNewModality(p => ({...p, duration: e.target.value}))} placeholder="e.g. 30 min" /></div>
-                <div><label className={labelCls}>Clinical Template</label><input className={inputCls} value={newModality.template} onChange={e => setNewModality(p => ({...p, template: e.target.value}))} placeholder="e.g. PT Progress Note" /></div>
+                <div><label className={labelCls}>Duration</label><input className={inputCls} value={newModality.duration} onChange={e => setNewModality(p => ({ ...p, duration: e.target.value }))} placeholder="e.g. 30 min" /></div>
+                <div><label className={labelCls}>Clinical Template</label><input className={inputCls} value={newModality.template} onChange={e => setNewModality(p => ({ ...p, template: e.target.value }))} placeholder="e.g. PT Progress Note" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3 items-center">
                 <div>
                   <label className={labelCls}>Status</label>
-                  <select className={inputCls} value={newModality.status} onChange={e => setNewModality(p => ({...p, status: e.target.value}))}>
+                  <select className={inputCls} value={newModality.status} onChange={e => setNewModality(p => ({ ...p, status: e.target.value }))}>
                     <option value="COMPLETE">Complete</option>
                     <option value="CONFIGURATION_PENDING">Configuration Pending</option>
                   </select>
                 </div>
                 <div className="flex items-center gap-2 mt-4">
-                  <input type="checkbox" id="modEnabled" checked={newModality.enabled} onChange={e => setNewModality(p => ({...p, enabled: e.target.checked}))} className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-600 cursor-pointer" />
+                  <input type="checkbox" id="modEnabled" checked={newModality.enabled} onChange={e => setNewModality(p => ({ ...p, enabled: e.target.checked }))} className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-600 cursor-pointer" />
                   <label htmlFor="modEnabled" className="text-xs font-bold text-slate-700 cursor-pointer">Enable Modality</label>
                 </div>
               </div>
@@ -1263,22 +1400,22 @@ export const GeneralSettingsPage = () => {
             </div>
             <form onSubmit={handleAddProvider} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>Provider Name *</label><input required className={inputCls} value={newProv.name} onChange={e => setNewProv(p => ({...p, name: e.target.value}))} placeholder="Dr. John Smith, MD" /></div>
-                <div><label className={labelCls}>Business/Practice Name *</label><input required className={inputCls} value={newProv.businessName} onChange={e => setNewProv(p => ({...p, businessName: e.target.value}))} placeholder="Smith Wellness LLC" /></div>
+                <div><label className={labelCls}>Provider Name *</label><input required className={inputCls} value={newProv.name} onChange={e => setNewProv(p => ({ ...p, name: e.target.value }))} placeholder="Dr. John Smith, MD" /></div>
+                <div><label className={labelCls}>Business/Practice Name *</label><input required className={inputCls} value={newProv.businessName} onChange={e => setNewProv(p => ({ ...p, businessName: e.target.value }))} placeholder="Smith Wellness LLC" /></div>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div><label className={labelCls}>NPI (10 digits) *</label><input required className={inputCls} value={newProv.npi} onChange={e => setNewProv(p => ({...p, npi: e.target.value}))} placeholder="1234567890" /></div>
-                <div><label className={labelCls}>Tax ID (EIN) *</label><input required className={inputCls} value={newProv.taxId} onChange={e => setNewProv(p => ({...p, taxId: e.target.value}))} placeholder="75-1234567" /></div>
-                <div><label className={labelCls}>Category</label><input className={inputCls} value={newProv.serviceCategory} onChange={e => setNewProv(p => ({...p, serviceCategory: e.target.value}))} placeholder="Pain Mgmt" /></div>
+                <div><label className={labelCls}>NPI (10 digits) *</label><input required className={inputCls} value={newProv.npi} onChange={e => setNewProv(p => ({ ...p, npi: e.target.value }))} placeholder="1234567890" /></div>
+                <div><label className={labelCls}>Tax ID (EIN) *</label><input required className={inputCls} value={newProv.taxId} onChange={e => setNewProv(p => ({ ...p, taxId: e.target.value }))} placeholder="75-1234567" /></div>
+                <div><label className={labelCls}>Category</label><input className={inputCls} value={newProv.serviceCategory} onChange={e => setNewProv(p => ({ ...p, serviceCategory: e.target.value }))} placeholder="Pain Mgmt" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>Phone Number</label><input className={inputCls} value={newProv.phone} onChange={e => setNewProv(p => ({...p, phone: e.target.value}))} placeholder="713-555-0100" /></div>
-                <div><label className={labelCls}>Email Address</label><input type="email" className={inputCls} value={newProv.email} onChange={e => setNewProv(p => ({...p, email: e.target.value}))} placeholder="doctor@clinic.com" /></div>
+                <div><label className={labelCls}>Phone Number</label><input className={inputCls} value={newProv.phone} onChange={e => setNewProv(p => ({ ...p, phone: e.target.value }))} placeholder="713-555-0100" /></div>
+                <div><label className={labelCls}>Email Address</label><input type="email" className={inputCls} value={newProv.email} onChange={e => setNewProv(p => ({ ...p, email: e.target.value }))} placeholder="doctor@clinic.com" /></div>
               </div>
               <div className="grid grid-cols-4 gap-2">
-                <div className="col-span-2"><label className={labelCls}>Street Address</label><input className={inputCls} value={newProv.street} onChange={e => setNewProv(p => ({...p, street: e.target.value}))} placeholder="10101 Harwin Dr" /></div>
-                <div><label className={labelCls}>City</label><input className={inputCls} value={newProv.city} onChange={e => setNewProv(p => ({...p, city: e.target.value}))} /></div>
-                <div><label className={labelCls}>State/Zip</label><input className={inputCls} value={`${newProv.state} ${newProv.zipCode}`} onChange={e => setNewProv(p => ({...p, state: e.target.value}))} /></div>
+                <div className="col-span-2"><label className={labelCls}>Street Address</label><input className={inputCls} value={newProv.street} onChange={e => setNewProv(p => ({ ...p, street: e.target.value }))} placeholder="10101 Harwin Dr" /></div>
+                <div><label className={labelCls}>City</label><input className={inputCls} value={newProv.city} onChange={e => setNewProv(p => ({ ...p, city: e.target.value }))} /></div>
+                <div><label className={labelCls}>State/Zip</label><input className={inputCls} value={`${newProv.state} ${newProv.zipCode}`} onChange={e => setNewProv(p => ({ ...p, state: e.target.value }))} /></div>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => setShowAddProvModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
@@ -1304,15 +1441,18 @@ export const GeneralSettingsPage = () => {
               }} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
             </div>
             <form onSubmit={handleAddCptCode} className="space-y-3">
+              <div><label className={labelCls}>CPT Code *</label><input required className={inputCls} value={newCpt.code} onChange={e => setNewCpt(p => ({ ...p, code: e.target.value }))} placeholder="e.g. 99213" /></div>
+              <div><label className={labelCls}>Procedure Description *</label><input required className={inputCls} value={newCpt.description} onChange={e => setNewCpt(p => ({ ...p, description: e.target.value }))} placeholder="e.g. Office Visit, Established Patient" /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>CPT Code *</label><input required className={inputCls} value={newCpt.code} onChange={e => setNewCpt(p => ({...p, code: e.target.value}))} placeholder="e.g. 99204" /></div>
-                <div><label className={labelCls}>Default Fee ($)</label><input type="number" step="0.01" className={inputCls} value={newCpt.defaultFee} onChange={e => setNewCpt(p => ({...p, defaultFee: e.target.value}))} /></div>
+                <div><label className={labelCls}>Standard Fee ($) *</label><input type="number" step="0.01" required className={inputCls} value={newCpt.defaultFee} onChange={e => setNewCpt(p => ({ ...p, defaultFee: e.target.value }))} placeholder="0.00" /></div>
+                <div><label className={labelCls}>Category</label><select className={inputCls} value={newCpt.category} onChange={e => setNewCpt(p => ({ ...p, category: e.target.value }))}><option value="General">General</option><option value="E&M">E&amp;M</option><option value="Procedure">Procedure</option>
+                  <option value="Evaluation">Evaluation</option>
+                  <option value="Therapy">Therapy</option>
+                  <option value="Injections">Injections</option>
+                  <option value="Mental Health">Mental Health</option>
+                  <option value="Other">Other</option></select></div>
               </div>
-              <div><label className={labelCls}>Procedure Description *</label><input required className={inputCls} value={newCpt.description} onChange={e => setNewCpt(p => ({...p, description: e.target.value}))} placeholder="e.g. Comprehensive Pain Consult" /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelCls}>Category</label><input className={inputCls} value={newCpt.category} onChange={e => setNewCpt(p => ({...p, category: e.target.value}))} placeholder="e.g. E&M / Therapy" /></div>
-                <div><label className={labelCls}>Standard Modifiers</label><input className={inputCls} value={newCpt.modifiers} onChange={e => setNewCpt(p => ({...p, modifiers: e.target.value}))} placeholder="e.g. 25, 59" /></div>
-              </div>
+              <div><label className={labelCls}>Default Modifiers</label><input className={inputCls} value={newCpt.modifiers} onChange={e => setNewCpt(p => ({ ...p, modifiers: e.target.value }))} placeholder="e.g. 25, 59" /></div>
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => {
                   setShowAddCptModal(false);
@@ -1339,9 +1479,9 @@ export const GeneralSettingsPage = () => {
               <button type="button" onClick={() => setShowAddIcdModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
             </div>
             <form onSubmit={handleAddIcdCode} className="space-y-3">
-              <div><label className={labelCls}>ICD-10 Code *</label><input required className={inputCls} value={newIcd.code} onChange={e => setNewIcd(p => ({...p, code: e.target.value}))} placeholder="e.g. M54.50" /></div>
-              <div><label className={labelCls}>Diagnosis Description *</label><input required className={inputCls} value={newIcd.description} onChange={e => setNewIcd(p => ({...p, description: e.target.value}))} placeholder="e.g. Low back pain, unspecified" /></div>
-              <div><label className={labelCls}>Category</label><input className={inputCls} value={newIcd.category} onChange={e => setNewIcd(p => ({...p, category: e.target.value}))} placeholder="e.g. Orthopedic / MVA" /></div>
+              <div><label className={labelCls}>ICD-10 Code *</label><input required className={inputCls} value={newIcd.code} onChange={e => setNewIcd(p => ({ ...p, code: e.target.value }))} placeholder="e.g. M54.50" /></div>
+              <div><label className={labelCls}>Diagnosis Description *</label><input required className={inputCls} value={newIcd.description} onChange={e => setNewIcd(p => ({ ...p, description: e.target.value }))} placeholder="e.g. Low back pain, unspecified" /></div>
+              <div><label className={labelCls}>Category</label><input className={inputCls} value={newIcd.category} onChange={e => setNewIcd(p => ({ ...p, category: e.target.value }))} placeholder="e.g. Orthopedic / MVA" /></div>
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => setShowAddIcdModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">Add ICD Code</button>
@@ -1362,20 +1502,20 @@ export const GeneralSettingsPage = () => {
               <button type="button" onClick={() => setShowAddHolidayModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
             </div>
             <form onSubmit={handleAddHoliday} className="space-y-3">
-              <div><label className={labelCls}>Holiday Name *</label><input required className={inputCls} value={newHoliday.name} onChange={e => setNewHoliday(p => ({...p, name: e.target.value}))} placeholder="e.g. Independence Day" /></div>
-              
+              <div><label className={labelCls}>Holiday Name *</label><input required className={inputCls} value={newHoliday.name} onChange={e => setNewHoliday(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Independence Day" /></div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>Type</label>
-                  <select className={inputCls} value={newHoliday.type} onChange={e => setNewHoliday(p => ({...p, type: e.target.value}))}>
+                  <select className={inputCls} value={newHoliday.type} onChange={e => setNewHoliday(p => ({ ...p, type: e.target.value }))}>
                     <option value="FIXED">Fixed Date</option>
                     <option value="FLOATING">Floating Date</option>
                   </select>
                 </div>
                 <div>
                   <label className={labelCls}>Month</label>
-                  <select className={inputCls} value={newHoliday.month} onChange={e => setNewHoliday(p => ({...p, month: e.target.value}))}>
-                    {Array.from({length: 12}, (_, i) => i + 1).map(m => (
+                  <select className={inputCls} value={newHoliday.month} onChange={e => setNewHoliday(p => ({ ...p, month: e.target.value }))}>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                       <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' })}</option>
                     ))}
                   </select>
@@ -1385,7 +1525,7 @@ export const GeneralSettingsPage = () => {
               {newHoliday.type === 'FIXED' ? (
                 <div>
                   <label className={labelCls}>Day of Month</label>
-                  <input type="number" min="1" max="31" required className={inputCls} value={newHoliday.day} onChange={e => setNewHoliday(p => ({...p, day: e.target.value}))} placeholder="e.g. 4" />
+                  <input type="number" min="1" max="31" required className={inputCls} value={newHoliday.day} onChange={e => setNewHoliday(p => ({ ...p, day: e.target.value }))} placeholder="e.g. 4" />
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-3">
@@ -1393,8 +1533,8 @@ export const GeneralSettingsPage = () => {
                     <label className={labelCls}>Occurrence</label>
                     <select className={inputCls} value={newHoliday.last ? 'last' : newHoliday.nth} onChange={e => {
                       const val = e.target.value;
-                      if (val === 'last') setNewHoliday(p => ({...p, last: true, nth: ''}));
-                      else setNewHoliday(p => ({...p, last: false, nth: val}));
+                      if (val === 'last') setNewHoliday(p => ({ ...p, last: true, nth: '' }));
+                      else setNewHoliday(p => ({ ...p, last: false, nth: val }));
                     }}>
                       <option value="1">1st</option>
                       <option value="2">2nd</option>
@@ -1405,7 +1545,7 @@ export const GeneralSettingsPage = () => {
                   </div>
                   <div className="col-span-2">
                     <label className={labelCls}>Day of Week</label>
-                    <select className={inputCls} value={newHoliday.dayOfWeek} onChange={e => setNewHoliday(p => ({...p, dayOfWeek: e.target.value}))}>
+                    <select className={inputCls} value={newHoliday.dayOfWeek} onChange={e => setNewHoliday(p => ({ ...p, dayOfWeek: e.target.value }))}>
                       <option value="0">Sunday</option>
                       <option value="1">Monday</option>
                       <option value="2">Tuesday</option>
@@ -1438,8 +1578,8 @@ export const GeneralSettingsPage = () => {
               <button type="button" onClick={() => setShowAddModModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
             </div>
             <form onSubmit={handleAddModifier} className="space-y-3">
-              <div><label className={labelCls}>Modifier Code *</label><input required className={inputCls} value={newMod.code} onChange={e => setNewMod(p => ({...p, code: e.target.value}))} placeholder="e.g. 25" /></div>
-              <div><label className={labelCls}>Modifier Description &amp; Usage *</label><input required className={inputCls} value={newMod.description} onChange={e => setNewMod(p => ({...p, description: e.target.value}))} placeholder="e.g. Significant, Separately Identifiable E&M Service" /></div>
+              <div><label className={labelCls}>Modifier Code *</label><input required className={inputCls} value={newMod.code} onChange={e => setNewMod(p => ({ ...p, code: e.target.value }))} placeholder="e.g. 25" /></div>
+              <div><label className={labelCls}>Modifier Description &amp; Usage *</label><input required className={inputCls} value={newMod.description} onChange={e => setNewMod(p => ({ ...p, description: e.target.value }))} placeholder="e.g. Significant, Separately Identifiable E&M Service" /></div>
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => setShowAddModModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">Add Modifier</button>

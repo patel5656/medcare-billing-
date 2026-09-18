@@ -4,8 +4,11 @@ const API_BASE = API_BASE_URL;
 
 
 export const apiDocumentService = {
-  async getDocuments() {
-    const res = await fetch(`${API_BASE}/documents`);
+  async getDocuments(caseId = null) {
+    const params = new URLSearchParams();
+    if (caseId) params.set('caseId', caseId);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE}/documents${query}`);
     if (!res.ok) {
       throw new Error('Failed to retrieve documents.');
     }

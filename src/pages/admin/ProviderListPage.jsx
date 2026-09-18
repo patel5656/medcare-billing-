@@ -11,6 +11,8 @@ export const ProviderListPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editProviderId, setEditProviderId] = useState(null);
   const { addToast, activeProviderFilter } = useUIStore();
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 6;
 
   const filteredProvidersList = Object.values(providers).filter(prov => {
     if (!activeProviderFilter || activeProviderFilter === 'ALL') {
@@ -56,6 +58,11 @@ export const ProviderListPage = () => {
   useEffect(() => {
     loadProviders();
   }, []);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeProviderFilter]);
 
   const toggleShowSensitive = (provId) => {
     setShowSensitive(prev => ({ ...prev, [provId]: !prev[provId] }));
@@ -175,7 +182,7 @@ export const ProviderListPage = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Provider Profiles & Billing Configurations</h1>
@@ -206,7 +213,9 @@ export const ProviderListPage = () => {
             <p className="text-xs text-slate-500">Select "All Practice Providers" in the top navbar dropdown to view all provider configurations.</p>
           </div>
         ) : (
-          filteredProvidersList.map((prov) => {
+          filteredProvidersList
+            .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+            .map((prov) => {
             const isVisible = showSensitive[prov.id];
             const isCounselor = prov.id === 'prov-counselor';
 
@@ -271,6 +280,41 @@ export const ProviderListPage = () => {
           })
         )}
       </div>
+
+      {/* Pagination */}
+      {filteredProvidersList.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-5 py-3">
+          <span className="text-xs text-slate-500">
+            Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, filteredProvidersList.length)} of {filteredProvidersList.length} providers
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+            >‹ Prev</button>
+            {Array.from({length: Math.ceil(filteredProvidersList.length / PAGE_SIZE)}, (_, i) => i + 1).map(pg => (
+              <button
+                key={pg}
+                type="button"
+                onClick={() => setCurrentPage(pg)}
+                className={`w-8 h-8 text-xs font-bold rounded-xl transition cursor-pointer ${
+                  currentPage === pg
+                    ? 'bg-teal-600 text-white shadow-sm shadow-teal-500/30'
+                    : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >{pg}</button>
+            ))}
+            <button
+              type="button"
+              disabled={currentPage === Math.ceil(filteredProvidersList.length / PAGE_SIZE)}
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+            >Next ›</button>
+          </div>
+        </div>
+      )}
 
       {/* 🔴 ADD NEW PROVIDER DIALOG MODAL */}
       {isAddModalOpen && (
