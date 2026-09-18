@@ -4,7 +4,8 @@ import { apiAppointmentService as mockAppointmentService } from '../../services/
 import { apiPatientService as mockPatientService } from '../../services/api/apiPatientService';
 import { apiCaseService as mockCaseService } from '../../services/api/apiCaseService';
 import { INITIAL_PROVIDER_CONFIGS } from '../../constants/providerConfigs';
-import { createDefaultServiceLine, COMMON_CPT_CODES } from '../../constants/servicesCatalog';
+import { createDefaultServiceLine } from '../../constants/servicesCatalog';
+import { useSettingsStore } from '../../store/settingsStore';
 import { MultiLineCptTable } from '../../components/common/MultiLineCptTable';
 import { useUIStore } from '../../store/uiStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -27,8 +28,10 @@ export const ScheduleAppointmentPage = () => {
   const [searchParams] = useSearchParams();
   const patientIdFromUrl = searchParams.get('patientId');
   const [dbProviders, setDbProviders] = useState([]);
+  const { cptCodes, fetchSettings } = useSettingsStore();
 
   useEffect(() => {
+    fetchSettings();
     apiProviderService.getProviders()
       .then(res => {
         if (res) {
@@ -70,7 +73,7 @@ export const ScheduleAppointmentPage = () => {
         if (matchingAvailSrv) {
           realPrice = matchingAvailSrv.defaultCharge;
         } else {
-          const catalogFee = COMMON_CPT_CODES.find(cc => cc.code === c.code)?.defaultFee || 0;
+          const catalogFee = cptCodes.find(cc => cc.code === c.code)?.defaultFee || cptCodes.find(cc => cc.code === c.code)?.fee || 0;
           realPrice = catalogFee;
         }
       }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiAppointmentService } from '../../services/api/apiAppointmentService';
 import { apiProviderService } from '../../services/api/apiProviderService';
-import { CORE_SERVICES as SERVICES_CATALOG } from '../../constants/servicesCatalog';
+import { useSettingsStore } from '../../store/settingsStore';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,7 @@ export const PatientSelfBookingPage = () => {
   const navigate = useNavigate();
   const { addToast } = useUIStore();
   const { user } = useAuthStore();
+  const { modalities, fetchSettings, getOperationalModalities } = useSettingsStore();
 
   const [mode, setMode] = useState('book'); // 'book' | 'lookup'
   const [step, setStep] = useState(1);
@@ -37,9 +38,9 @@ export const PatientSelfBookingPage = () => {
     patientDob: '',
     providerId: 'prov-josmic',
     visitType: 'INITIAL', // 'INITIAL' | 'SUBSEQUENT'
-    serviceIds: [SERVICES_CATALOG[0].id],
-    appointmentType: SERVICES_CATALOG[0].name,
-    cptCode: SERVICES_CATALOG[0].suggestedCptCode,
+    serviceIds: [],
+    appointmentType: '',
+    cptCode: '',
     reasonForVisit: 'Initial consultation and evaluation',
     date: new Date().toISOString().split('T')[0],
     time: '',
@@ -81,6 +82,23 @@ export const PatientSelfBookingPage = () => {
   const [slotsState, setSlotsState] = useState({ loading: false, isClosed: false, isWeekend: false, isHoliday: false, reason: '', holidayName: '', slots: [] });
 
   const selectedProvider = providers.find(p => p.id === formData.providerId) || providers[0];
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  const activeServices = getOperationalModalities();
+
+  useEffect(() => {
+    if (activeServices.length > 0 && formData.serviceIds.length === 0) {
+      setFormData(prev => ({
+        ...prev,
+        serviceIds: [activeServices[0].id],
+        appointmentType: activeServices[0].name,
+        cptCode: activeServices[0].suggestedCptCode
+      }));
+    }
+  }, [activeServices, formData.serviceIds]);
 
   useEffect(() => {
     if (formData.date && formData.providerId && mode === 'book') {
@@ -141,7 +159,7 @@ export const PatientSelfBookingPage = () => {
       currentIds.push(serviceId);
     }
 
-    const selectedServices = SERVICES_CATALOG.filter(s => currentIds.includes(s.id));
+    const selectedServices = activeServices.filter(s => currentIds.includes(s.id));
     const aptTypes = selectedServices.map(s => s.name).join(' + ');
     const cptCodes = selectedServices.map(s => s.suggestedCptCode).join(', ');
 
@@ -177,7 +195,7 @@ export const PatientSelfBookingPage = () => {
     }
     setIsSubmitting(true);
     try {
-      const selectedServices = SERVICES_CATALOG.filter(s => formData.serviceIds.includes(s.id));
+      const selectedServices = activeServices.filter(s => formData.serviceIds.includes(s.id));
       const serviceLines = selectedServices.map((s, idx) => ({
         id: `line-${idx + 1}`,
         cptCode: s.suggestedCptCode,
@@ -610,7 +628,7 @@ export const PatientSelfBookingPage = () => {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {SERVICES_CATALOG.map(s => {
+                  {activeServices.map(s => {
                     const isSelected = (formData.serviceIds || []).includes(s.id);
                     return (
                       <div
