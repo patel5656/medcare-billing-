@@ -93,11 +93,23 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
           const providerBill = res.allBills.find(b => b.providerId === providerId);
           if (providerBill) {
             setBill(providerBill);
-            const claims = mapBillToCms1500Claims(providerBill, selectedCase, { 
-              id: providerId, 
-              identifiers: { taxId: providerBill.provider?.identifiers?.taxId || '993723387' } 
-            });
+            const providerConfig = {
+              id: providerId,
+              identifiers: providerBill.identifiers || { 
+                taxId: providerBill.providerTaxId || providerBill.provider?.identifiers?.taxId || '',
+                npi: providerBill.providerNpi || providerBill.provider?.identifiers?.npi || '',
+                ssnOrEin: providerBill.providerSsnOrEin || providerBill.provider?.identifiers?.ssnOrEin || 'EIN'
+              },
+              renderingProvider: providerBill.renderingProvider || {},
+              serviceFacility: providerBill.serviceFacility || {},
+              billingProvider: providerBill.billingProvider || {},
+              defaultPlaceOfService: '11',
+            };
+            const claims = mapBillToCms1500Claims(providerBill, selectedCase, providerConfig);
             setCmsClaims(claims);
+          } else {
+            setBill(null);
+            setCmsClaims([]);
           }
         }
       } catch (err) {
@@ -147,7 +159,8 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
       return <PrintableBillingStatement bill={blankPracticeMode ? null : bill} pageIndex={pageDef.pageIndex || 0} selectedCase={selectedCase} />;
     }
     if (key === 'CmsRedGridForm') {
-      const claim = cmsClaims[pageDef.claimIndex || 0] || cmsClaims[0] || null;
+      const idx = pageDef.claimIndex !== undefined ? pageDef.claimIndex : 0;
+      const claim = cmsClaims && cmsClaims.length > idx ? cmsClaims[idx] : null;
       return <CmsRedGridForm claim={claim} blankMode={blankPracticeMode} readOnly={isLocked} />;
     }
     

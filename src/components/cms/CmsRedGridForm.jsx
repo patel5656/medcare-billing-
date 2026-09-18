@@ -42,124 +42,7 @@ const FieldInput = ({ defaultValue = '', placeholder = '', className = '', readO
  * Fits strictly on 1 US Letter portrait page (8.5" x 11")
  */
 export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, readOnly = false }) => {
-  const baseClaim = rawClaim || {
-    box1: 'OTHER',
-    box1a: '906684061',
-    box2: 'SAMPLE, TESTING',
-    box3Dob: { mm: '10', dd: '08', yy: '1974' },
-    box3Sex: 'M',
-    box4: 'SAMPLE, TESTING',
-    box5Address: '',
-    box5City: '',
-    box5State: '',
-    box5Zip: '',
-    box5Phone: '',
-    box6Relation: '',
-    box7Address: '',
-    box7City: '',
-    box7State: '',
-    box7Zip: '',
-    box7Phone: '',
-    box8Status: '',
-    box8EmploymentStatus: '',
-    box10Employment: '',
-    box10AutoAccident: '',
-    box10OtherAccident: '',
-    box10State: '',
-    box12Signature: 'SIGNATURE ON FILE',
-    box12Date: '01/22/2026',
-    box13Signature: 'SIGNATURE ON FILE',
-    box14IllnessDate: { mm: '12', dd: '27', yy: '25' },
-    box17ReferringName: '',
-    box17Npi: '',
-    box21Diagnoses: ['M5450', 'M542', 'M25572', ''],
-    box24Lines: [
-      {
-        note: '1ST SESSION LASER THERAPY',
-        fromDos: '2026-01-22',
-        toDos: '2026-01-22',
-        pos: '11',
-        emg: '',
-        cpt: '97039',
-        mod1: '',
-        mod2: '',
-        diagPtr: '123',
-        charge: '2000.00',
-        units: '1',
-        renderingId: 'R7637'
-      },
-      {
-        note: '2ND SESSION LASER THERAPY',
-        fromDos: '2026-01-22',
-        toDos: '2026-01-22',
-        pos: '11',
-        emg: '',
-        cpt: '97039',
-        mod1: '',
-        mod2: '',
-        diagPtr: '123',
-        charge: '2000.00',
-        units: '1',
-        renderingId: 'R7637'
-      },
-      {
-        note: '3RD SESSION LASER THERAPY',
-        fromDos: '2026-01-22',
-        toDos: '2026-01-22',
-        pos: '11',
-        emg: '',
-        cpt: '97039',
-        mod1: '',
-        mod2: '',
-        diagPtr: '123',
-        charge: '2000.00',
-        units: '1',
-        renderingId: 'R7637'
-      },
-      {
-        note: 'EYE PROTECTIVE GLASSES',
-        fromDos: '2026-01-22',
-        toDos: '2026-01-22',
-        pos: '11',
-        emg: '',
-        cpt: '10001',
-        mod1: '',
-        mod2: '',
-        diagPtr: '123',
-        charge: '50.00',
-        units: '1',
-        renderingId: 'R7637'
-      },
-      {
-        note: 'MASSAGE THERAPY I',
-        fromDos: '2026-01-22',
-        toDos: '2026-01-22',
-        pos: '11',
-        emg: '',
-        cpt: '97124',
-        mod1: '',
-        mod2: '',
-        diagPtr: '123',
-        charge: '90.00',
-        units: '1',
-        renderingId: 'R7637'
-      }
-    ],
-    box25TaxId: '993723387',
-    box25Type: 'EIN',
-    box27AcceptAssignment: 'YES',
-    box28TotalCharge: '6140.00',
-    box29AmountPaid: '0.00',
-    box30BalanceDue: '6140.00',
-    box31ProviderSignature: 'Adeoye, Segun',
-    box31Date: '04/13/2026',
-    box32Facility: 'ANIK LASER THERAPY\n10101 HARWIN DR,STE.320\nHOUSTON, TX 77036',
-    box33BillingProvider: 'ANIK LASER THERAPY\n10101 HARWIN DR,STE.274\nHOUSTON, TX 77036',
-    box33Phone: '(832) 815 0959',
-    carrierHeader: 'O.J LAWAL REMI ADESHOLA\n\n11711 BEDFORD ST. SUITE 01\nHOUSTON, TX 77031'
-  };
-
-  const claim = blankMode ? {
+  const emptyClaim = {
     box1: '', box1a: '', box2: '', box3Dob: { mm: '', dd: '', yy: '' }, box3Sex: '',
     box4: '', box5Address: '', box5City: '', box5State: '', box5Zip: '', box5Phone: '',
     box6Relation: '', box7Address: '', box7City: '', box7State: '', box7Zip: '', box7Phone: '',
@@ -168,7 +51,10 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
     box21Diagnoses: [], box24Lines: [], box25TaxId: '', box28TotalCharge: '',
     box29AmountPaid: '', box30BalanceDue: '', box31ProviderSignature: '',
     box32Facility: '', box32Npi: '', box33BillingProvider: '', box33Phone: '', box33Npi: ''
-  } : baseClaim;
+  };
+
+  const isBlank = blankMode || !rawClaim;
+  const claim = isBlank ? emptyClaim : rawClaim;
 
   const cleanAmount = (val) => {
     if (blankMode) return '';
@@ -402,15 +288,16 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             {/* BOX 8 */}
             <div className="p-0.5 border-b border-[#b91c1c]">
               <span>8. PATIENT STATUS</span>
-              <div className="grid grid-cols-3 gap-0.5 mt-0.5 font-mono text-[7.5px] text-slate-900">
-                <div>Single <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box8Status === 'Single')}</span></div>
-                <div>Married <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box8Status === 'Married')}</span></div>
-                <div>Other <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box8Status === 'Other')}</span></div>
-              </div>
-              <div className="grid grid-cols-3 gap-0.5 mt-0.5 font-mono text-[7px] text-slate-900">
-                <div>Employed <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box8EmploymentStatus === 'Employed')}</span></div>
-                <div>Full-Time Student <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box8EmploymentStatus === 'Full-Time Student')}</span></div>
-                <div>Part-Time Student <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box8EmploymentStatus === 'Part-Time Student')}</span></div>
+              <div className="grid grid-cols-3 gap-x-0.5 gap-y-0.5 mt-0.5 font-mono text-[6.5px] text-slate-900 leading-none">
+                <div>Single <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Single')}</span></div>
+                <div>Married <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Married')}</span></div>
+                <div>Divorced <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Divorced')}</span></div>
+                <div>Widowed <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Widowed')}</span></div>
+                <div>Employed <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Employed')}</span></div>
+                <div>Unemployed <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Unemployed')}</span></div>
+                <div>Self-Employed <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Self-Employed')}</span></div>
+                <div>Student <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Student')}</span></div>
+                <div>Retired <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Retired')}</span></div>
               </div>
             </div>
 
@@ -475,8 +362,8 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
                 <div className="w-1/2 p-0.5">
                   <span>SEX</span>
                   <div className="flex gap-1.5 mt-0.5 font-mono text-slate-900">
-                    <span className="text-[7.5px]">M <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box11InsuredSex === 'M' || claim.box11InsuredSex === 'Male')}</span></span>
-                    <span className="text-[7.5px]">F <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box11InsuredSex === 'F' || claim.box11InsuredSex === 'Female')}</span></span>
+                    <span className="text-[7.5px]">M <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk((claim.box11InsuredSex || '').trim().toUpperCase() === 'M' || (claim.box11InsuredSex || '').trim().toUpperCase() === 'MALE')}</span></span>
+                    <span className="text-[7.5px]">F <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk((claim.box11InsuredSex || '').trim().toUpperCase() === 'F' || (claim.box11InsuredSex || '').trim().toUpperCase() === 'FEMALE')}</span></span>
                   </div>
                 </div>
               </div>
@@ -813,7 +700,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
                         <FieldInput defaultValue={hasData ? 'NPI' : ''} readOnly={readOnly} className="w-full text-center text-[5.5px]" />
                       </div>
                       <div className="flex-[2] h-full flex items-center justify-center">
-                        <FieldInput defaultValue={hasData ? (line.renderingNpi || claim.box33Npi || '') : ''} readOnly={readOnly} className="w-full text-center text-[6px] px-0 tracking-tighter" />
+                        <FieldInput defaultValue={hasData ? (line.renderingNpi || claim.box33Npi || '') : ''} readOnly={readOnly} className="w-full text-center text-[5px] px-0 tracking-tighter" />
                       </div>
                     </div>
                   </div>

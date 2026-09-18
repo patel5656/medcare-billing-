@@ -18,17 +18,19 @@ const mapBox8MaritalStatus = (maritalStatus) => {
   const m = String(maritalStatus).trim().toUpperCase();
   if (m === 'SINGLE') return 'Single';
   if (m === 'MARRIED') return 'Married';
-  if (['DIVORCED', 'WIDOWED', 'SEPARATED', 'DOMESTIC_PARTNER', 'OTHER'].includes(m)) return 'Other';
+  if (m === 'DIVORCED') return 'Divorced';
+  if (m === 'WIDOWED') return 'Widowed';
   return '';
 };
 
 const mapBox8EmploymentStatus = (employmentStatus) => {
   if (!employmentStatus) return '';
   const emp = String(employmentStatus).trim().toUpperCase().replace(/[\s-]/g, '_');
-  if (emp.includes('FULL_TIME_STUDENT')) return 'Full-Time Student';
-  if (emp.includes('PART_TIME_STUDENT')) return 'Part-Time Student';
-  if (emp === 'STUDENT') return 'Full-Time Student';
-  if (emp.includes('EMPLOYED') || emp === 'SELF_EMPLOYED') return 'Employed';
+  if (emp === 'SELF_EMPLOYED') return 'Self-Employed';
+  if (emp.includes('EMPLOYED')) return 'Employed';
+  if (emp === 'UNEMPLOYED') return 'Unemployed';
+  if (emp.includes('STUDENT')) return 'Student';
+  if (emp === 'RETIRED') return 'Retired';
   return '';
 };
 
@@ -47,6 +49,51 @@ const mapBox10Conditions = (accidentType) => {
     box10OtherAccident: ['SLIP_AND_FALL', 'GENERAL_PERSONAL_INJURY', 'OTHER', 'SLIP_AND_FALL_ACCIDENT'].includes(acc) ? 'YES' : 'NO'
   };
 };
+
+const parseDobToMmDdYy = (rawDob) => {
+  if (!rawDob) return { mm: '', dd: '', yy: '' };
+  
+  const dobStr = String(rawDob).trim().split('T')[0];
+  if (!dobStr) return { mm: '', dd: '', yy: '' };
+  
+  const parts = dobStr.split(/[-/]/);
+  if (parts.length < 3) return { mm: '', dd: '', yy: '' };
+
+  let mm = '';
+  let dd = '';
+  let yyyy = '';
+
+  if (parts[0].length === 4) {
+    // YYYY-MM-DD
+    yyyy = parts[0];
+    mm = parts[1];
+    dd = parts[2];
+  } else if (parts[2].length === 4 || parts[2].length === 2) {
+    // MM/DD/YYYY or MM/DD/YY
+    mm = parts[0];
+    dd = parts[1];
+    yyyy = parts[2];
+  } else {
+    mm = parts[0];
+    dd = parts[1];
+    yyyy = parts[2];
+  }
+
+  mm = mm ? mm.padStart(2, '0') : '';
+  dd = dd ? dd.padStart(2, '0') : '';
+  const yy = yyyy ? (yyyy.length === 4 ? yyyy.slice(-2) : yyyy) : '';
+
+  return { mm, dd, yy };
+};
+
+const parseSex = (rawSex) => {
+  if (!rawSex) return '';
+  const s = String(rawSex).trim().toUpperCase();
+  if (s === 'M' || s === 'MALE') return 'M';
+  if (s === 'F' || s === 'FEMALE') return 'F';
+  return '';
+};
+
 
 /**
  * Maps a bill statement and case to date-grouped CMS-1500 claims.
@@ -83,16 +130,12 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
 
   // --- Patient demographics ---
   const patientId = bill.patientSystemId || patientCase?.patientId || bill.patientId || '';
-  const patientDob = bill.patientDob || patientCase?.patientDob || patientCase?.patient?.dob || '';
-  const dobString = patientDob ? String(patientDob) : '';
-  const dobParts = dobString.split(/[-/]/);
-  const mm = dobString ? (dobParts[0] || '') : '';
-  const dd = dobString ? (dobParts[1] || '') : '';
-  const yy = dobString ? (dobParts[2] || '') : '';
-  const patientSex = bill.patientSex || patientCase?.patientSex || patientCase?.patient?.sex || '';
+  const ptObj = patientCase?.patient || bill?.patient || {};
+  const patientDob = bill.patientDob || patientCase?.patientDob || patientCase?.patient?.dob || ptObj.dob || ptObj.patientDob || '';
+  const box3Dob = parseDobToMmDdYy(patientDob);
+  const patientSex = bill.patientSex || patientCase?.patientSex || patientCase?.patient?.sex || ptObj.sex || ptObj.patientSex || '';
 
   // --- Patient address (individual components from DB) ---
-  const ptObj = patientCase?.patient || bill?.patient || {};
   const ptAddrObj = typeof ptObj.address === 'object' && ptObj.address ? ptObj.address : {};
 
   const patientStreet = bill.patientStreet || ptObj.street || ptAddrObj.street || patientCase?.patientStreet || '';
@@ -114,21 +157,16 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   let box11InsuredDob = { mm: '', dd: '', yy: '' };
   let box11InsuredSex = '';
 
-  if (box6Relation === 'Self') {
-    box11InsuredDob = { mm, dd, yy };
-    box11InsuredSex = patientSex;
-  } else if (['Spouse', 'Child', 'Other'].includes(box6Relation)) {
+  if (['Spouse', 'Child', 'Other'].includes(box6Relation)) {
     const rawHolderDob = ptObj.policyHolderDob || bill.policyHolderDob || patientCase?.policyHolderDob || patientCase?.patient?.policyHolderDob || '';
-    if (rawHolderDob) {
-      const holderParts = String(rawHolderDob).split(/[-/]/);
-      box11InsuredDob = {
-        mm: holderParts[0] || '',
-        dd: holderParts[1] || '',
-        yy: holderParts[2] || ''
-      };
-    }
+    box11InsuredDob = parseDobToMmDdYy(rawHolderDob);
+
     const rawHolderSex = ptObj.policyHolderSex || bill.policyHolderSex || patientCase?.policyHolderSex || patientCase?.patient?.policyHolderSex || '';
-    box11InsuredSex = rawHolderSex;
+    box11InsuredSex = parseSex(rawHolderSex);
+  } else {
+    // Insured is Patient (Self or unspecified)
+    box11InsuredDob = parseDobToMmDdYy(patientDob);
+    box11InsuredSex = parseSex(patientSex);
   }
 
   // Box 11d: Is There Another Health Benefit Plan?
@@ -256,7 +294,7 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box1: 'OTHER',
       box1a: bill.insurancePolicyNumber || patientCase?.insurancePolicyNumber || '',
       box2: patientName,
-      box3Dob: { mm, dd, yy },
+      box3Dob,
       box3Sex: patientSex,
       box4: patientName,
       box5Address: patientStreet,
@@ -384,17 +422,19 @@ export const mapAppointmentToCmsClaim = (appointment) => {
   let box11InsuredDob = { mm: '', dd: '', yy: '' };
   let box11InsuredSex = '';
 
-  if (box6Relation === 'Self') {
-    const apptDobParts = apptPt.dob ? String(apptPt.dob).split(/[-/]/) : [];
-    box11InsuredDob = { mm: apptDobParts[0] || '', dd: apptDobParts[1] || '', yy: apptDobParts[2] || '' };
-    box11InsuredSex = apptPt.sex || appointment.sex || '';
-  } else if (['Spouse', 'Child', 'Other'].includes(box6Relation)) {
+  const apptDob = apptPt.dob || appointment.dob || appointment.patientDob || apptPt.patientDob || '';
+  const apptSex = apptPt.sex || appointment.sex || appointment.patientSex || apptPt.patientSex || '';
+
+  if (['Spouse', 'Child', 'Other'].includes(box6Relation)) {
     const rawHolderDob = apptPt.policyHolderDob || appointment.policyHolderDob || '';
-    if (rawHolderDob) {
-      const holderParts = String(rawHolderDob).split(/[-/]/);
-      box11InsuredDob = { mm: holderParts[0] || '', dd: holderParts[1] || '', yy: holderParts[2] || '' };
-    }
-    box11InsuredSex = apptPt.policyHolderSex || appointment.policyHolderSex || '';
+    box11InsuredDob = parseDobToMmDdYy(rawHolderDob);
+
+    const rawHolderSex = apptPt.policyHolderSex || appointment.policyHolderSex || '';
+    box11InsuredSex = parseSex(rawHolderSex);
+  } else {
+    // Insured is Patient (Self or unspecified)
+    box11InsuredDob = parseDobToMmDdYy(apptDob);
+    box11InsuredSex = parseSex(apptSex);
   }
 
   const apptSecComp = (apptPt.secondaryInsuranceCompany || appointment.secondaryInsuranceCompany || '').trim();
