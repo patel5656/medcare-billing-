@@ -1,4 +1,4 @@
-﻿// src/constants/servicesCatalog.js
+// src/constants/servicesCatalog.js
 
 export const CORE_SERVICES = [
   {
@@ -175,15 +175,5 @@ export const createDefaultServiceLine = (idx = 1, cptCode = '99204', desc = 'Ini
   charge: fee
 });
 
-export const getServiceById = (serviceId) => {
-  return CORE_SERVICES.find(s => s.id === serviceId);
-};
 
-export const getOperationalServices = () => {
-  return CORE_SERVICES.filter(s => s.activeStatus === 'ACTIVE');
-};
-
-export const getPendingServices = () => {
-  return CORE_SERVICES.filter(s => s.activeStatus !== 'ACTIVE');
-};
 

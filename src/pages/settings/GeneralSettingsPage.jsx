@@ -12,6 +12,7 @@ import { apiHolidayService } from '../../services/api/apiHolidayService';
 import { setUSHolidays } from '../../constants/usHolidays';
 import { refreshSettingsCache } from '../../utils/settingsCache';
 import { formatFeeString } from '../../utils/billingCalculations';
+import { useSettingsStore } from '../../store/settingsStore';
 import { API_BASE_URL } from '../../config/api';
 
 const inputCls = 'w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition';
@@ -111,6 +112,7 @@ export const GeneralSettingsPage = () => {
   const [testEmailRecipient, setTestEmailRecipient] = useState('admin@medpracticepro.com');
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
   const { addToast } = useUIStore();
+  const refreshGlobalStore = useSettingsStore(s => s.fetchSettings);
 
   const [providers, setProviders] = useState([]);
   const [modalitiesList, setModalitiesList] = useState([]);
@@ -335,6 +337,7 @@ export const GeneralSettingsPage = () => {
 
       const data = await apiCptService.getCptCodes();
       setCptCodes(data);
+      refreshGlobalStore();
     } catch (err) {
       addToast(err.message || 'Failed to save CPT Code', 'error');
     }
@@ -347,6 +350,7 @@ export const GeneralSettingsPage = () => {
       addToast('CPT Code deleted.', 'success');
       const data = await apiCptService.getCptCodes();
       setCptCodes(data);
+      refreshGlobalStore();
     } catch (err) {
       addToast(err.message || 'Failed to delete CPT code', 'error');
     }
@@ -382,6 +386,7 @@ export const GeneralSettingsPage = () => {
 
       const data = await getAllICDCodes();
       setIcdCodes(data);
+      refreshGlobalStore();
     } catch (err) {
       addToast(err.message || 'Failed to save ICD Code', 'error');
     }
@@ -394,6 +399,7 @@ export const GeneralSettingsPage = () => {
       addToast('ICD Code deleted.', 'success');
       const data = await getAllICDCodes();
       setIcdCodes(data);
+      refreshGlobalStore();
     } catch (err) {
       addToast(err.message || 'Failed to delete ICD code', 'error');
     }
@@ -429,6 +435,7 @@ export const GeneralSettingsPage = () => {
 
       const data = await apiModifierService.getModifiers();
       setModifiers(data);
+      refreshGlobalStore();
     } catch (err) {
       addToast(err.message || 'Failed to save Modifier', 'error');
     }
@@ -441,6 +448,7 @@ export const GeneralSettingsPage = () => {
       addToast('Modifier deleted.', 'success');
       const data = await apiModifierService.getModifiers();
       setModifiers(data);
+      refreshGlobalStore();
     } catch (err) {
       addToast(err.message || 'Failed to delete modifier', 'error');
     }
@@ -465,6 +473,7 @@ export const GeneralSettingsPage = () => {
       addToast(`Modality ${newModality.name} created successfully!`, 'success');
       setShowAddModalityModal(false);
       setNewModality({ name: '', cptCode: '', fee: '', duration: '', template: '', providerId: '', enabled: true, status: 'COMPLETE' });
+      refreshGlobalStore();
     } catch (err) {
       addToast(err.message || 'Failed to add modality', 'error');
     }
@@ -477,6 +486,7 @@ export const GeneralSettingsPage = () => {
       await apiModalityService.deleteModality(srv.id);
       setModalitiesList(prev => prev.filter((_, i) => i !== idx));
       addToast(`Modality ${srv.name} deleted successfully!`, 'success');
+      refreshGlobalStore();
     } catch (err) {
       addToast('Failed to delete CPT Code', 'error');
     }
@@ -545,6 +555,7 @@ export const GeneralSettingsPage = () => {
         return copy;
       });
       addToast(`${srv.name} has been ${updated.enabled ? 'enabled' : 'disabled'}!`, 'info');
+      refreshGlobalStore();
     } catch (err) {
       addToast(`Failed to toggle ${srv.name}`, 'error');
     }
@@ -560,6 +571,7 @@ export const GeneralSettingsPage = () => {
         return copy;
       });
       addToast(`Provider assignment updated for ${srv.name}!`, 'info');
+      refreshGlobalStore();
     } catch (err) {
       addToast(`Failed to update provider for ${srv.name}`, 'error');
     }

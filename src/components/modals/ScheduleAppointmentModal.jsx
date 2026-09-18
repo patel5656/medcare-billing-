@@ -4,6 +4,7 @@ import { Modal } from './Modal';
 import { apiAppointmentService } from '../../services/api/apiAppointmentService';
 import { apiPatientService } from '../../services/api/apiPatientService';
 import { apiCaseService } from '../../services/api/apiCaseService';
+import { apiProviderService } from '../../services/api/apiProviderService';
 import { INITIAL_PROVIDER_CONFIGS } from '../../constants/providerConfigs';
 import { createDefaultServiceLine } from '../../constants/servicesCatalog';
 import { MultiLineCptTable } from '../common/MultiLineCptTable';
@@ -28,6 +29,7 @@ export const ScheduleAppointmentModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const [patients, setPatients] = useState([]);
   const [cases, setCases] = useState([]);
+  const [dbProviders, setDbProviders] = useState([]);
 
   const [serviceLines, setServiceLines] = useState([
     createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
@@ -78,6 +80,13 @@ export const ScheduleAppointmentModal = ({
           setCases(res);
         }
       }).catch(() => { });
+
+      apiProviderService.getProviders().then(res => {
+        if (res) {
+          const list = Array.isArray(res) ? res : Object.values(res);
+          setDbProviders(list || []);
+        }
+      }).catch(console.error);
     }
   }, [isOpen, prefillPatientId, prefillPatientName, prefillPhone, prefillCaseId]);
 
@@ -265,6 +274,12 @@ export const ScheduleAppointmentModal = ({
               <option value="prov-counselor">Counselor Practice (Behavioral Health &amp; PTSD)</option>
               <option value="prov-tpi">Trigger Point Injection Clinic (Pain Management & Injections)</option>
               <option value="prov-tecar">TECAR Therapy Clinic (Deep Tissue Radiofrequency)</option>
+              {dbProviders
+                .filter(p => !['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor', 'prov-tpi', 'prov-tecar'].includes(p.id))
+                .map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.serviceCategory || 'Specialist Provider'})</option>
+                ))
+              }
             </select>
           </div>
 
