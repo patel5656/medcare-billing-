@@ -3,7 +3,7 @@ import { apiPatientService as mockPatientService, apiPatientService } from '../.
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { ROLES } from '../../constants/rolePermissions';
-import { Search, PlusCircle, User, Phone, Mail, ChevronRight, Filter, Eye, MapPin, Trash2, Download, FileSpreadsheet, Edit3 } from 'lucide-react';
+import { Search, PlusCircle, User, Phone, Mail, ChevronRight, ChevronLeft, Filter, Eye, MapPin, Trash2, Download, FileSpreadsheet, Edit3 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AddPatientModal } from '../../components/modals/AddPatientModal';
 import { PatientDetailsModal } from '../../components/modals/PatientDetailsModal';
@@ -32,6 +32,8 @@ export const PatientListPage = () => {
   const [patientToEdit, setPatientToEdit] = useState(null);
   const [patientToDelete, setPatientToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const handleEditPatient = (pat) => {
     setPatientToEdit(pat);
@@ -112,12 +114,16 @@ export const PatientListPage = () => {
 
   useEffect(() => {
     loadPatients();
+    setCurrentPage(1);
   }, [search, statusFilter]);
 
   const filteredPatients = patients.filter(pat => {
     if (activeProviderFilter === 'ALL') return true;
     return pat.assignedProviderIds?.includes(activeProviderFilter);
   });
+
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+  const paginatedPatients = filteredPatients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const patientExportColumns = [
     { key: 'patientId', label: 'Patient MRN', formatter: (v, r) => v || r.id || 'N/A' },
@@ -204,7 +210,7 @@ export const PatientListPage = () => {
           <>
             {/* 1. Mobile Card View (< 768px) */}
             <div className="divide-y divide-slate-100 md:hidden">
-              {filteredPatients.map((pat) => (
+              {paginatedPatients.map((pat) => (
                 <div key={pat.id} className="p-4 space-y-3 hover:bg-slate-50/70 transition">
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -316,7 +322,7 @@ export const PatientListPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredPatients.map((pat) => (
+                  {paginatedPatients.map((pat) => (
                     <tr key={pat.id} className="hover:bg-slate-50/80 transition">
                       <td className="p-3.5 font-mono text-slate-600 font-bold">{pat.patientId || pat.id}</td>
                       <td className="p-3.5">
@@ -413,6 +419,32 @@ export const PatientListPage = () => {
           </>
         )}
       </div>
+
+      {/* -- Pagination UI -- */}
+      {!isLoading && filteredPatients.length > itemsPerPage && (
+        <div className="flex items-center justify-between bg-white px-4 py-3 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="text-xs text-slate-500">
+            Showing <span className="font-bold text-slate-900">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * itemsPerPage, filteredPatients.length)}</span> of <span className="font-bold text-slate-900">{filteredPatients.length}</span> patients
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-bold text-slate-700 px-2">Page {currentPage} of {totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* -- Modals -- */}
       <AddPatientModal

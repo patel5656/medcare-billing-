@@ -61,7 +61,7 @@ export const JosmicPainFormPage = () => {
         content: {
           chiefComplaint,
           painLocations: selectedLocations,
-          painScale,
+          painScale: selectedLocations.length,
           hpiText,
           planText
         }
@@ -130,28 +130,53 @@ export const JosmicPainFormPage = () => {
           </div>
         </div>
 
-        {/* Section 2: Pain Scale (0-10) */}
+        {/* Section 2: Pain Areas Progress Bar (0-24) */}
         <div className="space-y-3">
-          <label className="block text-xs font-bold text-on-surface">Pain Scale Severity (0 - 10): <span className="text-secondary-container font-extrabold text-sm">{painScale} / 10</span></label>
+          <label className="block text-xs font-bold text-on-surface">
+            Anatomical Areas Selected (0 - 24): <span className="text-secondary-container font-extrabold text-sm">{selectedLocations.length} / 24</span>
+          </label>
           <input
             type="range"
             min="0"
-            max="10"
-            value={painScale}
-            onChange={(e) => setPainScale(Number(e.target.value))}
-            className="w-full h-2 bg-surface-container-high rounded-lg appearance-none cursor-pointer accent-secondary-container"
+            max="24"
+            value={selectedLocations.length}
+            readOnly
+            className="w-full h-2 rounded-lg appearance-none pointer-events-none accent-teal-600"
+            style={{
+              background: `linear-gradient(to right, #0d9488 ${(selectedLocations.length / 24) * 100}%, #e2e8f0 ${(selectedLocations.length / 24) * 100}%)`
+            }}
           />
           <div className="flex justify-between text-[10px] text-on-surface-variant font-bold">
-            <span>0 - No Pain</span>
-            <span>5 - Moderate</span>
-            <span>10 - Unbearable</span>
+            <span>0 - No Areas</span>
+            <span>12 - Half Body</span>
+            <span>24 - All Areas</span>
           </div>
         </div>
 
         {/* Section 3: 24 Anatomical Pain Locations Checkbox Grid */}
         <div className="space-y-3">
-          <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-2 flex items-center gap-2">
-            <CheckSquare className="w-4 h-4 text-secondary-container" /> Anatomical Pain Locations (24 Areas)
+          <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-2 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-secondary-container" /> Anatomical Pain Locations (24 Areas)
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedLocations.length === PAIN_LOCATIONS.length) {
+                    setSelectedLocations([]);
+                  } else {
+                    setSelectedLocations([...PAIN_LOCATIONS]);
+                  }
+                }}
+                className="text-[10px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2 py-0.5 rounded cursor-pointer transition"
+              >
+                {selectedLocations.length === PAIN_LOCATIONS.length ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
+              {selectedLocations.length} / 24 Selected
+            </span>
           </h2>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
