@@ -217,17 +217,7 @@ export const TopHeader = () => {
             </div>
           )}
 
-          {/* Global Search Input */}
-          <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-0">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search patients, MRN, cases, or providers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 text-slate-900 text-xs rounded-xl pl-9 pr-3 py-2 border border-slate-200 focus:bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 placeholder-slate-400 outline-none transition"
-            />
-          </form>
+
         </div>
       </div>
 

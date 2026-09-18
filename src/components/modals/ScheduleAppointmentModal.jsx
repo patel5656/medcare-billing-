@@ -5,6 +5,7 @@ import { apiAppointmentService } from '../../services/api/apiAppointmentService'
 import { apiPatientService } from '../../services/api/apiPatientService';
 import { apiCaseService } from '../../services/api/apiCaseService';
 import { apiProviderService } from '../../services/api/apiProviderService';
+import { getGeneralSettings } from '../../services/api/apiSettingsService';
 import { INITIAL_PROVIDER_CONFIGS } from '../../constants/providerConfigs';
 import { createDefaultServiceLine } from '../../constants/servicesCatalog';
 import { MultiLineCptTable } from '../common/MultiLineCptTable';
@@ -30,6 +31,7 @@ export const ScheduleAppointmentModal = ({
   const [patients, setPatients] = useState([]);
   const [cases, setCases] = useState([]);
   const [dbProviders, setDbProviders] = useState([]);
+  const [practiceSettings, setPracticeSettings] = useState(null);
 
   const [serviceLines, setServiceLines] = useState([
     createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
@@ -60,6 +62,15 @@ export const ScheduleAppointmentModal = ({
   // Load patients and cases
   useEffect(() => {
     if (isOpen) {
+      getGeneralSettings().then(res => {
+        if (res) {
+          setPracticeSettings(res);
+          if (res.defaultAppointmentDuration) {
+             setFormData(prev => ({ ...prev, duration: res.defaultAppointmentDuration }));
+          }
+        }
+      }).catch(console.error);
+
       apiPatientService.getPatients().then(res => {
         if (res && res.length > 0) {
           setPatients(res);
@@ -106,7 +117,10 @@ export const ScheduleAppointmentModal = ({
     }
   };
 
-  const closedCheck = isClinicClosed(formData.date);
+  let closedCheck = isClinicClosed(formData.date);
+  if (practiceSettings && practiceSettings.autoBlockUSHolidays === false && closedCheck.isClosed && !closedCheck.isWeekend) {
+    closedCheck = { isClosed: false, isPast: closedCheck.isPast, isWeekend: false, reason: '' };
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -125,6 +139,7 @@ export const ScheduleAppointmentModal = ({
       const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseFloat(l.units) || 1) * (parseFloat(l.charge) || 0)), 0);
       const created = await apiAppointmentService.createAppointment({
         ...formData,
+        status: practiceSettings?.autoConfirmAppointments ? 'CONFIRMED' : 'SCHEDULED',
         serviceLines,
         totalEstimatedCharge,
         cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(',').substring(0, 10),
@@ -316,7 +331,7 @@ export const ScheduleAppointmentModal = ({
             <label className={labelCls}>Visit Date *</label>
             <input
               type="date"
-              min={getTodayDateStr()}
+              min={practiceSettings?.allowSameDayBooking === false ? getNextBusinessDay() : getTodayDateStr()}
               required
               className={inputCls}
               value={formData.date}

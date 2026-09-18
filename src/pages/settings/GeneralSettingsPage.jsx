@@ -1051,7 +1051,6 @@ export const GeneralSettingsPage = () => {
             <div><label className={labelCls}>State</label><input className={inputCls} value={settings.practiceState} onChange={e => set('practiceState', e.target.value)} /></div>
             <div><label className={labelCls}>ZIP</label><input className={inputCls} value={settings.practiceZip} onChange={e => set('practiceZip', e.target.value)} /></div>
           </div>
-          <div><label className={labelCls}>Website URL</label><input type="url" className={inputCls} value={settings.practiceWebsite} onChange={e => set('practiceWebsite', e.target.value)} /></div>
         </div>
 
         {/* Localization */}
