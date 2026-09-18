@@ -8,12 +8,15 @@ import { useNavigate } from 'react-router-dom';
 import { ExportDataModal } from '../../components/common/ExportDataModal';
 import { exportToCSV, getTimestampedFilename } from '../../utils/exportUtils';
 import { useUIStore } from '../../store/uiStore';
+import Pagination from '../../components/common/Pagination';
 
 export const CmsClaimListPage = () => {
   const [allClaims, setAllClaims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showExportModal, setShowExportModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
   const { addToast, activeProviderFilter } = useUIStore();
   const navigate = useNavigate();
 
@@ -26,6 +29,11 @@ export const CmsClaimListPage = () => {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  // Reset page to 1 when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, activeProviderFilter]);
 
   const filteredClaims = allClaims.filter(c => {
     // 1. Global Navbar Provider/Modality Filter
@@ -59,6 +67,12 @@ export const CmsClaimListPage = () => {
       (c.box21Diagnoses || []).some(d => d.toLowerCase().includes(q))
     );
   });
+
+  const totalPages = Math.ceil(filteredClaims.length / ITEMS_PER_PAGE);
+  const currentClaims = filteredClaims.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const claimExportColumns = [
     { key: 'claimId', label: 'Claim ID' },
@@ -124,7 +138,7 @@ export const CmsClaimListPage = () => {
                   </td>
                 </tr>
               ) : (
-                filteredClaims.map((claim) => (
+                currentClaims.map((claim) => (
                   <tr key={claim.claimId} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3.5 px-4 font-mono font-semibold text-slate-900 whitespace-nowrap">
                       {claim.dosDisplay}
@@ -164,6 +178,18 @@ export const CmsClaimListPage = () => {
             </tbody>
           </table>
         </div>
+        
+        {/* -- Pagination -- */}
+        {totalPages > 1 && (
+          <div className="border-t border-slate-200 p-3">
+            <Pagination
+              currentPage={currentPage}
+              pageSize={ITEMS_PER_PAGE}
+              onPageChange={setCurrentPage}
+              totalItems={filteredClaims.length}
+            />
+          </div>
+        )}
       </div>
 
       {/* Export Claims Modal */}
