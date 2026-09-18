@@ -1,5 +1,6 @@
 // src/pages/admin/StaffListPage.jsx
 import React, { useEffect, useState, useRef } from 'react';
+import Pagination from '../../components/common/Pagination';
 import { mockStaffService } from '../../services/mock/mockStaffService';
 import { Shield, PlusCircle, User, Plus, X, Save, Mail, UserCheck, Edit2, Trash2, Upload, Camera, Check } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
@@ -22,6 +23,8 @@ export const StaffListPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 8;
   const { addToast } = useUIStore();
   const fileInputRef = useRef(null);
 
@@ -147,7 +150,7 @@ export const StaffListPage = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-4 sm:p-6 space-y-4">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" style={{ minHeight: '300px' }}>
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold text-[10px] border-b border-slate-200">
               <tr>
@@ -160,7 +163,7 @@ export const StaffListPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {staff.map((usr) => (
+              {staff.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((usr) => (
                 <tr key={usr.id} className="hover:bg-slate-50 transition">
                   <td className="p-3.5 font-bold text-slate-900 flex items-center gap-2.5">
                     <img src={usr.avatar} alt="" className="w-8 h-8 rounded-full object-cover border border-slate-200" />
@@ -174,9 +177,8 @@ export const StaffListPage = () => {
                   <td className="p-3.5 text-slate-600 font-medium">{usr.title}</td>
                   <td className="p-3.5 font-mono text-slate-600">{usr.email}</td>
                   <td className="p-3.5 text-center">
-                    <span className={`px-2.5 py-0.5 font-bold rounded-full text-[10px] border ${
-                      usr.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
-                    }`}>
+                    <span className={`px-2.5 py-0.5 font-bold rounded-full text-[10px] border ${usr.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+                      }`}>
                       {usr.status || 'ACTIVE'}
                     </span>
                   </td>
@@ -203,6 +205,13 @@ export const StaffListPage = () => {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={staff.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          itemLabel="staff members"
+        />
       </div>
 
       {/* Add / Edit Staff Modal */}

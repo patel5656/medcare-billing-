@@ -237,6 +237,7 @@ export const ServicesPage = () => {
                     <option value="Therapy">Therapy</option>
                     <option value="Injections">Injections</option>
                     <option value="Mental Health">Mental Health</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
               </div>
@@ -265,7 +266,7 @@ export const ServicesPage = () => {
                   disabled={isSaving}
                   className="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 active:scale-95 rounded-xl flex items-center gap-2 shadow-md shadow-teal-500/20 transition cursor-pointer disabled:opacity-50"
                 >
-                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} 
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Save Service
                 </button>
               </div>

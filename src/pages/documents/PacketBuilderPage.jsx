@@ -20,10 +20,11 @@ export const PacketBuilderPage = () => {
     { id: 'doc-004', name: 'Behavioral Health Progress Note', providerName: 'Counselor Practice (Hope Behavioral Health)', type: 'Therapy Note', size: '1.5 MB' },
   ];
 
-  const [docs, setDocs] = useState(DEFAULT_DOCS);
+  const [docs, setDocs] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(false);
   const [cases, setCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState(queryCaseId);
-  const [selectedIds, setSelectedIds] = useState(['doc-001', 'doc-002', 'doc-003', 'doc-004']);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [isBuilding, setIsBuilding] = useState(false);
   const [packetResult, setPacketResult] = useState(null);
   const { addToast } = useUIStore();
@@ -32,22 +33,46 @@ export const PacketBuilderPage = () => {
 
   const canViewBilling = [ROLES.SUPER_ADMIN, ROLES.BILLING_STAFF, ROLES.COUNSELOR].includes(currentUser?.role);
 
+  // Load cases once on mount
   useEffect(() => {
-    apiDocumentService.getDocuments().then(res => {
-      if (Array.isArray(res) && res.length > 0) setDocs(res);
-    }).catch(() => {});
-
     apiCaseService.getCases().then(res => {
       if (res && res.length > 0) {
         setCases(res);
-        if (queryCaseId && res.some(c => c.id === queryCaseId || c.caseId === queryCaseId)) {
-          setSelectedCaseId(queryCaseId);
-        } else {
-          setSelectedCaseId(res[0].id || 'case-001');
-        }
+        // Set initial case from URL param, else first case
+        const matched = res.find(c => c.id === queryCaseId || c.caseId === queryCaseId);
+        setSelectedCaseId(matched ? matched.id : (res[0].id || 'case-001'));
       }
     }).catch(() => {});
-  }, [queryCaseId]);
+  }, []);
+
+  // Re-fetch documents whenever selectedCaseId changes
+  useEffect(() => {
+    if (!selectedCaseId) return;
+    setDocsLoading(true);
+    setDocs([]);
+    setSelectedIds([]);
+    setPacketResult(null);
+    apiDocumentService.getDocuments(selectedCaseId)
+      .then(res => {
+        if (Array.isArray(res) && res.length > 0) {
+          // Filter to only docs belonging to this case
+          const caseDocs = res.filter(d => !d.caseId || d.caseId === selectedCaseId);
+          const finalDocs = caseDocs.length > 0 ? caseDocs : res;
+          setDocs(finalDocs);
+          setSelectedIds(finalDocs.map(d => d.id)); // auto-select all
+        } else {
+          setDocs([]);
+        }
+      })
+      .catch(() => setDocs([]))
+      .finally(() => setDocsLoading(false));
+  }, [selectedCaseId]);
+
+  // Dynamically compute included providers from selected docs
+  const includedProviders = [...new Set(
+    docs.filter(d => selectedIds.includes(d.id)).map(d => d.providerName).filter(Boolean)
+  )];
+
 
   const toggleSelect = (id) => {
     if (selectedIds.includes(id)) {
@@ -141,8 +166,20 @@ export const PacketBuilderPage = () => {
             </button>
           </div>
 
-          <div className="space-y-2">
-            {docs.map((d) => {
+              <div className="space-y-2">
+            {docsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs text-slate-500 font-medium">Loading documents for this case...</p>
+              </div>
+            ) : docs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+                <FileText className="w-8 h-8 text-slate-300" />
+                <p className="text-sm font-bold text-slate-600">No documents found for this case</p>
+                <p className="text-xs text-slate-400">Upload documents via the Document Repository first</p>
+              </div>
+            ) : (
+              docs.map((d) => {
               const isChecked = selectedIds.includes(d.id);
               return (
                 <div
@@ -161,13 +198,14 @@ export const PacketBuilderPage = () => {
                     />
                     <div>
                       <p className="text-xs font-bold text-slate-900">{d.name}</p>
-                      <p className="text-[10px] text-slate-500">{d.providerName} | {d.type}</p>
+                      <p className="text-[10px] text-slate-500">{d.providerName} | {d.type || d.documentType}</p>
                     </div>
                   </div>
                   <span className="text-[10px] font-mono font-bold text-slate-400">{d.size}</span>
                 </div>
               );
-            })}
+            })
+            )}
           </div>
         </div>
 
@@ -181,7 +219,7 @@ export const PacketBuilderPage = () => {
             <div className="space-y-2 text-xs text-slate-600">
               <div className="flex justify-between">
                 <span className="text-slate-400">Target Patient / Case:</span>
-                <strong className="text-slate-900 truncate max-w-[150px]">{currentCase?.patientName || 'Demo Patient 001'}</strong>
+                <strong className="text-slate-900 truncate max-w-[150px]">{currentCase?.patientName || 'Select a case'}</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Selected Files:</span>
@@ -191,10 +229,21 @@ export const PacketBuilderPage = () => {
                 <span className="text-slate-400">Estimated Pages:</span>
                 <strong className="text-slate-900">{selectedIds.length * 4} Pages</strong>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Included Providers:</span>
-                <strong className="text-emerald-700 font-bold">4 Modalities</strong>
+              <div className="flex justify-between items-start gap-2">
+                <span className="text-slate-400 shrink-0">Included Providers:</span>
+                <strong className="text-emerald-700 font-bold text-right">
+                  {includedProviders.length > 0
+                    ? `${includedProviders.length} Provider${includedProviders.length > 1 ? 's' : ''}`
+                    : '—'}
+                </strong>
               </div>
+              {includedProviders.length > 0 && (
+                <div className="pt-1 space-y-0.5">
+                  {includedProviders.map(p => (
+                    <p key={p} className="text-[10px] text-slate-400 truncate">• {p}</p>
+                  ))}
+                </div>
+              )}
             </div>
 
             <button
