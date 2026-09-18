@@ -110,7 +110,9 @@ export const DocumentListPage = () => {
 
       const base64String = await toBase64(selectedFile);
       const realFileName = selectedFile.name;
-      const realFileSize = `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`;
+      const realFileSize = selectedFile.size < 1024 * 1024 
+        ? `${(selectedFile.size / 1024).toFixed(2)} KB` 
+        : `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`;
 
       // Save metadata + base64 string to our own backend
       const payload = {
@@ -231,33 +233,43 @@ export const DocumentListPage = () => {
             {/* Modal Header */}
             <div className="p-3 sm:p-4 border-b border-slate-800 bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 rounded border border-amber-500/30 flex-shrink-0">
-                  BLANK FORM TEMPLATE
+                <span className="px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase bg-teal-500/20 text-teal-300 rounded border border-teal-500/30 flex-shrink-0">
+                  REAL DOCUMENT VIEWER
                 </span>
                 <div className="min-w-0">
                   <h2 className="text-xs sm:text-sm font-bold text-slate-100 truncate">{previewDoc.name}</h2>
-                  <p className="text-[10px] text-slate-400 truncate">{previewDoc.providerName} — Clean Form Layout</p>
+                  <p className="text-[10px] text-slate-400 truncate">{previewDoc.providerName}</p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between sm:justify-end gap-2 border-t sm:border-t-0 border-slate-800 pt-2 sm:pt-0">
-                <button onClick={() => window.print()} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg flex items-center gap-1 border border-slate-700">
-                  <Printer className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Print Blank Form</span><span className="sm:hidden">Print</span>
-                </button>
+                <a href={previewDoc.url} target="_blank" rel="noreferrer" className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg flex items-center gap-1 border border-slate-700">
+                  <span className="hidden sm:inline">Open in New Tab</span><span className="sm:hidden">Open</span>
+                </a>
                 <button onClick={() => setPreviewDoc(null)} className="p-1 text-slate-400 hover:text-slate-100 rounded-lg hover:bg-slate-800" title="Close">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Modal Body — Unfilled Blank Packet Viewer */}
-            <div className="flex-1 overflow-y-auto p-2 sm:p-4 bg-slate-950/60">
-              <UnifiedPacketViewer providerId={getProviderId(previewDoc.providerName)} initialBlank={true} />
+            {/* Modal Body — Real PDF Viewer */}
+            <div className="flex-1 bg-slate-200">
+              {previewDoc.url && previewDoc.url !== '#' ? (
+                <iframe 
+                  src={previewDoc.url} 
+                  className="w-full h-full border-0"
+                  title="Document Preview"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm font-bold">
+                  No valid document URL found.
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}
             <div className="p-3 border-t border-slate-800 bg-slate-900 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs text-slate-400">
-              <p className="text-[10px] sm:text-xs leading-tight">Unfilled Practice Form — Includes Provider Letterhead, Section Headings, Line Grids &amp; Anatomy Diagrams.</p>
+              <p className="text-[10px] sm:text-xs leading-tight">Viewing live document from secure cloud storage.</p>
               <button onClick={() => setPreviewDoc(null)} className="w-full sm:w-auto px-4 py-1.5 bg-teal-600 text-white text-xs font-bold rounded-lg hover:bg-teal-700 flex-shrink-0">
                 Close Preview
               </button>
@@ -361,7 +373,13 @@ export const DocumentListPage = () => {
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">File Size</label>
                   <input
                     type="text"
-                    value={selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB` : '0.00 MB'}
+                    value={
+                      selectedFile 
+                        ? selectedFile.size < 1024 * 1024 
+                          ? `${(selectedFile.size / 1024).toFixed(2)} KB` 
+                          : `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`
+                        : '0.00 MB'
+                    }
                     disabled
                     className="w-full px-3 py-2 border border-slate-200 bg-slate-50 text-slate-500 rounded-lg text-xs focus:outline-none"
                   />
