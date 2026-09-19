@@ -219,18 +219,30 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
           {/* LEFT COLUMN: BOXES 5 & 9 */}
           <div className="w-[310px] border-r border-[#b91c1c] flex flex-col justify-between">
             {/* BOX 5 */}
-            <div className="p-0.5 border-b border-[#b91c1c]">
-              <span>5. PATIENT'S ADDRESS (No., Street)</span>
-              <div className="mt-0.5">
-                <FieldInput defaultValue={c(claim.box5Address || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+            <div className="border-b border-[#b91c1c]">
+              <div className="p-0.5 border-b border-[#b91c1c]">
+                <span>5. PATIENT'S ADDRESS (No., Street)</span>
+                <div className="mt-0.5">
+                  <FieldInput defaultValue={c(claim.box5Address || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+                </div>
               </div>
-              <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
-                <span>CITY: <FieldInput defaultValue={c(claim.box5City || '')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
-                <span>STATE: <FieldInput defaultValue={c(claim.box5State || '')} readOnly={readOnly} className="w-6 inline-block text-[10px]" /></span>
-              </div>
-              <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
-                <span>ZIP: <FieldInput defaultValue={c(claim.box5Zip || '')} readOnly={readOnly} className="w-14 inline-block text-[10px]" /></span>
-                <span>TEL: <FieldInput defaultValue={c(claim.box5Phone || '( )')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
+              <div className="flex">
+                <div className="w-[200px] p-0.5 border-r border-[#b91c1c] flex flex-col justify-between">
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase">
+                    <span>CITY:</span> <FieldInput defaultValue={c(claim.box5City || '')} readOnly={readOnly} className="w-[130px] inline-block text-[10px]" />
+                  </div>
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase mt-0.5">
+                    <span>ZIP:</span> <FieldInput defaultValue={c(claim.box5Zip || '')} readOnly={readOnly} className="w-[130px] inline-block text-[10px]" />
+                  </div>
+                </div>
+                <div className="flex-1 p-0.5 flex flex-col justify-between">
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase">
+                    <span>STATE:</span> <FieldInput defaultValue={c(claim.box5State || '')} readOnly={readOnly} className="w-8 inline-block text-[10px]" />
+                  </div>
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase mt-0.5">
+                    <span>TEL:</span> <FieldInput defaultValue={c(claim.box5Phone || '( )')} readOnly={readOnly} className="w-[60px] inline-block text-[10px]" />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -329,18 +341,30 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
           {/* RIGHT COLUMN: BOXES 7 & 11 */}
           <div className="flex-1 flex flex-col justify-between">
             {/* BOX 7 */}
-            <div className="p-0.5 border-b border-[#b91c1c]">
-              <span>7. INSURED'S ADDRESS (No., Street)</span>
-              <div className="mt-0.5">
-                <FieldInput defaultValue={c(claim.box7Address || claim.box5Address || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+            <div className="border-b border-[#b91c1c]">
+              <div className="p-0.5 border-b border-[#b91c1c]">
+                <span>7. INSURED'S ADDRESS (No., Street)</span>
+                <div className="mt-0.5">
+                  <FieldInput defaultValue={c(claim.box7Address || claim.box5Address || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+                </div>
               </div>
-              <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
-                <span>CITY: <FieldInput defaultValue={c(claim.box7City || claim.box5City || '')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
-                <span>STATE: <FieldInput defaultValue={c(claim.box7State || claim.box5State || '')} readOnly={readOnly} className="w-6 inline-block text-[10px]" /></span>
-              </div>
-              <div className="flex justify-between font-mono text-[10px] text-slate-900 mt-0.5 uppercase">
-                <span>ZIP: <FieldInput defaultValue={c(claim.box7Zip || claim.box5Zip || '')} readOnly={readOnly} className="w-14 inline-block text-[10px]" /></span>
-                <span>TEL: <FieldInput defaultValue={c(claim.box7Phone || '( )')} readOnly={readOnly} className="w-20 inline-block text-[10px]" /></span>
+              <div className="flex">
+                <div className="w-[200px] p-0.5 border-r border-[#b91c1c] flex flex-col justify-between">
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase">
+                    <span>CITY:</span> <FieldInput defaultValue={c(claim.box7City || claim.box5City || '')} readOnly={readOnly} className="w-[130px] inline-block text-[10px]" />
+                  </div>
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase mt-0.5">
+                    <span>ZIP:</span> <FieldInput defaultValue={c(claim.box7Zip || claim.box5Zip || '')} readOnly={readOnly} className="w-[130px] inline-block text-[10px]" />
+                  </div>
+                </div>
+                <div className="flex-1 p-0.5 flex flex-col justify-between">
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase">
+                    <span>STATE:</span> <FieldInput defaultValue={c(claim.box7State || claim.box5State || '')} readOnly={readOnly} className="w-8 inline-block text-[10px]" />
+                  </div>
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase mt-0.5">
+                    <span>TEL:</span> <FieldInput defaultValue={c(claim.box7Phone || '( )')} readOnly={readOnly} className="w-[60px] inline-block text-[10px]" />
+                  </div>
+                </div>
               </div>
             </div>
 
