@@ -40,6 +40,9 @@ import { TecarCoverPage } from './tecar/TecarCoverPage';
 import { TecarAssessmentForm } from './tecar/TecarAssessmentForm';
 import { TecarProcedureForm } from './tecar/TecarProcedureForm';
 
+// General Final Report
+import { PatientFinalTreatmentReport } from './general/PatientFinalTreatmentReport';
+
 import { 
   Printer, Download, Eye, Edit3, Lock, Unlock, ZoomIn, ZoomOut, 
   Maximize2, ChevronLeft, ChevronRight, FileCheck, AlertCircle, Sparkles, FileText, RotateCcw
@@ -194,6 +197,9 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     if (key === 'TecarCoverPage') return <TecarCoverPage blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
     if (key === 'TecarAssessmentForm') return <TecarAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
     if (key === 'TecarProcedureForm') return <TecarProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
+
+    // General Component
+    if (key === 'PatientFinalTreatmentReport') return <PatientFinalTreatmentReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
 
     return <div className="p-12 text-center text-xs text-slate-400">Component {key} placeholder</div>;
   };

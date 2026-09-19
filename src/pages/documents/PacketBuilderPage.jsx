@@ -4,9 +4,10 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { apiDocumentService } from '../../services/api/apiDocumentService';
 import { apiCaseService } from '../../services/api/apiCaseService';
 import { useUIStore } from '../../store/uiStore';
+import { UnifiedPacketViewer } from '../../components/packets/UnifiedPacketViewer';
 import { useAuthStore } from '../../store/authStore';
 import { ROLES } from '../../constants/rolePermissions';
-import { FolderOpen, CheckSquare, Download, Sparkles, ArrowLeft, FileText, CheckCircle2, DollarSign, User, Shield } from 'lucide-react';
+import { FolderOpen, CheckSquare, Download, Sparkles, ArrowLeft, FileText, CheckCircle2, DollarSign, User, Shield, Eye, X } from 'lucide-react';
 
 export const PacketBuilderPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -27,6 +28,8 @@ export const PacketBuilderPage = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [isBuilding, setIsBuilding] = useState(false);
   const [packetResult, setPacketResult] = useState(null);
+  const [showViewerModal, setShowViewerModal] = useState(false);
+  const [viewerProvider, setViewerProvider] = useState('prov-anik');
   const { addToast } = useUIStore();
   const { currentUser } = useAuthStore();
   const navigate = useNavigate();
@@ -123,6 +126,12 @@ export const PacketBuilderPage = () => {
               <DollarSign className="w-3.5 h-3.5" /> Provider Bills Ledger
             </button>
           )}
+          <button
+            onClick={() => setShowViewerModal(true)}
+            className="px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1 shadow-xs"
+          >
+            <Eye className="w-3.5 h-3.5" /> Preview Live Forms
+          </button>
         </div>
       </div>
 
@@ -273,6 +282,60 @@ export const PacketBuilderPage = () => {
           )}
         </div>
       </div>
+
+      {/* Full Screen Live Forms Viewer Modal */}
+      {showViewerModal && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl w-full h-full max-w-7xl flex flex-col shadow-2xl overflow-hidden relative">
+            {/* Modal Header */}
+            <div className="shrink-0 p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div>
+                <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-teal-600" /> Live Clinical Forms Viewer
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">Dynamically generated forms from {currentCase?.patientName || 'Database'}</p>
+              </div>
+              <button 
+                onClick={() => setShowViewerModal(false)}
+                className="p-2 hover:bg-slate-200 text-slate-500 rounded-xl transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Provider Switcher */}
+            <div className="shrink-0 p-4 bg-white border-b border-slate-200 flex items-center gap-2 overflow-x-auto">
+              {[
+                { id: 'prov-anik', label: 'ANIK Laser' },
+                { id: 'prov-davs', label: "DAV'S ESWT" },
+                { id: 'prov-josmic', label: 'JOSMIC Consult' },
+                { id: 'prov-counselor', label: 'Counselor' },
+                { id: 'prov-general', label: 'Final Treatment Report' }
+              ].map(prov => (
+                <button
+                  key={prov.id}
+                  onClick={() => setViewerProvider(prov.id)}
+                  className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition whitespace-nowrap cursor-pointer ${
+                    viewerProvider === prov.id ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 bg-slate-50 border border-slate-200'
+                  }`}
+                >
+                  {prov.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Viewer Content */}
+            <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
+              <UnifiedPacketViewer 
+                providerId={viewerProvider} 
+                selectedCase={currentCase} 
+                initialBlank={false} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

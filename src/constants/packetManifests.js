@@ -105,6 +105,15 @@ export const PACKET_MANIFESTS = {
       { pageNumber: 4, id: 'tecar-assess', type: 'ASSESSMENT', title: 'TECAR Therapy Assessment', componentKey: 'TecarAssessmentForm' },
       { pageNumber: 5, id: 'tecar-proc-1', type: 'PROCEDURE', title: 'TECAR Procedure Log', componentKey: 'TecarProcedureForm', dos: '01/20/2026' }
     ]
+  },
+
+  'prov-general': {
+    providerId: 'prov-general',
+    providerName: 'General Final Treatment',
+    totalPages: 1,
+    pages: [
+      { pageNumber: 1, id: 'general-final', type: 'NARRATIVE', title: 'Final Treatment Report', componentKey: 'PatientFinalTreatmentReport' }
+    ]
   }
 };
 

@@ -1,4 +1,4 @@
-﻿// src/pages/documents/PatientPacketsPage.jsx
+// src/pages/documents/PatientPacketsPage.jsx
 import React, { useState } from 'react';
 import { UnifiedPacketViewer } from '../../components/packets/UnifiedPacketViewer';
 import { FileText, ShieldAlert, CheckCircle2, Clock } from 'lucide-react';
@@ -49,6 +49,14 @@ export const PatientPacketsPage = () => {
             }`}
           >
             Counselor (4 Pages)
+          </button>
+          <button
+            onClick={() => setSelectedProvider('prov-general')}
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition ${
+              selectedProvider === 'prov-general' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            Final Treatment (1 Page)
           </button>
         </div>
       </div>
