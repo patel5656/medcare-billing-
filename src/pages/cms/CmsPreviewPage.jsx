@@ -74,7 +74,9 @@ export const CmsPreviewPage = () => {
       addToast('Generating 1-page CMS-1500 PDF...', 'info');
       const claim = claims[activeClaimIndex];
       const filename = getTimestampedFilename(`cms1500_claim_${claim?.claimId || bill?.id || 'claim'}`, 'pdf');
-      await exportToPDF('printable-cms-claim', filename);
+      // Target the HIDDEN off-screen render container — always at 1:1 scale,
+      // never inside a CSS transform, never affected by scroll position.
+      await exportToPDF('pdf-hidden-render', filename);
       addToast(`Downloaded PDF: ${filename}`, 'success');
     } catch (err) {
       console.error('PDF generation error:', err);
@@ -331,6 +333,30 @@ export const CmsPreviewPage = () => {
             <Printer className="w-3.5 h-3.5 text-slate-600" /> Browser Print
           </button>
         </div>
+      </div>
+
+      {/*
+        HIDDEN PDF RENDER TARGET
+        This div is always off-screen and always renders the CMS form at exactly
+        816 x 1035px — no CSS transform, no scroll offset, no zoom distortion.
+        html2canvas captures this element directly for a perfect 1:1 PDF.
+      */}
+      <div
+        id="pdf-hidden-render"
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: '-9999px',
+          width: '816px',
+          height: '1035px',
+          overflow: 'hidden',
+          background: 'white',
+          zIndex: -9999,
+          pointerEvents: 'none',
+        }}
+      >
+        <CmsRedGridForm claim={currentClaim} />
       </div>
     </div>
   );
