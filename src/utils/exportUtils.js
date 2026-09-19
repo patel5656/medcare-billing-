@@ -12,8 +12,8 @@ export const exportToCSV = (filename, data = [], columns = []) => {
   }
 
   // If columns are not specified, extract keys from the first object
-  const activeCols = columns.length > 0 
-    ? columns 
+  const activeCols = columns.length > 0
+    ? columns
     : Object.keys(data[0] || {}).map(k => ({ key: k, label: k }));
 
   // Build CSV Header
@@ -45,7 +45,7 @@ export const exportToCSV = (filename, data = [], columns = []) => {
   const csvContent = '\uFEFF' + [headerRow, ...dataRows].join('\r\n'); // Add UTF-8 BOM for Excel compatibility
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  
+
   const link = document.createElement('a');
   link.setAttribute('href', url);
   link.setAttribute('download', filename.endsWith('.csv') ? filename : `${filename}.csv`);
@@ -64,7 +64,7 @@ export const exportToJSON = (filename, data) => {
   const jsonContent = JSON.stringify(data, null, 2);
   const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  
+
   const link = document.createElement('a');
   link.setAttribute('href', url);
   link.setAttribute('download', filename.endsWith('.json') ? filename : `${filename}.json`);
@@ -104,76 +104,126 @@ export const getTimestampedFilename = (prefix, extension = 'csv') => {
 
 /**
  * Client-side automatic PDF generator for CMS-1500 forms using html2pdf.js.
- * Produces a clean 1-page US Letter portrait PDF matching exact visual layout and colors.
+ *
+ * NOTE: The caller (CmsPreviewPage) is responsible for setting zoom to 1 and
+ * waiting for the browser to repaint BEFORE calling this function. This ensures
+ * the form element in the DOM has no CSS transform applied, so html2canvas
+ * captures it at true 1:1 pixel dimensions with perfect alignment.
+ *
  * @param {string|HTMLElement} elementOrId - Element or ID of element to convert
  * @param {string} filename - Target PDF filename
  */
 export const exportToPDF = async (elementOrId, filename = 'cms1500_claim.pdf') => {
+  let movedContainer = null;
+  let origLeft     = null;
+  let origZIndex   = null;
+
   try {
-    const html2pdf = (await import('html2pdf.js')).default;
-    const rootEl = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-    
-    if (!rootEl) {
-      throw new Error('Target element for PDF generation not found');
-    }
+    // Lazy-load both libraries (they're in node_modules as standalone packages)
+    const html2canvas = (await import('html2canvas')).default;
+    const { jsPDF }   = await import('jspdf');
 
-    // Locate inner .cms-claim-page or fallback to rootEl
-    const targetEl = rootEl.querySelector?.('.cms-claim-page') || rootEl;
+    const rootEl = typeof elementOrId === 'string'
+      ? document.getElementById(elementOrId)
+      : elementOrId;
 
-    const opt = {
-      margin: 0,
-      filename: filename.endsWith('.pdf') ? filename : `${filename}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        scrollY: 0,
-        scrollX: 0,
-        windowWidth: 816,
-        onclone: (clonedDoc, element) => {
-          // 1. Reset scale transforms and margins on cloned container elements
-          const scaledSheets = clonedDoc.querySelectorAll('.print-page-sheet, .print-page-sheet-wrapper');
-          scaledSheets.forEach(s => {
-            s.style.transform = 'none';
-            s.style.marginBottom = '0';
-            s.style.marginTop = '0';
-          });
+    if (!rootEl) throw new Error('Target element for PDF generation not found');
 
-          // 2. Convert input/textarea elements into text spans matching natural FieldInput layout
-          const origInputs = targetEl.querySelectorAll('input, textarea, select');
-          const clonedInputs = element.querySelectorAll('input, textarea, select');
-          origInputs.forEach((inp, i) => {
-            const clonedInp = clonedInputs[i];
-            if (clonedInp) {
-              const val = inp.value || inp.getAttribute('value') || '';
-              const isTextArea = inp.tagName === 'TEXTAREA';
-              const span = clonedDoc.createElement('span');
-              span.className = clonedInp.className;
-              span.style.display = isTextArea ? 'block' : 'inline-block';
-              span.style.whiteSpace = isTextArea ? 'pre-wrap' : 'nowrap';
-              span.style.verticalAlign = 'baseline';
-              span.textContent = val;
+    // ── Move hidden container into the capturable viewport area ──────────────
+    // html2canvas virtual window spans x=0..windowWidth. position:fixed elements
+    // at left:-9999px are OUTSIDE this range and captured as blank.
+    // Temporarily bring the container to left:0 with sky-high z-index so:
+    //   (a) It is within x=0..windowWidth
+    //   (b) It is on top of the sidebar/navbar so nothing overlaps the form
+    // ─────────────────────────────────────────────────────────────────────────
+    movedContainer = rootEl;
+    origLeft   = rootEl.style.left;
+    origZIndex = rootEl.style.zIndex;
+    rootEl.style.left   = '0px';
+    rootEl.style.zIndex = '99999';
 
-              if (clonedInp.parentNode) {
-                clonedInp.parentNode.replaceChild(span, clonedInp);
-              }
-            }
-          });
-        }
-      },
-      jsPDF: {
-        unit: 'in',
-        format: 'letter',
-        orientation: 'portrait'
-      },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    };
+    // Two rAFs: first schedules the style change, second waits for the browser paint
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-    return await html2pdf().set(opt).from(targetEl).save();
+    // Locate the actual CMS form (direct .cms-claim-page child or the root itself)
+    const targetEl = rootEl.querySelector('.cms-claim-page') || rootEl;
+
+    // ── Swap <input>/<textarea>/<select> → <span> ────────────────────────────
+    // html2canvas does NOT render form control values; text must be in the DOM
+    const inputs       = Array.from(targetEl.querySelectorAll('input, textarea, select'));
+    const replacements = [];
+
+    inputs.forEach(inp => {
+      const val      = inp.value || inp.getAttribute('value') || '';
+      const isTa     = inp.tagName === 'TEXTAREA';
+      const computed = window.getComputedStyle(inp);
+
+      const span = document.createElement('span');
+      span.className            = inp.className;
+      span.style.display        = isTa ? 'block' : 'inline-block';
+      span.style.whiteSpace     = isTa ? 'pre-wrap' : 'nowrap';
+      span.style.verticalAlign  = 'baseline';
+      span.style.fontSize       = computed.fontSize;
+      span.style.fontFamily     = computed.fontFamily;
+      span.style.color          = computed.color;
+      span.style.lineHeight     = inp.style.lineHeight || computed.lineHeight;
+      span.style.padding        = computed.padding;
+      span.style.margin         = computed.margin;
+      // Shift text slightly up specifically for the PDF canvas capture 
+      // because spans render slightly lower than native inputs in html2canvas
+      span.style.position       = 'relative';
+      span.style.top            = '-2px';
+      span.textContent          = val;
+
+      if (inp.parentNode) {
+        inp.parentNode.replaceChild(span, inp);
+        replacements.push({ parent: span.parentNode, span, original: inp });
+      }
+    });
+
+    // ── Capture the form element at 2× resolution ────────────────────────────
+    const canvas = await html2canvas(targetEl, {
+      scale       : 2,          // 2× sharpness (192dpi effective at 96dpi screen)
+      useCORS     : true,
+      allowTaint  : true,
+      logging     : false,
+      scrollY     : 0,          // form is position:fixed at top:0 — no scroll offset
+      scrollX     : 0,
+      windowWidth : window.innerWidth,  // real viewport so layout renders at natural size
+    });
+
+    // ── Restore <input>/<textarea>/<select> ──────────────────────────────────
+    replacements.forEach(({ parent, span, original }) => {
+      if (parent && span.parentNode === parent) parent.replaceChild(original, span);
+    });
+
+    // ── Build jsPDF page sized EXACTLY to the captured canvas ────────────────
+    // canvas.width/height are at scale:2 (double the element's CSS pixels).
+    // Dividing by (scale × 96dpi) converts back to inches.
+    const pdfW = canvas.width  / (2 * 96);  // e.g. 1632 / 192 = 8.5 in
+    const pdfH = canvas.height / (2 * 96);  // e.g. 2070 / 192 = 10.78 in
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit       : 'in',
+      format     : [pdfW, pdfH],
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    // Place the image to fill the whole page — no margin, no scaling artifact
+    pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, pdfH);
+
+    const safeFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+    pdf.save(safeFilename);
+
   } catch (err) {
     console.error('Failed to generate PDF:', err);
     throw err;
+  } finally {
+    // ALWAYS restore the container to its off-screen position
+    if (movedContainer && origLeft !== null) {
+      movedContainer.style.left   = origLeft;
+      movedContainer.style.zIndex = origZIndex;
+    }
   }
 };
-
