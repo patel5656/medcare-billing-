@@ -36,6 +36,144 @@ const FieldInput = ({ defaultValue = '', placeholder = '', className = '', readO
   );
 };
 
+const SignatureFieldInput = ({ defaultValue = '', className = '', readOnly = false }) => {
+  const [val, setVal] = useState(defaultValue);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const canvasRef = React.useRef(null);
+  const [hasDrawn, setHasDrawn] = useState(false);
+
+  useEffect(() => {
+    setVal(defaultValue);
+  }, [defaultValue]);
+
+  const handleSave = () => {
+    if (canvasRef.current && hasDrawn) {
+      setVal(canvasRef.current.toDataURL('image/png'));
+    }
+    setIsModalOpen(false);
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasDrawn(false);
+  };
+
+  const handleMouseMove = (e) => {
+    if (e.buttons !== 1) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    setHasDrawn(true);
+  };
+
+  const handleMouseDown = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.beginPath();
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    ctx.moveTo(x, y);
+  };
+  
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    setHasDrawn(true);
+  };
+
+  const handleTouchStart = (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.beginPath();
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
+    ctx.moveTo(x, y);
+  };
+
+  const isBase64 = val && val.startsWith('data:image');
+  const baseClasses = "w-full bg-transparent hover:bg-amber-100/70 focus:bg-amber-100 focus:ring-1 focus:ring-amber-600 rounded px-0.5 outline-none text-slate-900 font-mono font-bold uppercase transition cursor-pointer border-b border-transparent focus:border-amber-500 min-h-[20px] flex items-end overflow-hidden";
+
+  if (readOnly) {
+    if (isBase64) {
+      return <div className={`flex items-end ${className}`}><img src={val} alt="Signature" className="h-4 max-w-[150px] object-contain" /></div>;
+    }
+    return <span className={className}>{val}</span>;
+  }
+
+  return (
+    <>
+      <div 
+        className={`${baseClasses} ${className}`} 
+        onClick={() => setIsModalOpen(true)}
+      >
+        {isBase64 ? (
+          <img src={val} alt="Signature" className="h-6 max-w-full object-contain object-left bottom-0 relative" />
+        ) : val ? (
+          <span className="leading-none pb-0.5">{val}</span>
+        ) : (
+          <span className="text-[9px] text-amber-700/60 font-sans italic w-full hover:text-amber-700 pb-0.5 text-center">Click to Sign</span>
+        )}
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}>
+          <div className="bg-white p-5 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
+            <h3 className="text-sm font-bold text-slate-900 mb-4 flex justify-between items-center font-sans uppercase">
+              <span>Draw Signature</span>
+              <button type="button" onClick={clearCanvas} className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer">Clear</button>
+            </h3>
+            
+            <div className="border-2 border-dashed border-teal-300 rounded-xl bg-slate-50 mb-4 overflow-hidden flex items-center justify-center relative cursor-crosshair">
+              {!hasDrawn && (
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-400 text-xs font-sans">
+                  Sign with mouse or touch here
+                </div>
+              )}
+              <canvas
+                ref={canvasRef}
+                width={380}
+                height={160}
+                className="w-full touch-none"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 bg-slate-100 text-xs font-bold font-sans rounded-xl text-slate-700 hover:bg-slate-200 cursor-pointer">Cancel</button>
+              <button type="button" onClick={handleSave} className="flex-1 py-2.5 bg-emerald-600 text-white text-xs font-bold font-sans rounded-xl shadow-sm hover:bg-emerald-700 cursor-pointer">Apply Signature</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 /**
  * Authentic NUCC 02/12 Standard CMS-1500 (HCFA-1500) Red-Grid Claim Form Component
  * Form Approved OMB-0938-1197 FORM CMS-1500 (02/12)
@@ -420,7 +558,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div className="flex justify-between items-end mt-1 font-mono text-xs text-slate-900">
               <div className="flex items-end flex-1 pr-4">
                 <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1 mb-0.5">SIGNED</span>
-                <FieldInput defaultValue={c(claim.box12Signature || '')} readOnly={readOnly} className="font-bold border-b border-slate-400 flex-1" />
+                <SignatureFieldInput defaultValue={c(claim.box12Signature || '')} readOnly={readOnly} className="font-bold border-b border-slate-400 flex-1" />
               </div>
               <div>
                 <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1">DATE</span>
@@ -436,7 +574,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             </div>
             <div className="font-mono text-xs text-slate-900 mt-1 flex items-end w-full pr-4">
               <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1 mb-0.5">SIGNED</span>
-              <FieldInput defaultValue={c(claim.box13Signature || '')} readOnly={readOnly} className="font-bold border-b border-slate-400 flex-1" />
+              <SignatureFieldInput defaultValue={c(claim.box13Signature || '')} readOnly={readOnly} className="font-bold border-b border-slate-400 flex-1" />
             </div>
           </div>
         </div>
@@ -791,7 +929,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <span className="text-[5.5px] font-normal leading-tight block text-slate-500">(I certify that the statements on the reverse apply to this bill and are made a part thereof.)</span>
             </div>
             <div className="flex justify-between items-end mt-0.5">
-              <FieldInput defaultValue={c(claim.box31ProviderSignature || '')} readOnly={readOnly} className="font-bold text-[9px] w-2/3" />
+              <SignatureFieldInput defaultValue={c(claim.box31ProviderSignature || '')} readOnly={readOnly} className="font-bold text-[9px] w-2/3" />
               <FieldInput defaultValue={blankMode || !claim.box31Date ? '' : `DATE ${claim.box31Date}`} readOnly={readOnly} className="text-[7.5px] text-slate-600 w-1/3 text-right" />
             </div>
           </div>
