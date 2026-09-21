@@ -181,7 +181,7 @@ const SignatureFieldInput = ({ defaultValue = '', className = '', readOnly = fal
  * Form Approved OMB-0938-1197 FORM CMS-1500 (02/12)
  * Fits strictly on 1 US Letter portrait page (8.5" x 11")
  */
-export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, readOnly = false }) => {
+export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, readOnly = false, onSignatureChange }) => {
   const emptyClaim = {
     box1: '', box1a: '', box2: '', box3Dob: { mm: '', dd: '', yy: '' }, box3Sex: '',
     box4: '', box5Address: '', box5City: '', box5State: '', box5Zip: '', box5Phone: '',
@@ -565,7 +565,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div className="flex justify-between items-end mt-1 font-mono text-xs text-slate-900">
               <div className="flex items-end flex-1 pr-4">
                 <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1 mb-0.5">SIGNED</span>
-                <SignatureFieldInput defaultValue={c(claim.box12Signature || '')} onChange={(val) => { if (claim) claim.box12Signature = val; }} readOnly={readOnly} className="font-bold border-b border-slate-400 flex-1" />
+                <SignatureFieldInput defaultValue={c(claim.box12Signature || '')} onChange={(val) => { if (claim) { claim.box12Signature = val; if (onSignatureChange) onSignatureChange(claim); } }} readOnly={readOnly} className="font-bold border-b border-slate-400 flex-1" />
               </div>
               <div>
                 <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1">DATE</span>
@@ -581,7 +581,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             </div>
             <div className="font-mono text-xs text-slate-900 mt-1 flex items-end w-full pr-4">
               <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1 mb-0.5">SIGNED</span>
-              <SignatureFieldInput defaultValue={c(claim.box13Signature || '')} onChange={(val) => { if (claim) claim.box13Signature = val; }} readOnly={readOnly} className="font-bold border-b border-slate-400 flex-1" />
+              <SignatureFieldInput defaultValue={c(claim.box13Signature || '')} onChange={(val) => { if (claim) { claim.box13Signature = val; if (onSignatureChange) onSignatureChange(claim); } }} readOnly={readOnly} className="font-bold border-b border-slate-400 flex-1" />
             </div>
           </div>
         </div>
@@ -936,7 +936,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <span className="text-[5.5px] font-normal leading-tight block text-slate-500">(I certify that the statements on the reverse apply to this bill and are made a part thereof.)</span>
             </div>
             <div className="flex justify-between items-end mt-0.5">
-              <SignatureFieldInput defaultValue={c(claim.box31ProviderSignature || '')} onChange={(val) => { if (claim) claim.box31ProviderSignature = val; }} readOnly={readOnly} className="font-bold text-[9px] w-2/3" />
+              <SignatureFieldInput defaultValue={c(claim.box31ProviderSignature || '')} onChange={(val) => { if (claim) { claim.box31ProviderSignature = val; if (onSignatureChange) onSignatureChange(claim); } }} readOnly={readOnly} className="font-bold text-[9px] w-2/3" />
               <FieldInput defaultValue={blankMode || !claim.box31Date ? '' : `DATE ${claim.box31Date}`} readOnly={readOnly} className="text-[7.5px] text-slate-600 w-1/3 text-right" />
             </div>
           </div>
