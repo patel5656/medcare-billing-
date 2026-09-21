@@ -7,11 +7,11 @@ const FieldInput = ({ defaultValue = '', placeholder = '', className = '', readO
     setVal(defaultValue);
   }, [defaultValue]);
 
-  if (readOnly) {
-    return <span className={className}>{val}</span>;
-  }
-
   const baseClasses = "w-full bg-transparent hover:bg-amber-100/70 focus:bg-amber-100 focus:ring-1 focus:ring-amber-600 rounded px-0.5 outline-none text-slate-900 font-mono font-bold uppercase transition cursor-text border-b border-transparent focus:border-amber-500";
+  
+  if (readOnly) {
+    return <span className={`w-full bg-transparent px-0.5 text-slate-900 font-mono font-bold uppercase inline-block ${className}`} style={{ transform: 'translateY(-2.5px)' }}>{val}</span>;
+  }
 
   if (multiline) {
     return (
@@ -63,7 +63,10 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
   };
 
   const c = (v) => blankMode ? '' : (v || '');
-  const chk = (cond) => (!blankMode && cond) ? 'X' : '';
+  const chk = (cond) => {
+    if (blankMode || !cond) return '';
+    return <span style={{ transform: readOnly ? 'translateY(-1.5px)' : 'none', display: 'inline-block' }}>X</span>;
+  };
 
   const formatDos = (dosString) => {
     if (!dosString) return { mm: '', dd: '', yy: '' };
@@ -105,11 +108,13 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
 
   return (
     <div
-      className="cms-claim-page relative bg-white text-black font-sans mx-auto px-5 py-2 print:w-full print:mx-auto print:max-w-none print:h-full print:min-h-0 print:p-2 print:m-0 print:shadow-none select-text overflow-hidden box-border"
+      className="cms-claim-page relative bg-white text-black font-sans mx-auto px-5 py-2 print:mx-auto print:p-2 print:m-0 print:shadow-none select-text overflow-hidden box-border"
       style={{
-        width: '100%',
+        width: '816px',
+        minWidth: '816px',
         maxWidth: '816px',
         height: '1035px',
+        minHeight: '1035px',
         maxHeight: '1035px',
         WebkitPrintColorAdjust: 'exact',
         printColorAdjust: 'exact'
@@ -120,7 +125,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
         <div className="w-[460px] pr-2 pt-0.5">
           <div className="flex items-end gap-1.5 mb-0.5">
             <div className="border border-[#b91c1c] w-[34px] h-[15px] flex items-center justify-center bg-white z-10">
-              <span className="text-[14px] font-bold text-[#991b1b] font-mono tracking-tighter leading-none">1500</span>
+              <span className="text-[13px] font-bold text-[#991b1b] font-mono tracking-tighter leading-none" style={{ transform: readOnly ? 'translateY(-8px)' : 'translateY(-1.5px)' }}>1500</span>
             </div>
             <span className="text-[12px] font-black text-[#991b1b] tracking-widest leading-none pt-[1px]">HEALTH INSURANCE CLAIM FORM</span>
           </div>
@@ -199,8 +204,8 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div className="flex justify-between items-center mt-0.5 font-mono text-xs text-slate-900">
               <FieldInput defaultValue={blankMode || !claim.box3Dob?.mm ? '' : `${claim.box3Dob.mm} ${claim.box3Dob.dd || ''} ${claim.box3Dob.yy || ''}`} readOnly={readOnly} className="w-22 text-xs font-mono font-bold" />
               <div className="flex gap-1.5 pr-1">
-                <span className="text-[7.5px]">M <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk((claim.box3Sex || '').trim().toUpperCase() === 'M' || (claim.box3Sex || '').trim().toUpperCase() === 'MALE')}</span></span>
-                <span className="text-[7.5px]">F <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk((claim.box3Sex || '').trim().toUpperCase() === 'F' || (claim.box3Sex || '').trim().toUpperCase() === 'FEMALE')}</span></span>
+                <span className="text-[7.5px]">M <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk((claim.box3Sex || '').trim().toUpperCase() === 'M' || (claim.box3Sex || '').trim().toUpperCase() === 'MALE')}</span></span>
+                <span className="text-[7.5px]">F <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk((claim.box3Sex || '').trim().toUpperCase() === 'F' || (claim.box3Sex || '').trim().toUpperCase() === 'FEMALE')}</span></span>
               </div>
             </div>
           </div>
@@ -268,8 +273,8 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
                 <div className="w-1/2 p-0.5">
                   <span>SEX</span>
                   <div className="flex gap-1.5 mt-0.5 font-mono text-slate-900">
-                    <span className="text-[7.5px]">M <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box9bSex === 'M')}</span></span>
-                    <span className="text-[7.5px]">F <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box9bSex === 'F')}</span></span>
+                    <span className="text-[7.5px]">M <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box9bSex === 'M')}</span></span>
+                    <span className="text-[7.5px]">F <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box9bSex === 'F')}</span></span>
                   </div>
                 </div>
               </div>
@@ -290,10 +295,10 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div className="p-0.5 border-b border-[#b91c1c]">
               <span>6. PATIENT RELATIONSHIP TO INSURED</span>
               <div className="grid grid-cols-2 gap-0.5 mt-0.5 font-mono text-[8px] text-slate-900">
-                <div>Self <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box6Relation === 'Self')}</span></div>
-                <div>Spouse <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box6Relation === 'Spouse')}</span></div>
-                <div>Child <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box6Relation === 'Child')}</span></div>
-                <div>Other <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box6Relation === 'Other')}</span></div>
+                <div>Self <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box6Relation === 'Self')}</span></div>
+                <div>Spouse <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box6Relation === 'Spouse')}</span></div>
+                <div>Child <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box6Relation === 'Child')}</span></div>
+                <div>Other <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box6Relation === 'Other')}</span></div>
               </div>
             </div>
 
@@ -301,15 +306,15 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div className="p-0.5 border-b border-[#b91c1c]">
               <span>8. PATIENT STATUS</span>
               <div className="grid grid-cols-3 gap-x-0.5 gap-y-0.5 mt-0.5 font-mono text-[6.5px] text-slate-900 leading-none">
-                <div>Single <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Single')}</span></div>
-                <div>Married <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Married')}</span></div>
-                <div>Divorced <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Divorced')}</span></div>
-                <div>Widowed <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Widowed')}</span></div>
-                <div>Employed <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Employed')}</span></div>
-                <div>Unemployed <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Unemployed')}</span></div>
-                <div>Self-Employed <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Self-Employed')}</span></div>
-                <div>Student <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Student')}</span></div>
-                <div>Retired <span className="inline-block w-2.5 h-2.5 border border-[#b91c1c] text-center font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Retired')}</span></div>
+                <div>Single <span className="inline-flex items-center justify-center w-2.5 h-2.5 border border-[#b91c1c] font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Single')}</span></div>
+                <div>Married <span className="inline-flex items-center justify-center w-2.5 h-2.5 border border-[#b91c1c] font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Married')}</span></div>
+                <div>Divorced <span className="inline-flex items-center justify-center w-2.5 h-2.5 border border-[#b91c1c] font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Divorced')}</span></div>
+                <div>Widowed <span className="inline-flex items-center justify-center w-2.5 h-2.5 border border-[#b91c1c] font-bold text-[7px] leading-none">{chk(claim.box8Status === 'Widowed')}</span></div>
+                <div>Employed <span className="inline-flex items-center justify-center w-2.5 h-2.5 border border-[#b91c1c] font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Employed')}</span></div>
+                <div>Unemployed <span className="inline-flex items-center justify-center w-2.5 h-2.5 border border-[#b91c1c] font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Unemployed')}</span></div>
+                <div>Self-Employed <span className="inline-flex items-center justify-center w-2.5 h-2.5 border border-[#b91c1c] font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Self-Employed')}</span></div>
+                <div>Student <span className="inline-flex items-center justify-center w-2.5 h-2.5 border border-[#b91c1c] font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Student')}</span></div>
+                <div>Retired <span className="inline-flex items-center justify-center w-2.5 h-2.5 border border-[#b91c1c] font-bold text-[7px] leading-none">{chk(claim.box8EmploymentStatus === 'Retired')}</span></div>
               </div>
             </div>
 
@@ -319,16 +324,16 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <div className="space-y-1 mt-0.5 font-mono text-[8px] text-slate-900 flex-1">
                 <div className="flex justify-between">
                   <span>a. EMPLOYMENT?</span>
-                  <div className="flex gap-1.5"><span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box10Employment === 'YES')}</span></span><span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box10Employment === 'NO')}</span></span></div>
+                  <div className="flex gap-1.5"><span>YES <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box10Employment === 'YES')}</span></span><span>NO <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box10Employment === 'NO')}</span></span></div>
                 </div>
                 <div className="flex justify-between">
                   <span>b. AUTO ACCIDENT?</span>
-                  <div className="flex gap-1.5"><span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box10AutoAccident === 'YES')}</span></span><span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box10AutoAccident === 'NO')}</span></span></div>
+                  <div className="flex gap-1.5"><span>YES <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box10AutoAccident === 'YES')}</span></span><span>NO <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box10AutoAccident === 'NO')}</span></span></div>
                 </div>
                 <div className="text-right"><span className="ml-1 font-bold text-[7.5px]">PLACE (State) <FieldInput defaultValue={c(claim.box10State || '')} readOnly={readOnly} className="w-6 inline-block text-center text-[9px]" /></span></div>
                 <div className="flex justify-between">
                   <span>c. OTHER ACCIDENT?</span>
-                  <div className="flex gap-1.5"><span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box10OtherAccident === 'YES')}</span></span><span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box10OtherAccident === 'NO')}</span></span></div>
+                  <div className="flex gap-1.5"><span>YES <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box10OtherAccident === 'YES')}</span></span><span>NO <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box10OtherAccident === 'NO')}</span></span></div>
                 </div>
               </div>
               <div className="border-t border-[#b91c1c] pt-0.5">
@@ -386,8 +391,8 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
                 <div className="w-1/2 p-0.5">
                   <span>SEX</span>
                   <div className="flex gap-1.5 mt-0.5 font-mono text-slate-900">
-                    <span className="text-[7.5px]">M <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk((claim.box11InsuredSex || '').trim().toUpperCase() === 'M' || (claim.box11InsuredSex || '').trim().toUpperCase() === 'MALE')}</span></span>
-                    <span className="text-[7.5px]">F <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk((claim.box11InsuredSex || '').trim().toUpperCase() === 'F' || (claim.box11InsuredSex || '').trim().toUpperCase() === 'FEMALE')}</span></span>
+                    <span className="text-[7.5px]">M <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk((claim.box11InsuredSex || '').trim().toUpperCase() === 'M' || (claim.box11InsuredSex || '').trim().toUpperCase() === 'MALE')}</span></span>
+                    <span className="text-[7.5px]">F <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk((claim.box11InsuredSex || '').trim().toUpperCase() === 'F' || (claim.box11InsuredSex || '').trim().toUpperCase() === 'FEMALE')}</span></span>
                   </div>
                 </div>
               </div>
@@ -402,8 +407,8 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <div className="p-0.5">
                 <span>d. IS THERE ANOTHER HEALTH BENEFIT PLAN?</span>
                 <div className="flex gap-1.5 mt-0.5 font-mono text-[8px] text-slate-900">
-                  <span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box11d === 'YES')}</span></span>
-                  <span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(claim.box11d === 'NO')}</span></span>
+                  <span>YES <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box11d === 'YES')}</span></span>
+                  <span>NO <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box11d === 'NO')}</span></span>
                   <span className="text-[6px] font-normal leading-none self-center">If yes, return to item 9 a-d.</span>
                 </div>
               </div>
@@ -742,7 +747,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               <FieldInput defaultValue={c(claim.box25TaxId || '')} readOnly={readOnly} className="font-bold w-24" />
               <div className="flex gap-1 text-[7px]">
                 <span>SSN <span className="inline-block w-3 h-3 border border-[#b91c1c]"></span></span>
-                <span>EIN <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold">{chk(true)}</span></span>
+                <span>EIN <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(true)}</span></span>
               </div>
             </div>
           </div>
@@ -756,7 +761,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <span>27. ACCEPT ASSIGNMENT?</span>
             <span className="text-[5.5px] font-normal leading-none block">(For govt. claims, see back)</span>
             <div className="flex gap-2 mt-0.5 font-mono text-[8px] text-slate-900">
-              <span>YES <span className="inline-block w-3 h-3 border border-[#b91c1c] text-center font-bold text-teal-900">{chk(true)}</span></span>
+              <span>YES <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold text-teal-900">{chk(true)}</span></span>
               <span>NO <span className="inline-block w-3 h-3 border border-[#b91c1c]"></span></span>
             </div>
           </div>
