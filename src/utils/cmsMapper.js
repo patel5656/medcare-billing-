@@ -281,6 +281,8 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
     const claimAdjustments = Number(totalAdjustments) || 0;
     const claimBalanceDue = Math.max(0, claimTotalCharge - (claimAmountPaid + claimAdjustments));
 
+    const parsedSignatures = typeof bill.cmsSignatures === 'string' ? JSON.parse(bill.cmsSignatures) : bill.cmsSignatures || {};
+
     return {
       claimId: `cms-${bill.id}-${idx}`,
       billId: bill.id,
@@ -326,9 +328,9 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box11b: '',
       box11c: bill.insuranceCompany || patientCase?.insuranceCompany || '',
       box11d,
-      box12Signature: '',
+      box12Signature: parsedSignatures.box12Signature || '',
       box12Date: dosKey,
-      box13Signature: '',
+      box13Signature: parsedSignatures.box13Signature || '',
       box14IllnessDate: { mm: illMm, dd: illDd, yy: illYy },
       box15Date: { mm: '', dd: '', yy: '' },
       box16From: { mm: '', dd: '', yy: '' },
@@ -351,7 +353,7 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box28TotalCharge: claimTotalCharge.toFixed(2),
       box29AmountPaid: claimAmountPaid.toFixed(2),
       box30BalanceDue: claimBalanceDue.toFixed(2),
-      box31ProviderSignature: renderingName,
+      box31ProviderSignature: parsedSignatures.box31ProviderSignature || renderingName,
       box31Date: dosKey,
       box32Facility: sfAddress ? `${sfName}\n${sfAddress}` : sfName,
       box32Npi: sfNpi,

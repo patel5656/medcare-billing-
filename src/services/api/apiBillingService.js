@@ -29,7 +29,7 @@ export const apiBillingService = {
 
   async getBillById(id) {
     if (!id) return null;
-    const res = await fetch(`${API_BASE}/billing/bills/${encodeURIComponent(id)}`);
+    const res = await fetch(`${API_BASE}/billing/bills/${encodeURIComponent(id)}`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`Failed to retrieve bill ${id}`);
     return res.json();
   },

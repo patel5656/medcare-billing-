@@ -46,6 +46,23 @@ export const CmsPreviewPage = () => {
 
   const currentClaim = claims[activeClaimIndex];
 
+  const handleSignatureChange = async (claim) => {
+    try {
+      const payload = {
+        cmsSignatures: {
+          box12Signature: claim.box12Signature || '',
+          box13Signature: claim.box13Signature || '',
+          box31ProviderSignature: claim.box31ProviderSignature || ''
+        }
+      };
+      await mockBillingService.updateBill(claim.billId, payload);
+      addToast('Signature saved to database.', 'success');
+    } catch (e) {
+      console.error(e);
+      addToast('Failed to save signature.', 'error');
+    }
+  };
+
   const handleNextClaim = () => {
     if (activeClaimIndex < claims.length - 1) {
       setActiveClaimIndex(prev => prev + 1);
@@ -289,7 +306,7 @@ export const CmsPreviewPage = () => {
                 marginBottom: `${(1 - zoomLevel) * -500}px`
               }}
             >
-              <CmsRedGridForm claim={currentClaim} />
+              <CmsRedGridForm claim={currentClaim} onSignatureChange={handleSignatureChange} />
             </div>
           </div>
         )}
@@ -299,7 +316,7 @@ export const CmsPreviewPage = () => {
           <div className="space-y-0 w-full">
             {claims.map((claimItem) => (
               <div key={claimItem.claimId} className="print-page-item">
-                <CmsRedGridForm claim={claimItem} />
+                <CmsRedGridForm claim={claimItem} onSignatureChange={handleSignatureChange} />
               </div>
             ))}
           </div>
@@ -356,7 +373,7 @@ export const CmsPreviewPage = () => {
           pointerEvents: 'none',
         }}
       >
-        <CmsRedGridForm claim={currentClaim} readOnly={true} />
+        <CmsRedGridForm claim={currentClaim} readOnly={true} onSignatureChange={handleSignatureChange} />
       </div>
     </div>
   );
