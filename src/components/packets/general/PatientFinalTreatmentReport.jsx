@@ -34,16 +34,20 @@ export const PatientFinalTreatmentReport = ({
   const latestNote = clinicalNotes.length > 0 ? clinicalNotes[0] : null; 
   
   // Vitals
-  let vitals = null;
+  let bloodPressure = '';
+  let heartRate = '';
+  let temperature = '';
+  
   for (const note of clinicalNotes) {
-    if (note.content?.vitals) {
-      vitals = note.content.vitals;
-      break;
-    }
+    const content = note.content || {};
+    const nestedVitals = content.vitals || {};
+    
+    if (!bloodPressure) bloodPressure = nestedVitals.bloodPressure || nestedVitals.bp || content.bloodPressure || content.bp || '';
+    if (!heartRate) heartRate = nestedVitals.heartRate || nestedVitals.hr || content.heartRate || content.hr || '';
+    if (!temperature) temperature = nestedVitals.temperature || nestedVitals.temp || content.temperature || content.temp || '';
+    
+    if (bloodPressure && heartRate && temperature) break;
   }
-  const bloodPressure = vitals?.bloodPressure || vitals?.bp || '';
-  const heartRate = vitals?.heartRate || vitals?.hr || '';
-  const temperature = vitals?.temperature || vitals?.temp || '';
 
   // Other info
   const accidentDate = packetData?.accidentDate || 'Not documented';
@@ -100,11 +104,9 @@ export const PatientFinalTreatmentReport = ({
         <h1 className="text-2xl font-bold uppercase">{providerName}</h1>
         <p className="text-lg font-bold">Final Medical Report</p>
         
-        {/* Placeholder for Logo if needed */}
+        {/* Software Logo */}
         <div className="w-full flex justify-center py-2">
-          <div className="w-16 h-16 bg-teal-100 flex items-center justify-center rounded-full text-teal-800 font-bold opacity-50">
-            LOGO
-          </div>
+          <img src="/fm-logo.jpeg" alt="Logo" className="h-20 object-contain mix-blend-multiply" />
         </div>
 
         <div className="text-xs font-bold mt-2">
@@ -131,7 +133,7 @@ export const PatientFinalTreatmentReport = ({
               <th className="border border-black p-2">Last name</th>
               <th className="border border-black p-2">First name</th>
               <th className="border border-black p-2">Middle name</th>
-              <th className="border border-black p-2">Date of birth</th>
+              <th className="border border-black p-2" colSpan={2}>Date of birth</th>
               <th className="border border-black p-2">Gender</th>
             </tr>
           </thead>
@@ -140,10 +142,8 @@ export const PatientFinalTreatmentReport = ({
               <td className="border border-black p-2 uppercase">{lastName}</td>
               <td className="border border-black p-2 uppercase">{firstName}</td>
               <td className="border border-black p-2 uppercase">{middleName}</td>
-              <td className="border border-black p-2">
-                {dobFormatted}
-                {age && <span className="ml-2">({age})</span>}
-              </td>
+              <td className="border border-black p-2 font-bold">{dobFormatted}</td>
+              <td className="border border-black p-2 font-bold">{age}</td>
               <td className="border border-black p-2 uppercase">{gender}</td>
             </tr>
           </tbody>
@@ -171,37 +171,29 @@ export const PatientFinalTreatmentReport = ({
       </div>
 
       {/* VITAL SIGNS TABLE */}
-      {(bloodPressure || heartRate || temperature) && (
-        <div className="w-full mt-8">
-          <table className="w-full border-collapse border border-black text-sm">
-            <thead>
-              <tr className="bg-green-500 text-black">
-                <th colSpan="2" className="border border-black p-2 text-center font-bold">Vital Signs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bloodPressure && (
-                <tr>
-                  <td className="border border-black p-2 font-bold w-1/2">Blood Pressure</td>
-                  <td className="border border-black p-2">{bloodPressure}</td>
-                </tr>
-              )}
-              {heartRate && (
-                <tr>
-                  <td className="border border-black p-2 font-bold">Heart Rate</td>
-                  <td className="border border-black p-2">{heartRate}</td>
-                </tr>
-              )}
-              {temperature && (
-                <tr>
-                  <td className="border border-black p-2 font-bold">Temperature</td>
-                  <td className="border border-black p-2">{temperature}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div className="w-full mt-8">
+        <table className="w-full border-collapse border border-black text-sm">
+          <thead>
+            <tr className="bg-green-500 text-black">
+              <th colSpan="2" className="border border-black p-2 text-center font-bold">Vital Signs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="border border-black p-2 font-bold w-1/2">Blood Pressure</td>
+              <td className="border border-black p-2">{bloodPressure || ''}</td>
+            </tr>
+            <tr>
+              <td className="border border-black p-2 font-bold">Heart Rate</td>
+              <td className="border border-black p-2">{heartRate || ''}</td>
+            </tr>
+            <tr>
+              <td className="border border-black p-2 font-bold">Temperature</td>
+              <td className="border border-black p-2">{temperature || ''}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       {/* PHYSICAL EXAMINATION */}
       <div className="text-sm mt-8 space-y-2 text-justify">

@@ -24,7 +24,7 @@ export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = fal
   const retDuration = blankMode || !packetData ? '' : (packetData.retDuration || '');
 
   const totalTimeText = blankMode || !packetData ? '' : (packetData.totalTreatmentTime || packetData.totalTime || '');
-  const clinicalNotesText = blankMode || !packetData ? '' : (packetData.clinicalNotes || packetData.patientResponse || packetData.procedureDescription || packetData.technique || '');
+  const clinicalNotesText = blankMode || !packetData ? '' : ((typeof packetData.clinicalNotes === 'string' ? packetData.clinicalNotes : null) || packetData.patientResponse || packetData.procedureDescription || packetData.technique || '');
 
   return (
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>

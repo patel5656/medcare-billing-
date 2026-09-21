@@ -1,33 +1,50 @@
 // src/pages/clinical/AnikLaserFormPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiClinicalNoteService as mockClinicalNoteService } from '../../services/api/apiClinicalNoteService';
+import { apiPatientService } from '../../services/api/apiPatientService';
 import { useUIStore } from '../../store/uiStore';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Award } from 'lucide-react';
+import { ArrowLeft, Save, Award, CheckCircle2 } from 'lucide-react';
 
 export const AnikLaserFormPage = () => {
+  const [patients, setPatients] = useState([]);
   const [formData, setFormData] = useState({
-    patientName: 'Demo Patient 001',
-    bp: '115/70 mmHg',
-    hr: '90 bpm',
-    treatmentAreas: 'Low back, Neck, Left ankle',
-    wavelength: '800nm',
-    totalMins: '900s (15 Mins)',
-    dose: '10.5W',
-    totalEnergy: '236,250 Joules',
-    comments: 'Patient tolerated Class IV laser procedure with minimal discomfort. Safety eye protection worn.'
+    patientId: '',
+    patientName: '',
+    bp: '',
+    hr: '',
+    treatmentAreas: '',
+    wavelength: '',
+    totalMins: '',
+    dose: '',
+    totalEnergy: '',
+    comments: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useUIStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    apiPatientService.getPatients().then(res => {
+      const raw = Array.isArray(res) ? res : (res?.patients || []);
+      if (raw && raw.length > 0) {
+        setPatients(raw);
+        setFormData(prev => ({
+          ...prev,
+          patientId: raw[0].id,
+          patientName: `${raw[0].firstName} ${raw[0].lastName}`.trim()
+        }));
+      }
+    }).catch(console.error);
+  }, []);
 
   const handleSave = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       const note = await mockClinicalNoteService.createNote({
-        patientId: 'pat-001',
-        patientName: formData.patientName,
+        patientId: formData.patientId || 'pat-001',
+        patientName: formData.patientName || 'Demo Patient',
         caseId: 'case-001',
         providerId: 'prov-anik',
         providerName: 'ANIK Laser Therapy',
@@ -57,6 +74,32 @@ export const AnikLaserFormPage = () => {
       </div>
 
       <form onSubmit={handleSave} className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant shadow-sm space-y-6">
+        
+        {/* Patient Selection */}
+        <div className="space-y-4">
+          <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-2 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Patient Selection
+          </h2>
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-1">Select Patient *</label>
+            <select
+              required
+              value={formData.patientId}
+              onChange={(e) => {
+                const p = patients.find(x => x.id === e.target.value);
+                if (p) {
+                  setFormData({ ...formData, patientId: p.id, patientName: `${p.firstName} ${p.lastName}`.trim() });
+                }
+              }}
+              className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface font-bold text-secondary-container"
+            >
+              {patients.map(p => (
+                <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div className="space-y-4">
           <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-2 flex items-center gap-2">
             <Award className="w-4 h-4 text-purple-600" /> Class IV Laser Dosimetry Parameters

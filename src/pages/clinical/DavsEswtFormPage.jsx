@@ -1,34 +1,51 @@
-﻿// src/pages/clinical/DavsEswtFormPage.jsx
-import React, { useState } from 'react';
+// src/pages/clinical/DavsEswtFormPage.jsx
+import React, { useState, useEffect } from 'react';
 import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
+import { apiPatientService } from '../../services/api/apiPatientService';
 import { useUIStore } from '../../store/uiStore';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Activity, CheckCircle2 } from 'lucide-react';
 
 export const DavsEswtFormPage = () => {
+  const [patients, setPatients] = useState([]);
   const [formData, setFormData] = useState({
-    patientName: 'Demo Patient 001',
-    bp: '120/80 mmHg',
-    hr: '100 bpm',
-    treatmentAreas: 'Low back, Neck, Left ankle',
-    barSetting: '3.0',
-    hzSetting: '10 Hz',
-    dose: '1000x3',
-    totalWaves: 3000,
+    patientId: '',
+    patientName: '',
+    bp: '',
+    hr: '',
+    treatmentAreas: '',
+    barSetting: '',
+    hzSetting: '',
+    dose: '',
+    totalWaves: '',
     bltCream: 'YES',
-    reaction: 'Normal localized erythema, no bruising'
+    reaction: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useUIStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    apiPatientService.getPatients().then(res => {
+      const raw = Array.isArray(res) ? res : (res?.patients || []);
+      if (raw && raw.length > 0) {
+        setPatients(raw);
+        setFormData(prev => ({
+          ...prev,
+          patientId: raw[0].id,
+          patientName: `${raw[0].firstName} ${raw[0].lastName}`.trim()
+        }));
+      }
+    }).catch(console.error);
+  }, []);
 
   const handleSave = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       const note = await apiClinicalNoteService.createNote({
-        patientId: 'pat-001',
-        patientName: formData.patientName,
+        patientId: formData.patientId || 'pat-001',
+        patientName: formData.patientName || 'Demo Patient',
         caseId: 'case-001',
         providerId: 'prov-davs',
         providerName: "DAV'S Anatomy",
@@ -59,6 +76,31 @@ export const DavsEswtFormPage = () => {
 
       <form onSubmit={handleSave} className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant shadow-sm space-y-6">
         
+        {/* Patient Selection */}
+        <div className="space-y-4">
+          <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-2 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Patient Selection
+          </h2>
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-1">Select Patient *</label>
+            <select
+              required
+              value={formData.patientId}
+              onChange={(e) => {
+                const p = patients.find(x => x.id === e.target.value);
+                if (p) {
+                  setFormData({ ...formData, patientId: p.id, patientName: `${p.firstName} ${p.lastName}`.trim() });
+                }
+              }}
+              className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface font-bold text-secondary-container"
+            >
+              {patients.map(p => (
+                <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {/* Vitals Check */}
         <div className="space-y-4">
           <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-2 flex items-center gap-2">

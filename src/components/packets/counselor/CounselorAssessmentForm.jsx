@@ -16,7 +16,7 @@ export const CounselorAssessmentForm = ({ blankMode = false, packetData = null }
   const mseSpeechThought = isShow ? (packetData.mseSpeechThought || packetData.speechThought || '') : '';
   const safetyRiskScreen = isShow ? (packetData.safetyRiskScreen || packetData.suicideRiskScreen || packetData.safetyScreen || '') : '';
 
-  const clinicalObservations = isShow ? (packetData.clinicalObservations || packetData.cbtInterventions || packetData.clinicalNotes || '') : '';
+  const clinicalObservations = isShow ? (packetData.clinicalObservations || packetData.cbtInterventions || (typeof packetData.clinicalNotes === 'string' ? packetData.clinicalNotes : '') || '') : '';
 
   const treatmentGoals = isShow
     ? (Array.isArray(packetData.treatmentGoals)
