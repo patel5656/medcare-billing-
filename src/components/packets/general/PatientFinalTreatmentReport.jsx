@@ -253,10 +253,16 @@ export const PatientFinalTreatmentReport = ({
 
       {/* PROVIDER SIGNATURE */}
       <div className="mt-16 text-sm font-bold w-1/2">
-        <div className="border-b border-black mb-2 h-10 flex items-end">
-          {/* Signature can go here if available */}
+        <div className="border-b border-black mb-2 h-16 flex items-end">
+          {!blankMode && latestNote?.signatureUrl && (
+            latestNote.signatureUrl.startsWith('data:image') ? (
+              <img src={latestNote.signatureUrl} alt="Provider Signature" className="max-h-14 object-contain mb-1" />
+            ) : (
+              <span className="font-mono text-teal-800 text-xs italic mb-1">{latestNote.signatureUrl.replace('DIGITAL_SIG:', '')}</span>
+            )
+          )}
         </div>
-        <p>{blankMode ? 'PROVIDER NAME' : providerName}</p>
+        <p>{blankMode ? 'PROVIDER NAME' : (latestNote?.signedBy || providerName)}</p>
         <p>Provider Signature</p>
         <p className="mt-2 text-xs font-normal">Date Signed: {blankMode ? '' : signOffDate}</p>
       </div>

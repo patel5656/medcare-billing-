@@ -71,6 +71,8 @@ export const TopHeader = () => {
   };
 
   const loadNotifications = async () => {
+    if (!currentUser) return; // Prevent race condition when auth is loading
+
     try {
       setLoadingNotifs(true);
       const params = {};
@@ -158,7 +160,7 @@ export const TopHeader = () => {
   return (
     <div className="w-full h-full px-3 sm:px-6 flex items-center justify-between text-slate-900 select-none gap-4">
       {/* -- Left section: Sidebar Toggle & Full Branding Title -- */}
-      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         {/* Toggle Button */}
         <button
           type="button"
@@ -180,15 +182,15 @@ export const TopHeader = () => {
 
         {/* Branding Logo & Title */}
         <div
-          className="flex items-center gap-3 cursor-pointer shrink-0"
+          className="flex items-center gap-2 sm:gap-3 cursor-pointer min-w-0"
           onClick={() => navigate(`/dashboard/${currentUser?.role?.toLowerCase()?.replace(/\s+/g, '-') || 'super-admin'}`)}
         >
-          <FMLogo className="w-11 h-11 sm:w-14 sm:h-14 shrink-0" fit="contain" shape="rounded-xl" />
-          <div className="flex flex-col justify-center">
-            <h1 className="text-sm sm:text-base md:text-lg font-serif font-black tracking-wide text-slate-900 leading-tight whitespace-nowrap">
+          <FMLogo className="w-10 h-10 sm:w-14 sm:h-14 shrink-0" fit="contain" shape="rounded-xl" />
+          <div className="flex flex-col justify-center min-w-0">
+            <h1 className="text-xs sm:text-base md:text-lg font-serif font-black tracking-wide text-slate-900 leading-tight truncate">
               F&amp;M HEALTH &amp; WELLNESS
             </h1>
-            <p className="text-[10px] sm:text-[11px] text-teal-600 font-bold tracking-wider uppercase whitespace-nowrap leading-tight mt-1">
+            <p className="text-[9px] sm:text-[11px] text-teal-600 font-bold tracking-wider uppercase leading-tight mt-0.5 truncate">
               Billing &amp; Clinical Platform
             </p>
           </div>

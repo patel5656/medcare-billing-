@@ -13,6 +13,7 @@ export const DavsEswtFormPage = () => {
     patientName: '',
     bp: '',
     hr: '',
+    temperature: '',
     treatmentAreas: '',
     barSetting: '',
     hzSetting: '',
@@ -107,7 +108,7 @@ export const DavsEswtFormPage = () => {
             <Activity className="w-4 h-4 text-secondary-container" /> Pre-Procedure Vitals Verification
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-on-surface mb-1">Blood Pressure (BP) *</label>
               <input
@@ -125,6 +126,16 @@ export const DavsEswtFormPage = () => {
                 required
                 value={formData.hr}
                 onChange={(e) => setFormData({ ...formData, hr: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">Temperature *</label>
+              <input
+                type="text"
+                required
+                value={formData.temperature}
+                onChange={(e) => setFormData({ ...formData, temperature: e.target.value })}
                 className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface font-mono"
               />
             </div>
