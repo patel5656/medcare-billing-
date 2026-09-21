@@ -176,7 +176,7 @@ export const AiAssistantPage = () => {
     }
   };
 
-  const handleSubmitForReview = () => {
+  const handleSubmitForReview = async () => {
     const textToSubmit = editableDraftText || generatedDraft?.draftText;
     if (!textToSubmit) return;
 
@@ -194,9 +194,39 @@ export const AiAssistantPage = () => {
       status: 'Pending Review',
       preview: textToSubmit
     };
-    setDrafts(prev => [newDraftItem, ...prev]);
-    setDraftStatus('submitted');
-    addToast(`Draft submitted directly to ${currentClinician.name}'s review queue!`, 'info');
+
+    try {
+      // Save draft to live database so it appears in the doctor's queue!
+      const createdRecord = await apiClinicalNoteService.createNote({
+        patientId: selectedPatientId || 'pat-001',
+        patientName: newDraftItem.patient,
+        caseId: selectedCaseId || 'case-001',
+        providerId: newDraftItem.providerId,
+        providerName: newDraftItem.assignedProviderName,
+        type: 'AI_ASSISTED_SOAP',
+        title: newDraftItem.type,
+        status: 'DRAFT',
+        author: currentUser?.name || 'Clinical Staff',
+        content: {
+          narrative: newDraftItem.preview,
+          model: newDraftItem.generatedBy,
+          assignedDoctor: newDraftItem.assignedDoctorName,
+          isSigned: false
+        }
+      });
+
+      // Update local ID with the real database ID so immediate approval works
+      if (createdRecord && createdRecord.id) {
+        newDraftItem.id = createdRecord.id;
+      }
+
+      setDrafts(prev => [newDraftItem, ...prev]);
+      setDraftStatus('submitted');
+      addToast(`Draft submitted directly to ${currentClinician.name}'s review queue!`, 'info');
+    } catch (err) {
+      console.error(err);
+      addToast('Failed to save draft to database', 'error');
+    }
   };
 
   const handleCopy = () => {
@@ -218,24 +248,13 @@ export const AiAssistantPage = () => {
     const targetProviderName = targetDraft.assignedProviderName || 'JOSMIC Wellness Center (Pain Management)';
 
     try {
-      // Save directly to live backend database clinical_notes table!
-      await apiClinicalNoteService.createNote({
-        patientId: 'pat-001',
-        patientName: targetDraft.patient,
-        caseId: 'case-001',
-        providerId: targetProviderId,
-        providerName: targetProviderName,
-        type: 'AI_ASSISTED_SOAP',
-        title: `AI Note: ${targetDraft.type} - ${new Date().toLocaleDateString()}`,
-        author: targetDocName,
-        signedBy: targetDocName,
-        content: {
-          narrative: targetDraft.preview,
-          doctorNotes: doctorNotes,
-          model: targetDraft.generatedBy,
-          assignedDoctor: targetDocName,
-          isSigned: true
-        }
+      // Update the existing draft in the database to be approved/signed
+      await apiClinicalNoteService.signNote(draftId, {
+        isSigned: true,
+        status: 'SIGNED',
+        doctorNotes: doctorNotes,
+        authorName: targetDocName,
+        signatureUrl: 'SIGNED_BY_PHYSICIAN'
       });
 
       setDrafts(prev => prev.map(d => d.id === draftId ? { ...d, status: 'Approved' } : d));
@@ -248,11 +267,21 @@ export const AiAssistantPage = () => {
     }
   };
 
-  const handleReject = (draftId) => {
-    setDrafts(prev => prev.map(d => d.id === draftId ? { ...d, status: 'Rejected' } : d));
-    addToast('Draft rejected - returned for revision', 'error');
-    setSelectedDraft(null);
-    setDoctorNotes('');
+  const handleReject = async (draftId) => {
+    try {
+      // Call backend to delete the mock/rejected draft permanently
+      await apiClinicalNoteService.deleteNote(draftId);
+      setDrafts(prev => prev.filter(d => d.id !== draftId));
+      addToast('Draft permanently deleted / rejected', 'error');
+      setSelectedDraft(null);
+      setDoctorNotes('');
+    } catch (err) {
+      console.error(err);
+      // Fallback to local removal if backend delete fails (e.g. for purely local mock drafts)
+      setDrafts(prev => prev.filter(d => d.id !== draftId));
+      addToast('Removed draft from queue', 'info');
+      setSelectedDraft(null);
+    }
   };
 
   const renderFormattedClinicalNote = (text) => {
