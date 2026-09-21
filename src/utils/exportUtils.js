@@ -148,39 +148,6 @@ export const exportToPDF = async (elementOrId, filename = 'cms1500_claim.pdf') =
     // Locate the actual CMS form (direct .cms-claim-page child or the root itself)
     const targetEl = rootEl.querySelector('.cms-claim-page') || rootEl;
 
-    // ── Swap <input>/<textarea>/<select> → <span> ────────────────────────────
-    // html2canvas does NOT render form control values; text must be in the DOM
-    const inputs       = Array.from(targetEl.querySelectorAll('input, textarea, select'));
-    const replacements = [];
-
-    inputs.forEach(inp => {
-      const val      = inp.value || inp.getAttribute('value') || '';
-      const isTa     = inp.tagName === 'TEXTAREA';
-      const computed = window.getComputedStyle(inp);
-
-      const span = document.createElement('span');
-      span.className            = inp.className;
-      span.style.display        = isTa ? 'block' : 'inline-block';
-      span.style.whiteSpace     = isTa ? 'pre-wrap' : 'nowrap';
-      span.style.verticalAlign  = 'baseline';
-      span.style.fontSize       = computed.fontSize;
-      span.style.fontFamily     = computed.fontFamily;
-      span.style.color          = computed.color;
-      span.style.lineHeight     = inp.style.lineHeight || computed.lineHeight;
-      span.style.padding        = computed.padding;
-      span.style.margin         = computed.margin;
-      // Shift text slightly up specifically for the PDF canvas capture 
-      // because spans render slightly lower than native inputs in html2canvas
-      span.style.position       = 'relative';
-      span.style.top            = '-2px';
-      span.textContent          = val;
-
-      if (inp.parentNode) {
-        inp.parentNode.replaceChild(span, inp);
-        replacements.push({ parent: span.parentNode, span, original: inp });
-      }
-    });
-
     // ── Capture the form element at 2× resolution ────────────────────────────
     const canvas = await html2canvas(targetEl, {
       scale       : 2,          // 2× sharpness (192dpi effective at 96dpi screen)
@@ -190,11 +157,6 @@ export const exportToPDF = async (elementOrId, filename = 'cms1500_claim.pdf') =
       scrollY     : 0,          // form is position:fixed at top:0 — no scroll offset
       scrollX     : 0,
       windowWidth : window.innerWidth,  // real viewport so layout renders at natural size
-    });
-
-    // ── Restore <input>/<textarea>/<select> ──────────────────────────────────
-    replacements.forEach(({ parent, span, original }) => {
-      if (parent && span.parentNode === parent) parent.replaceChild(original, span);
     });
 
     // ── Build jsPDF page sized EXACTLY to the captured canvas ────────────────

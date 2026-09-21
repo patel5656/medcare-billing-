@@ -356,7 +356,7 @@ export const CmsPreviewPage = () => {
           pointerEvents: 'none',
         }}
       >
-        <CmsRedGridForm claim={currentClaim} />
+        <CmsRedGridForm claim={currentClaim} readOnly={true} />
       </div>
     </div>
   );

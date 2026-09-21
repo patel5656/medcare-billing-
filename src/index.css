@@ -250,7 +250,6 @@ button, a {
   /* Sheet scaling & 850px container width reset to fit printable area */
   .print-page-sheet-wrapper,
   .print-page-sheet,
-  .cms-claim-page,
   #printable-packet > div,
   #printable-packet > div > div,
   #printable-packet div[style*="850px"],
