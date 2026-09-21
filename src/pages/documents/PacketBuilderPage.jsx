@@ -111,7 +111,7 @@ export const PacketBuilderPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="flex items-center justify-between gap-2 flex-wrap print:hidden">
         <button onClick={() => navigate('/documents')} className="flex items-center gap-1 text-xs font-bold text-teal-700 hover:underline cursor-pointer">
           <ArrowLeft className="w-4 h-4" /> Back to Document Repository
         </button>
@@ -135,7 +135,7 @@ export const PacketBuilderPage = () => {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">Patient Document Packet Builder</h1>
           <p className="text-xs text-slate-500">Compile multi-provider clinical notes, billing statements &amp; CMS-1500 claims into a single attorney packet</p>
@@ -160,7 +160,7 @@ export const PacketBuilderPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
         {/* Document Tree Selector */}
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -285,10 +285,10 @@ export const PacketBuilderPage = () => {
 
       {/* Full Screen Live Forms Viewer Modal */}
       {showViewerModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          <div className="bg-white rounded-2xl w-full h-full max-w-7xl flex flex-col shadow-2xl overflow-hidden relative">
+        <div className="printable-modal-backdrop fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200 print:static print:bg-white print:p-0 print:block print:overflow-visible print:inset-auto print:z-auto">
+          <div className="printable-modal bg-white rounded-2xl w-full h-full max-w-7xl flex flex-col shadow-2xl overflow-hidden relative print:shadow-none print:h-auto print:block print:overflow-visible print:w-full">
             {/* Modal Header */}
-            <div className="shrink-0 p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <div className="shrink-0 p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 print:hidden">
               <div>
                 <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-teal-600" /> Live Clinical Forms Viewer
@@ -304,7 +304,7 @@ export const PacketBuilderPage = () => {
             </div>
 
             {/* Provider Switcher */}
-            <div className="shrink-0 p-4 bg-white border-b border-slate-200 flex items-center gap-2 overflow-x-auto">
+            <div className="shrink-0 p-4 bg-white border-b border-slate-200 flex items-center gap-2 overflow-x-auto print:hidden">
               {[
                 { id: 'prov-anik', label: 'ANIK Laser' },
                 { id: 'prov-davs', label: "DAV'S ESWT" },
@@ -325,7 +325,7 @@ export const PacketBuilderPage = () => {
             </div>
 
             {/* Viewer Content */}
-            <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
+            <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6 print:overflow-visible print:bg-white print:p-0 print:block">
               <UnifiedPacketViewer 
                 providerId={viewerProvider} 
                 selectedCase={currentCase} 
