@@ -257,7 +257,7 @@ export const AiAssistantPage = () => {
         signatureUrl: 'SIGNED_BY_PHYSICIAN'
       });
 
-      setDrafts(prev => prev.map(d => d.id === draftId ? { ...d, status: 'Approved' } : d));
+      setDrafts(prev => prev.filter(d => d.id !== draftId));
       addToast(`Draft approved and locked to database by ${targetDocName}!`, 'success');
       setSelectedDraft(null);
       setDoctorNotes('');
