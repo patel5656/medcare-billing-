@@ -652,7 +652,7 @@ export const PaymentsAndAdjustmentsPage = () => {
     loadData();
   }, []);
 
-  const displayPayments = dbTransactions.filter(t => !t.type.includes('Adjustment') && !t.type.includes('Write-off'));
+  const displayPayments = dbTransactions.filter(t => t.type.includes('Payment'));
   const displayAdjustments = dbTransactions.filter(t => t.type.includes('Adjustment') || t.type.includes('Write-off'));
 
   const filteredPayments = displayPayments.filter(p => 
