@@ -118,6 +118,7 @@ export const GeneralSettingsPage = () => {
   const [modalitiesList, setModalitiesList] = useState([]);
   const [showAddModalityModal, setShowAddModalityModal] = useState(false);
   const [newModality, setNewModality] = useState({ name: '', cptCode: '', fee: '', duration: '', template: '', providerId: '', enabled: true, status: 'COMPLETE' });
+  const [editModalityIdx, setEditModalityIdx] = useState(null);
   const [showAddProvModal, setShowAddProvModal] = useState(false);
   const [newProv, setNewProv] = useState({ name: '', businessName: '', serviceCategory: 'General Medicine', npi: '', taxId: '', phone: '', email: '', street: '', suite: '', city: 'Houston', state: 'TX', zipCode: '77036' });
 
@@ -468,15 +469,43 @@ export const GeneralSettingsPage = () => {
       return;
     }
     try {
-      const created = await apiModalityService.createModality(newModality);
-      setModalitiesList(prev => [...prev, created]);
-      addToast(`Modality ${newModality.name} created successfully!`, 'success');
+      if (editModalityIdx !== null) {
+        const item = modalitiesList[editModalityIdx];
+        const updated = await apiModalityService.updateModality(item.id, newModality);
+        setModalitiesList(prev => {
+          const copy = [...prev];
+          copy[editModalityIdx] = updated;
+          return copy;
+        });
+        addToast(`Modality ${newModality.name} updated successfully!`, 'success');
+      } else {
+        const created = await apiModalityService.createModality(newModality);
+        setModalitiesList(prev => [...prev, created]);
+        addToast(`Modality ${newModality.name} created successfully!`, 'success');
+      }
       setShowAddModalityModal(false);
+      setEditModalityIdx(null);
       setNewModality({ name: '', cptCode: '', fee: '', duration: '', template: '', providerId: '', enabled: true, status: 'COMPLETE' });
       refreshGlobalStore();
     } catch (err) {
-      addToast(err.message || 'Failed to add modality', 'error');
+      addToast(err.message || 'Failed to save modality', 'error');
     }
+  };
+
+  const handleEditModality = (idx) => {
+    const item = modalitiesList[idx];
+    setNewModality({
+      name: item.name || '',
+      cptCode: item.cptCode || '',
+      fee: item.fee || '',
+      duration: item.duration || '',
+      template: item.template || '',
+      providerId: item.providerId || '',
+      enabled: item.enabled !== undefined ? item.enabled : true,
+      status: item.status || 'COMPLETE'
+    });
+    setEditModalityIdx(idx);
+    setShowAddModalityModal(true);
   };
 
   const handleDeleteModality = async (idx) => {
@@ -673,6 +702,14 @@ export const GeneralSettingsPage = () => {
                             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${srv.enabled ? 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200' : 'bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200'}`}
                           >
                             {srv.enabled ? 'Disable' : 'Enable'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleEditModality(idx)}
+                            className="p-1 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition cursor-pointer"
+                            title="Edit Modality"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
@@ -1328,9 +1365,9 @@ export const GeneralSettingsPage = () => {
           <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4 text-xs animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-teal-600" /> Add New Practice Modality
+                <Activity className="w-4 h-4 text-teal-600" /> {editModalityIdx !== null ? 'Edit Practice Modality' : 'Add New Practice Modality'}
               </h3>
-              <button type="button" onClick={() => setShowAddModalityModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+              <button type="button" onClick={() => { setShowAddModalityModal(false); setEditModalityIdx(null); setNewModality({ name: '', cptCode: '', fee: '', duration: '', template: '', providerId: '', enabled: true, status: 'COMPLETE' }); }} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
             </div>
             <form onSubmit={handleAddModality} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -1379,7 +1416,7 @@ export const GeneralSettingsPage = () => {
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t">
-                <button type="button" onClick={() => setShowAddModalityModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
+                <button type="button" onClick={() => { setShowAddModalityModal(false); setEditModalityIdx(null); setNewModality({ name: '', cptCode: '', fee: '', duration: '', template: '', providerId: '', enabled: true, status: 'COMPLETE' }); }} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700">Save Modality</button>
               </div>
             </form>

@@ -1,12 +1,15 @@
-// src/pages/admin/ProviderListPage.jsx
 import React, { useState, useEffect } from 'react';
 import { apiProviderService } from '../../services/api/apiProviderService';
+import { apiModalityService } from '../../services/api/apiModalityService';
+import { getAllICDCodes } from '../../services/api/apiIcdService';
 import { maskTaxId, maskNpi } from '../../utils/formatters';
 import { Shield, Eye, EyeOff, AlertTriangle, Edit3, Plus, X, Trash2 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 
 export const ProviderListPage = () => {
   const [providers, setProviders] = useState({});
+  const [modalitiesList, setModalitiesList] = useState([]);
+  const [icdCodesList, setIcdCodesList] = useState([]);
   const [showSensitive, setShowSensitive] = useState({});
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editProviderId, setEditProviderId] = useState(null);
@@ -50,9 +53,16 @@ export const ProviderListPage = () => {
   const [npi, setNpi] = useState('');
   const [renderingName, setRenderingName] = useState('');
   const [renderingCredentials, setRenderingCredentials] = useState('');
+  const [selectedDiagnoses, setSelectedDiagnoses] = useState([]);
 
   const loadProviders = () => {
     apiProviderService.getProviders().then(setProviders);
+    apiModalityService.getModalities().then(res => {
+      if (res) setModalitiesList(res);
+    }).catch(() => {});
+    getAllICDCodes().then(res => {
+      if (res) setIcdCodesList(res);
+    }).catch(() => {});
   };
 
   useEffect(() => {
@@ -84,6 +94,7 @@ export const ProviderListPage = () => {
     setNpi('');
     setRenderingName('');
     setRenderingCredentials('');
+    setSelectedDiagnoses([]);
     setIsAddModalOpen(true);
   };
 
@@ -112,6 +123,9 @@ export const ProviderListPage = () => {
     setRenderingName(rendering.name || '');
     setRenderingCredentials(rendering.credentials || '');
 
+    const diags = typeof prov.availableDiagnoses === 'string' ? JSON.parse(prov.availableDiagnoses || '[]') : (prov.availableDiagnoses || []);
+    setSelectedDiagnoses(diags.map(d => d.code));
+
     setIsAddModalOpen(true);
   };
 
@@ -135,7 +149,10 @@ export const ProviderListPage = () => {
       taxId,
       npi,
       renderingName,
-      renderingCredentials
+      renderingCredentials,
+      availableDiagnoses: icdCodesList
+        .filter(c => selectedDiagnoses.includes(c.code))
+        .map(c => ({ code: c.code, description: c.description }))
     };
     try {
       if (editProviderId) {
@@ -161,6 +178,7 @@ export const ProviderListPage = () => {
       setNpi('');
       setRenderingName('');
       setRenderingCredentials('');
+      setSelectedDiagnoses([]);
       
       // Reload
       loadProviders();
@@ -244,7 +262,24 @@ export const ProviderListPage = () => {
                       <span className="font-mono font-bold text-slate-900">{maskNpi(prov.identifiers?.npi || 'XXXXXXXXXX', isVisible)}</span>
                     </div>
                   </div>
-
+                  
+                  {/* System Settings Assigned Modality (Read-Only) */}
+                  {(() => {
+                    const assignedModality = modalitiesList.find(m => m.providerId === prov.id);
+                    if (assignedModality) {
+                      return (
+                        <div className="p-3 bg-teal-50/50 border border-teal-100 rounded-xl space-y-1.5 mt-2">
+                          <p className="text-[10px] font-bold text-teal-800 uppercase">Assigned Service Modality</p>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-800">{assignedModality.name}</span>
+                            <span className="font-mono font-bold text-teal-700">{assignedModality.cptCode} / {assignedModality.fee}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500">Assigned via General Settings</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
 
                 </div>
 
@@ -450,7 +485,52 @@ export const ProviderListPage = () => {
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-3">
+              {editProviderId && (() => {
+                const assignedModality = modalitiesList.find(m => m.providerId === editProviderId);
+                if (assignedModality) {
+                  return (
+                    <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 mt-3">
+                      <h3 className="text-xs font-bold text-teal-800 mb-1">Assigned Service Modality</h3>
+                      <p className="text-[11px] text-teal-700 mb-2">This provider is currently assigned to a Modality in System Settings.</p>
+                      <div className="flex justify-between text-xs bg-white rounded-md p-2 border border-teal-100">
+                        <span className="font-bold text-slate-700">{assignedModality.name}</span>
+                        <span className="font-mono font-bold text-teal-600">{assignedModality.cptCode} | {assignedModality.fee}</span>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              <div className="border-t border-slate-100 pt-3 mt-4">
+                <h3 className="text-xs font-bold text-slate-700 mb-2">Assigned ICD-10 Diagnoses</h3>
+                <div className="max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-slate-50 space-y-1">
+                  {icdCodesList.length === 0 ? (
+                    <p className="text-[10px] text-slate-500 p-1">No ICD-10 codes found in System Settings.</p>
+                  ) : (
+                    icdCodesList.map(icd => (
+                      <label key={icd.id} className="flex items-center gap-2 p-1.5 hover:bg-white rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="w-3.5 h-3.5 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer"
+                          checked={selectedDiagnoses.includes(icd.code)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedDiagnoses([...selectedDiagnoses, icd.code]);
+                            } else {
+                              setSelectedDiagnoses(selectedDiagnoses.filter(code => code !== icd.code));
+                            }
+                          }}
+                        />
+                        <span className="text-[11px] font-bold text-slate-800">{icd.code}</span>
+                        <span className="text-[11px] text-slate-500 truncate">{icd.description}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-3 mt-4">
                 <h3 className="text-xs font-bold text-slate-700 mb-2">Identifiers & Rendering Practitioner</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>

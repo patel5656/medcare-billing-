@@ -3,6 +3,7 @@ import { Modal } from './Modal';
 import { apiBillingService } from '../../services/api/apiBillingService';
 import { apiCaseService } from '../../services/api/apiCaseService';
 import { apiProviderService } from '../../services/api/apiProviderService';
+import { apiModalityService } from '../../services/api/apiModalityService';
 import { useUIStore } from '../../store/uiStore';
 import { Save, Receipt } from 'lucide-react';
 
@@ -14,6 +15,7 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
   const [isLoading, setIsLoading] = useState(false);
   const [casesList, setCasesList] = useState([]);
   const [providersList, setProvidersList] = useState([]);
+  const [modalitiesList, setModalitiesList] = useState([]);
 
   const [formData, setFormData] = useState({
     providerId: '',
@@ -54,16 +56,21 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
         }
       }).catch(() => { });
 
-      apiProviderService.getProviders().then(res => {
-        if (res) {
-          const list = Object.values(res);
-          setProvidersList(list);
-          
-          // Auto-select provider if none selected
-          if (list.length > 0) {
-            const activeProv = (activeProviderFilter && activeProviderFilter !== 'ALL') ? activeProviderFilter : list[0].id;
-            handleProviderChange(activeProv, list);
-          }
+      apiModalityService.getModalities().then(mRes => {
+        if (mRes) {
+          setModalitiesList(mRes);
+          apiProviderService.getProviders().then(res => {
+            if (res) {
+              const list = Object.values(res);
+              setProvidersList(list);
+              
+              // Auto-select provider if none selected
+              if (list.length > 0) {
+                const activeProv = (activeProviderFilter && activeProviderFilter !== 'ALL') ? activeProviderFilter : list[0].id;
+                handleProviderChange(activeProv, list, mRes);
+              }
+            }
+          }).catch(() => { });
         }
       }).catch(() => { });
     }
@@ -71,7 +78,7 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
 
   const set = (field, val) => setFormData(p => ({ ...p, [field]: val }));
 
-  const handleProviderChange = (pid, pList = providersList) => {
+  const handleProviderChange = (pid, pList = providersList, mList = modalitiesList) => {
     const prov = pList.find(p => p.id === pid);
     
     let cpt = '';
@@ -80,11 +87,12 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
     let diagnoses = '';
 
     if (prov) {
-      // Pick the first available service as default
-      if (prov.availableServices && prov.availableServices.length > 0) {
-        cpt = prov.availableServices[0].code || '';
-        desc = prov.availableServices[0].description || '';
-        fee = prov.availableServices[0].defaultCharge ? prov.availableServices[0].defaultCharge.toString() : '';
+      // Find the modality assigned to this provider in system settings
+      const assignedModality = mList.find(m => m.providerId === pid);
+      if (assignedModality) {
+        cpt = assignedModality.cptCode || '';
+        desc = assignedModality.name || '';
+        fee = assignedModality.fee ? assignedModality.fee.toString().replace(/[^0-9.]/g, '') : '';
       }
       
       // Auto-fill ICD codes from provider's available diagnoses
