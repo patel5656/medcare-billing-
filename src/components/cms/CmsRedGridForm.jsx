@@ -494,12 +494,12 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
                 </div>
               </div>
               <div className="flex">
-                <div className="w-[200px] p-0.5 border-r border-[#b91c1c] flex flex-col justify-between">
+                <div className="w-[155px] p-0.5 border-r border-[#b91c1c] flex flex-col justify-between">
                   <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase">
-                    <span>CITY:</span> <FieldInput defaultValue={c(claim.box7City || claim.box5City || '')} readOnly={readOnly} className="w-[130px] inline-block text-[10px]" />
+                    <span>CITY:</span> <FieldInput defaultValue={c(claim.box7City || claim.box5City || '')} readOnly={readOnly} className="w-[95px] inline-block text-[10px]" />
                   </div>
                   <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase mt-0.5">
-                    <span>ZIP:</span> <FieldInput defaultValue={c(claim.box7Zip || claim.box5Zip || '')} readOnly={readOnly} className="w-[130px] inline-block text-[10px]" />
+                    <span>ZIP:</span> <FieldInput defaultValue={c(claim.box7Zip || claim.box5Zip || '')} readOnly={readOnly} className="w-[95px] inline-block text-[10px]" />
                   </div>
                 </div>
                 <div className="flex-1 p-0.5 flex flex-col justify-between">
