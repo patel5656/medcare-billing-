@@ -38,7 +38,7 @@ export const TherapistDashboard = () => {
 
   const vitalsCompliance = therapeuticNotes.length > 0 
     ? Math.round((verifiedVitalsCount / therapeuticNotes.length) * 100) 
-    : 100;
+    : 0;
 
   return (
     <div className="space-y-6">
