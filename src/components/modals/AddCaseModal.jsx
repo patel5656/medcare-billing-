@@ -145,6 +145,9 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
       insuranceAdjusterPhone: patientObj.insuranceAdjusterPhone || patientObj.adjusterPhone || prev.insuranceAdjusterPhone || '',
       referringProviderName: patientObj.referringProvider || prev.referringProviderName || '',
       referringProviderNpi: patientObj.referringProviderNpi || prev.referringProviderNpi || '',
+      assignedProviderIds: Array.isArray(patientObj.assignedProviderIds) && patientObj.assignedProviderIds.length > 0
+        ? patientObj.assignedProviderIds
+        : prev.assignedProviderIds,
       caseNotes: patientObj.patientNotes || prev.caseNotes || ''
     }));
   };

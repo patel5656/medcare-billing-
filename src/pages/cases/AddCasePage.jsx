@@ -114,6 +114,9 @@ export const AddCasePage = () => {
       adjusterPhone: patientObj.insuranceAdjusterPhone || patientObj.adjusterPhone || prev.adjusterPhone || '',
       referringProviderName: patientObj.referringProvider || patientObj.referringProviderName || prev.referringProviderName || '',
       referringProviderNpi: patientObj.referringProviderNpi || prev.referringProviderNpi || '',
+      assignedProviderIds: Array.isArray(patientObj.assignedProviderIds) && patientObj.assignedProviderIds.length > 0
+        ? patientObj.assignedProviderIds
+        : prev.assignedProviderIds,
       caseNotes: patientObj.patientNotes || prev.caseNotes || ''
     }));
   };
