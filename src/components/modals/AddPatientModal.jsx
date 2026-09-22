@@ -221,7 +221,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
           insuranceAdjusterPhone: patientToEdit.insuranceAdjusterPhone || '',
           secondaryInsuranceCompany: patientToEdit.secondaryInsuranceCompany || '',
           secondaryPolicyNumber: patientToEdit.secondaryPolicyNumber || '',
-          assignedProviderIds: Array.isArray(patientToEdit.assignedProviderIds) ? patientToEdit.assignedProviderIds : ['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor'],
+          assignedProviderIds: Array.isArray(patientToEdit.assignedProviderIds) ? patientToEdit.assignedProviderIds : [],
           referringAttorney: patientToEdit.referringAttorney || '',
           attorneyCaseManager: patientToEdit.attorneyCaseManager || '',
           referringProvider: patientToEdit.referringProvider || '',

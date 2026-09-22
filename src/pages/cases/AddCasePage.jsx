@@ -72,7 +72,7 @@ const INITIAL_CASE_STATE = {
   umAvailable: false,
   referringProviderName: '',
   referringProviderNpi: '',
-  assignedProviderIds: ['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor']
+  assignedProviderIds: []
 };
 
 export const AddCasePage = () => {
