@@ -161,6 +161,12 @@ const PostPaymentModal = ({ onClose, onSuccess }) => {
       return;
     }
 
+    const currentBalance = Number(selectedStatement?.totals?.balanceDue ?? selectedStatement?.balanceDue ?? 0);
+    if (Number(form.amount) > currentBalance) {
+      addToast(`Payment amount ($${Number(form.amount).toFixed(2)}) cannot exceed current balance due ($${currentBalance.toFixed(2)}).`, 'warning');
+      return;
+    }
+
     setSaving(true);
     try {
       await apiBillingService.postPayment(
@@ -178,7 +184,7 @@ const PostPaymentModal = ({ onClose, onSuccess }) => {
       onClose();
     } catch (err) {
       console.error('Error posting payment:', err);
-      addToast('Failed to post payment to database', 'error');
+      addToast(err?.message || 'Failed to post payment to database', 'error');
     } finally {
       setSaving(false);
     }

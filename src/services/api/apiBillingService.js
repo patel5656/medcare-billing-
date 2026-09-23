@@ -60,7 +60,10 @@ export const apiBillingService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error('Failed to post payment');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to post payment');
+    }
     return res.json();
   },
 
