@@ -1,10 +1,21 @@
 import React, { useState, useEffect } from 'react';
 
-const InlineInput = ({ defaultValue = '', readOnly = false, className = '' }) => {
+const InlineInput = ({ defaultValue = '', readOnly = false, className = '', multiline = false }) => {
   const [val, setVal] = useState(defaultValue);
   useEffect(() => { setVal(defaultValue); }, [defaultValue]);
 
-  if (readOnly) return <span className={className}>{val}</span>;
+  if (readOnly) return <span className={`break-words whitespace-normal ${className}`}>{val}</span>;
+
+  if (multiline) {
+    return (
+      <textarea
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        rows={2}
+        className={`bg-transparent hover:bg-amber-100/60 focus:bg-amber-100 focus:ring-1 focus:ring-teal-600 rounded px-1 outline-none text-slate-900 font-mono font-bold cursor-text transition print:border-none print:bg-transparent print:p-0 print:shadow-none print:text-black resize-none w-full ${className}`}
+      />
+    );
+  }
 
   return (
     <input
@@ -56,24 +67,51 @@ export const AnikLaserProcedureForm = ({
 
   const procedureDos = getProcedureDos();
 
+  // Find saved ANIK_LASER clinical note
+  const notes = !blankMode && Array.isArray(packetData?.clinicalNotes) ? packetData.clinicalNotes : [];
+  const anikNote = notes.find(n => {
+    if (!n) return false;
+    const t = (n.type || n.noteType || '').toUpperCase();
+    const p = (n.providerId || '').toLowerCase();
+    const title = (n.title || '').toUpperCase();
+    return t === 'ANIK_LASER' || t === 'ANIK' || p === 'prov-anik' || title.includes('ANIK');
+  });
+  const noteContent = anikNote ? (typeof anikNote.content === 'string' ? (() => { try { return JSON.parse(anikNote.content); } catch (e) { return {}; } })() : (anikNote.content || {})) : {};
+
   // Patient Demographics
   const patientName = blankMode || !packetData ? '' : (packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '');
   const patientDob = blankMode || !packetData ? '' : (packetData.patientDob || packetData.patient?.dob || packetData.dob || '');
   const patientSex = blankMode || !packetData ? '' : (packetData.patientSex || packetData.patient?.sex || packetData.sex || '');
 
   // Vitals & Clinical Info
-  const allergies = blankMode || !procedureDos ? '' : (procedureData?.allergies || packetData?.allergies || '');
-  const bp = blankMode || !procedureDos ? '' : (procedureData?.bp || procedureData?.vitals?.bp || packetData?.vitals?.bp || '');
-  const hr = blankMode || !procedureDos ? '' : (procedureData?.hr || procedureData?.vitals?.hr || packetData?.vitals?.hr || '');
-  const sessions = blankMode || !procedureDos ? '' : (procedureData?.sessions !== undefined && procedureData?.sessions !== null ? String(procedureData.sessions) : (packetData?.sessions !== undefined && packetData?.sessions !== null ? String(packetData.sessions) : ''));
+  const rawAllergies = blankMode ? '' : (
+    procedureData?.allergies || 
+    procedureData?.knownAllergies || 
+    noteContent?.allergies ||
+    noteContent?.knownAllergies ||
+    packetData?.allergies || 
+    packetData?.knownAllergies || 
+    packetData?.patient?.knownAllergies || 
+    packetData?.patient?.allergies || 
+    ''
+  );
+  const allergies = Array.isArray(rawAllergies) 
+    ? rawAllergies.join(', ') 
+    : String(rawAllergies || '').replace(/,\s*$/, '').trim();
+  const bp = blankMode ? '' : (procedureData?.bp || procedureData?.vitals?.bp || noteContent?.bp || packetData?.vitals?.bp || packetData?.patient?.bp || packetData?.bp || '');
+  const hr = blankMode ? '' : (procedureData?.hr || procedureData?.vitals?.hr || noteContent?.hr || packetData?.vitals?.hr || packetData?.patient?.hr || packetData?.hr || '');
+  const sessions = blankMode ? '' : (procedureData?.sessions !== undefined && procedureData?.sessions !== null ? String(procedureData.sessions) : (packetData?.sessions !== undefined && packetData?.sessions !== null ? String(packetData.sessions) : ''));
 
   // Nerve Block & Treatment Areas
-  const nerveBlockVal = blankMode || !procedureDos ? '' : (procedureData?.nerveBlockInjections || procedureData?.nerveBlock || packetData?.nerveBlockInjections || '');
+  const nerveBlockVal = blankMode ? '' : (procedureData?.nerveBlockInjections || procedureData?.nerveBlock || packetData?.nerveBlockInjections || '');
   
   const getTreatmentAreas = () => {
-    if (blankMode || !packetData || !procedureDos) return '';
+    if (blankMode || !packetData) return '';
     if (procedureData?.treatmentAreas || procedureData?.treatmentArea) {
       return procedureData.treatmentAreas || procedureData.treatmentArea;
+    }
+    if (noteContent?.treatmentAreas || noteContent?.treatmentArea) {
+      return noteContent.treatmentAreas || noteContent.treatmentArea;
     }
     if (packetData.treatmentAreas || packetData.treatmentArea) {
       return packetData.treatmentAreas || packetData.treatmentArea;
@@ -86,10 +124,10 @@ export const AnikLaserProcedureForm = ({
   const treatmentAreas = getTreatmentAreas();
 
   // Laser Parameters
-  const wavelength = blankMode || !procedureDos ? '' : (procedureData?.wavelength || packetData?.laserParameters?.wavelength || '');
-  const totalMins = blankMode || !procedureDos ? '' : (procedureData?.totalMins || procedureData?.duration || packetData?.laserParameters?.totalMins || '');
-  const dose = blankMode || !procedureDos ? '' : (procedureData?.dose || packetData?.laserParameters?.dose || '');
-  const totalEnergy = blankMode || !procedureDos ? '' : (procedureData?.totalEnergy || packetData?.laserParameters?.totalEnergy || '');
+  const wavelength = blankMode ? '' : (procedureData?.wavelength || noteContent?.wavelength || packetData?.laserParameters?.wavelength || '');
+  const totalMins = blankMode ? '' : (procedureData?.totalMins || procedureData?.duration || noteContent?.totalMins || noteContent?.duration || packetData?.laserParameters?.totalMins || '');
+  const dose = blankMode ? '' : (procedureData?.dose || noteContent?.dose || packetData?.laserParameters?.dose || '');
+  const totalEnergy = blankMode ? '' : (procedureData?.totalEnergy || noteContent?.totalEnergy || packetData?.laserParameters?.totalEnergy || '');
 
   // Findings / Observational Checks
   const findings = blankMode || !procedureDos ? {} : (procedureData?.findings || procedureData?.observationalFindings || packetData?.findings || {});
@@ -175,11 +213,15 @@ export const AnikLaserProcedureForm = ({
           Intro: Patient presents for laser therapy treatment. The patient has been advised of the risks and the benefits of the procedure and has signed consent.
         </p>
 
-        <div className="flex justify-between items-center text-xs py-1 border-b border-slate-300">
-          <div><strong>ALLERGIES:</strong> <InlineInput defaultValue={allergies} readOnly={readOnly} className="w-20" /></div>
-          <div><strong>BP:</strong> <InlineInput defaultValue={bp} readOnly={readOnly} className="w-24" /></div>
-          <div><strong>HR:</strong> <InlineInput defaultValue={hr} readOnly={readOnly} className="w-16" /></div>
-          <div><strong>SESSIONS:</strong> <InlineInput defaultValue={sessions} readOnly={readOnly} className="w-8 border border-slate-800 px-1 text-center font-bold" /></div>
+        <div className="flex justify-between items-start text-xs py-1 border-b border-slate-300 gap-2">
+          <div className="flex-1 min-w-0 pr-2">
+            <strong>ALLERGIES:</strong> <InlineInput defaultValue={allergies} readOnly={readOnly} multiline className="font-mono font-bold" />
+          </div>
+          <div className="flex items-center gap-4 shrink-0">
+            <div><strong>BP:</strong> <InlineInput defaultValue={bp} readOnly={readOnly} className="w-24" /></div>
+            <div><strong>HR:</strong> <InlineInput defaultValue={hr} readOnly={readOnly} className="w-16" /></div>
+            <div><strong>SESSIONS:</strong> <InlineInput defaultValue={sessions} readOnly={readOnly} className="w-8 border border-slate-800 px-1 text-center font-bold" /></div>
+          </div>
         </div>
 
         {/* -- 3-COLUMN FINDINGS & ANATOMICAL BODY DIAGRAM -- */}

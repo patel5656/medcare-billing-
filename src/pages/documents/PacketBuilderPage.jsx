@@ -48,9 +48,25 @@ export const PacketBuilderPage = () => {
     }).catch(() => {});
   }, []);
 
-  // Re-fetch documents whenever selectedCaseId changes
+  // Re-fetch documents and fresh case details whenever selectedCaseId changes
   useEffect(() => {
     if (!selectedCaseId) return;
+
+    // Refresh case details to get latest clinical notes
+    apiCaseService.getCaseById(selectedCaseId).then(freshCase => {
+      if (freshCase) {
+        setCases(prev => {
+          const idx = prev.findIndex(c => c.id === selectedCaseId || c.caseId === selectedCaseId);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = freshCase;
+            return updated;
+          }
+          return [...prev, freshCase];
+        });
+      }
+    }).catch(console.error);
+
     setDocsLoading(true);
     setDocs([]);
     setSelectedIds([]);

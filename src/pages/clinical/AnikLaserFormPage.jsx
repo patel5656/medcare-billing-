@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { apiClinicalNoteService as mockClinicalNoteService } from '../../services/api/apiClinicalNoteService';
 import { apiPatientService } from '../../services/api/apiPatientService';
+import { apiCaseService } from '../../services/api/apiCaseService';
 import { useUIStore } from '../../store/uiStore';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Award, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Save, Award, CheckCircle2, Activity } from 'lucide-react';
 
 export const AnikLaserFormPage = () => {
   const [patients, setPatients] = useState([]);
+  const [activeCaseId, setActiveCaseId] = useState('');
   const [formData, setFormData] = useState({
     patientId: '',
     patientName: '',
@@ -24,6 +26,38 @@ export const AnikLaserFormPage = () => {
   const { addToast } = useUIStore();
   const navigate = useNavigate();
 
+  const fetchPreviousVitals = async (id) => {
+    try {
+      const notes = await mockClinicalNoteService.getNotes({ patientId: id });
+      if (notes && notes.length > 0) {
+        const lastNoteWithVitals = notes.find(n => n.content && (n.content.bp || n.content.hr));
+        if (lastNoteWithVitals && lastNoteWithVitals.content) {
+          setFormData(prev => ({
+            ...prev,
+            bp: lastNoteWithVitals.content.bp || prev.bp,
+            hr: lastNoteWithVitals.content.hr || prev.hr
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch previous vitals', err);
+    }
+  };
+
+  const fetchPatientCases = async (id) => {
+    try {
+      const patientCases = await apiCaseService.getCases({ patientId: id });
+      if (Array.isArray(patientCases) && patientCases.length > 0) {
+        setActiveCaseId(patientCases[0].id || patientCases[0].caseId || '');
+      } else {
+        const p = patients.find(x => x.id === id);
+        setActiveCaseId(p?.caseId || '');
+      }
+    } catch (err) {
+      console.error('Failed to fetch patient cases', err);
+    }
+  };
+
   useEffect(() => {
     apiPatientService.getPatients().then(res => {
       const raw = Array.isArray(res) ? res : (res?.patients || []);
@@ -34,6 +68,8 @@ export const AnikLaserFormPage = () => {
           patientId: raw[0].id,
           patientName: `${raw[0].firstName} ${raw[0].lastName}`.trim()
         }));
+        fetchPreviousVitals(raw[0].id);
+        fetchPatientCases(raw[0].id);
       }
     }).catch(console.error);
   }, []);
@@ -45,7 +81,7 @@ export const AnikLaserFormPage = () => {
       const note = await mockClinicalNoteService.createNote({
         patientId: formData.patientId || 'pat-001',
         patientName: formData.patientName || 'Demo Patient',
-        caseId: 'case-001',
+        caseId: activeCaseId || 'case-001',
         providerId: 'prov-anik',
         providerName: 'ANIK Laser Therapy',
         type: 'ANIK_LASER',
@@ -88,7 +124,15 @@ export const AnikLaserFormPage = () => {
               onChange={(e) => {
                 const p = patients.find(x => x.id === e.target.value);
                 if (p) {
-                  setFormData({ ...formData, patientId: p.id, patientName: `${p.firstName} ${p.lastName}`.trim() });
+                  setFormData(prev => ({
+                    ...prev,
+                    patientId: p.id,
+                    patientName: `${p.firstName} ${p.lastName}`.trim(),
+                    bp: '',
+                    hr: ''
+                  }));
+                  fetchPreviousVitals(p.id);
+                  fetchPatientCases(p.id);
                 }
               }}
               className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface font-bold text-secondary-container"
@@ -97,6 +141,36 @@ export const AnikLaserFormPage = () => {
                 <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
               ))}
             </select>
+          </div>
+        </div>
+
+        {/* Vitals Check */}
+        <div className="space-y-4">
+          <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-2 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-secondary-container" /> Pre-Procedure Vitals Verification
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">Blood Pressure (BP) *</label>
+              <input
+                type="text"
+                required
+                value={formData.bp}
+                onChange={(e) => setFormData({ ...formData, bp: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">Heart Rate (HR) *</label>
+              <input
+                type="text"
+                required
+                value={formData.hr}
+                onChange={(e) => setFormData({ ...formData, hr: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface font-mono"
+              />
+            </div>
           </div>
         </div>
 
