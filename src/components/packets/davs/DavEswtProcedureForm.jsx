@@ -91,6 +91,44 @@ export const DavEswtProcedureForm = ({
 
   const currentInternalPage = formPage || (pageIndex + 1);
 
+  const getInjuryDots = () => {
+    if (!isShow) return { front: [], back: [] };
+    const injuryAreas = packetData?.selectedInjuryAreas || packetData?.patient?.selectedInjuryAreas || [];
+    const areas = Array.isArray(injuryAreas) ? injuryAreas : [];
+    
+    const dots = { front: [], back: [] };
+    const dotStyle = "fill-emerald-500/60 stroke-emerald-700 stroke-1";
+
+    if (areas.includes('Shoulder / Rotator Cuff')) {
+      dots.front.push(<circle key="f-shoulder-l" cx="25" cy="42" r="4" className={dotStyle} />);
+      dots.front.push(<circle key="f-shoulder-r" cx="75" cy="42" r="4" className={dotStyle} />);
+      dots.back.push(<circle key="b-shoulder-l" cx="25" cy="42" r="4" className={dotStyle} />);
+      dots.back.push(<circle key="b-shoulder-r" cx="75" cy="42" r="4" className={dotStyle} />);
+    }
+    if (areas.includes('Lower Back / Lumbar')) {
+      dots.back.push(<circle key="b-lower-back" cx="50" cy="98" r="4" className={dotStyle} />);
+    }
+    if (areas.includes('Neck / Cervical Spine')) {
+      dots.front.push(<circle key="f-neck" cx="50" cy="35" r="4" className={dotStyle} />);
+      dots.back.push(<circle key="b-neck" cx="50" cy="35" r="4" className={dotStyle} />);
+    }
+    if (areas.includes('Knee / Lower Extremity')) {
+      dots.front.push(<circle key="f-knee-l" cx="30" cy="135" r="4" className={dotStyle} />);
+      dots.front.push(<circle key="f-knee-r" cx="70" cy="135" r="4" className={dotStyle} />);
+    }
+    if (areas.includes('Mid Back / Thoracic')) {
+      dots.back.push(<circle key="b-mid-back" cx="50" cy="65" r="4" className={dotStyle} />);
+    }
+    if (areas.includes('Headaches / Concussion')) {
+      dots.front.push(<circle key="f-head" cx="50" cy="18" r="4" className={dotStyle} />);
+      dots.back.push(<circle key="b-head" cx="50" cy="18" r="4" className={dotStyle} />);
+    }
+
+    return dots;
+  };
+
+  const anatomicalDots = getInjuryDots();
+
   return (
     <div
       className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-4 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:shadow-none print:border-none"
@@ -152,7 +190,7 @@ export const DavEswtProcedureForm = ({
                   <path d="M 36 60 Q 50 66 64 60" className="stroke-1 stroke-slate-400" />
                   <path d="M 40 85 Q 50 90 60 85" className="stroke-1 stroke-slate-400" />
                   <path d="M 32 135 L 30 190 Q 28 205 24 212 L 42 212 L 46 190 L 50 145 L 54 190 L 58 212 L 76 212 Q 72 205 70 190 L 68 135 Z" />
-                  {isShow && <circle cx="70" cy="205" r="4" className="fill-emerald-500/60 stroke-emerald-700 stroke-1" />}
+                  {anatomicalDots.front}
                 </svg>
                 <span className="text-[9px] font-bold text-slate-500 mt-1">Right (Front)</span>
               </div>
@@ -169,8 +207,7 @@ export const DavEswtProcedureForm = ({
                   <path d="M 46 38 Q 20 44 14 75 L 10 120 Q 12 126 18 122 L 24 82 L 30 115 L 30 135 L 70 135 L 70 115 L 76 82 L 82 122 Q 88 126 90 120 L 86 75 Q 80 44 54 38 Z" />
                   <path d="M 30 135 Q 50 148 70 135" className="stroke-1 stroke-slate-400" />
                   <path d="M 32 135 L 30 190 Q 28 205 24 212 L 42 212 L 46 190 L 50 145 L 54 190 L 58 212 L 76 212 Q 72 205 70 190 L 68 135 Z" />
-                  {isShow && <circle cx="50" cy="42" r="4" className="fill-emerald-500/60 stroke-emerald-700 stroke-1" />}
-                  {isShow && <circle cx="50" cy="98" r="4" className="fill-emerald-500/60 stroke-emerald-700 stroke-1" />}
+                  {anatomicalDots.back}
                 </svg>
                 <span className="text-[9px] font-bold text-slate-500 mt-1">Left (Back)</span>
               </div>
