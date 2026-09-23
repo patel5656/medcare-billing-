@@ -8,7 +8,7 @@ export const INITIAL_PROVIDER_CONFIGS = {
     serviceCategory: 'Pain Management Consultation',
     status: 'ACTIVE',
     isPlaceholder: false,
-    cptCode: '99204 (Confirmed)',
+    cptCode: '99204',
     fee: '$1,214.00',
     address: {
       street: '10101 Harwin Dr.',
@@ -80,7 +80,7 @@ export const INITIAL_PROVIDER_CONFIGS = {
     serviceCategory: 'Shockwave Therapy (ESWT)',
     status: 'ACTIVE',
     isPlaceholder: false,
-    cptCode: '0101T (Confirmed)',
+    cptCode: '0101T',
     fee: '$1,000.00',
     address: {
       street: '10101 Harwin Dr.',
@@ -153,7 +153,7 @@ export const INITIAL_PROVIDER_CONFIGS = {
     serviceCategory: 'Laser Therapy (HILT)',
     status: 'ACTIVE',
     isPlaceholder: false,
-    cptCode: '97039 (Confirmed)',
+    cptCode: '97039',
     fee: '$2,000.00',
     address: {
       street: '10101 Harwin Dr.',
