@@ -123,6 +123,14 @@ export const DavEswtProcedureForm = ({
       dots.front.push(<circle key="f-head" cx="50" cy="18" r="4" className={dotStyle} />);
       dots.back.push(<circle key="b-head" cx="50" cy="18" r="4" className={dotStyle} />);
     }
+    if (areas.includes('Whiplash / Myofascial Pain')) {
+      dots.back.push(<circle key="b-whiplash-neck" cx="50" cy="35" r="4" className={dotStyle} />);
+      dots.back.push(<circle key="b-whiplash-upper" cx="50" cy="48" r="4" className={dotStyle} />);
+    }
+    if (areas.includes('Anxiety / PTSD Symptoms')) {
+      dots.front.push(<circle key="f-anxiety" cx="50" cy="18" r="4" className={dotStyle} />);
+      dots.back.push(<circle key="b-anxiety" cx="50" cy="18" r="4" className={dotStyle} />);
+    }
 
     return dots;
   };
