@@ -26,6 +26,32 @@ export const DavsEswtFormPage = () => {
   const { addToast } = useUIStore();
   const navigate = useNavigate();
 
+  const fetchPreviousVitals = async (id) => {
+    try {
+      const notes = await apiClinicalNoteService.getNotes({ patientId: id });
+      if (notes && notes.length > 0) {
+        const lastNoteWithVitals = notes.find(n => n.content && Object.keys(n.content).length > 0);
+        if (lastNoteWithVitals && lastNoteWithVitals.content) {
+          setFormData(prev => ({
+            ...prev,
+            bp: lastNoteWithVitals.content.bp || prev.bp,
+            hr: lastNoteWithVitals.content.hr || prev.hr,
+            temperature: lastNoteWithVitals.content.temperature || prev.temperature,
+            treatmentAreas: lastNoteWithVitals.content.treatmentAreas || prev.treatmentAreas,
+            barSetting: lastNoteWithVitals.content.barSetting || prev.barSetting,
+            hzSetting: lastNoteWithVitals.content.hzSetting || prev.hzSetting,
+            dose: lastNoteWithVitals.content.dose || prev.dose,
+            totalWaves: lastNoteWithVitals.content.totalWaves || prev.totalWaves,
+            bltCream: lastNoteWithVitals.content.bltCream || prev.bltCream,
+            reaction: lastNoteWithVitals.content.reaction || prev.reaction
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch previous vitals', err);
+    }
+  };
+
   useEffect(() => {
     apiPatientService.getPatients().then(res => {
       const raw = Array.isArray(res) ? res : (res?.patients || []);
@@ -36,6 +62,7 @@ export const DavsEswtFormPage = () => {
           patientId: raw[0].id,
           patientName: `${raw[0].firstName} ${raw[0].lastName}`.trim()
         }));
+        fetchPreviousVitals(raw[0].id);
       }
     }).catch(console.error);
   }, []);
@@ -90,7 +117,22 @@ export const DavsEswtFormPage = () => {
               onChange={(e) => {
                 const p = patients.find(x => x.id === e.target.value);
                 if (p) {
-                  setFormData({ ...formData, patientId: p.id, patientName: `${p.firstName} ${p.lastName}`.trim() });
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    patientId: p.id, 
+                    patientName: `${p.firstName} ${p.lastName}`.trim(),
+                    bp: '',
+                    hr: '',
+                    temperature: '',
+                    treatmentAreas: '',
+                    barSetting: '',
+                    hzSetting: '',
+                    dose: '',
+                    totalWaves: '',
+                    bltCream: 'YES',
+                    reaction: ''
+                  }));
+                  fetchPreviousVitals(p.id);
                 }
               }}
               className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface font-bold text-secondary-container"
