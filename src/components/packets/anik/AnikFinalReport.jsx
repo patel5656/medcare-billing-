@@ -14,19 +14,41 @@ export const AnikFinalReport = ({
 }) => {
   const settings = useSettings();
 
+  const isShow = !blankMode && packetData;
+  const notes = isShow && Array.isArray(packetData?.clinicalNotes) ? packetData.clinicalNotes : [];
+  const anikNote = notes.find(n => {
+    if (!n) return false;
+    const t = (n.noteType || n.type || '').toUpperCase();
+    const p = (n.providerId || '').toLowerCase();
+    const title = (n.title || '').toUpperCase();
+    return t === 'ANIK_LASER' || t === 'ANIK' || p === 'prov-anik' || title.includes('ANIK');
+  });
+  const noteContent = anikNote ? (typeof anikNote.content === 'string' ? (() => { try { return JSON.parse(anikNote.content); } catch (e) { return {}; } })() : (anikNote.content || {})) : {};
+
   // Patient Demographics
-  const patientName = blankMode || !packetData ? '' : (packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '');
+  const patientName = !isShow ? '' : (packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '');
 
   // Discharge Date
   const getDischargeDate = () => {
-    if (blankMode || !packetData) return '';
-    return packetData.dischargeDate || packetData.dischargeDos || packetData.finalDos || packetData.finalServiceDate || '';
+    if (!isShow) return '';
+    if (packetData.dischargeDate || packetData.dischargeDos || packetData.finalDos || packetData.finalServiceDate) {
+      return packetData.dischargeDate || packetData.dischargeDos || packetData.finalDos || packetData.finalServiceDate;
+    }
+    const lines = (serviceLines && serviceLines.length > 0)
+      ? serviceLines
+      : (packetData?.serviceLines || packetData?.items || []);
+    if (Array.isArray(lines) && lines.length > 0) {
+      const dates = lines.map(l => l.dos || l.dateOfService || l.date).filter(Boolean);
+      if (dates.length > 0) return dates[dates.length - 1];
+    }
+    if (dos) return dos;
+    return '';
   };
   const dischargeDate = getDischargeDate();
 
   // Total Sessions & Financial Total
   const getTotalSessionsText = () => {
-    if (blankMode || !packetData) return '';
+    if (!isShow) return '';
     
     const rawSessions = packetData.totalSessionsCompleted !== undefined && packetData.totalSessionsCompleted !== null
       ? packetData.totalSessionsCompleted
@@ -53,28 +75,28 @@ export const AnikFinalReport = ({
 
   // Outcome / MMI Status
   const getOutcomeText = () => {
-    if (blankMode || !packetData) return '';
+    if (!isShow) return '';
     return packetData.dischargeOutcome || packetData.outcome || packetData.mmiStatus || packetData.finalReport?.outcome || packetData.finalReport?.mmiStatus || '';
   };
   const outcomeText = getOutcomeText();
 
   // Section 1: Summary of Treatment Completed
   const getTreatmentSummaryText = () => {
-    if (blankMode || !packetData) return '';
-    return packetData.treatmentSummary || packetData.summaryOfTreatment || packetData.finalReport?.treatmentSummary || packetData.dischargeSummary || packetData.completedTreatmentSummary || '';
+    if (!isShow) return '';
+    return noteContent.comments || packetData.treatmentSummary || packetData.summaryOfTreatment || packetData.finalReport?.treatmentSummary || packetData.dischargeSummary || packetData.completedTreatmentSummary || '';
   };
   const treatmentSummaryText = getTreatmentSummaryText();
 
   // Section 2: Objective Re-examination Findings
   const getReexamFindingsText = () => {
-    if (blankMode || !packetData) return '';
+    if (!isShow) return '';
     return packetData.reexaminationFindings || packetData.objectiveReexamFindings || packetData.finalReport?.reexaminationFindings || packetData.finalReport?.objectiveFindings || packetData.dischargeExamFindings || '';
   };
   const reexamFindingsText = getReexamFindingsText();
 
   // Section 3: Discharge Impression & Permanent Impairment
   const getDischargeImpressionText = () => {
-    if (blankMode || !packetData) return '';
+    if (!isShow) return '';
     if (packetData.dischargeImpression || packetData.permanentImpairment) {
       return [packetData.dischargeImpression, packetData.permanentImpairment].filter(Boolean).join(' ');
     }
@@ -87,7 +109,7 @@ export const AnikFinalReport = ({
 
   // Section 4: Home Exercise Program & Future Care
   const getHomeExerciseProgramText = () => {
-    if (blankMode || !packetData) return '';
+    if (!isShow) return '';
     if (packetData.homeExerciseProgram || packetData.futureCare || packetData.hep) {
       return [packetData.homeExerciseProgram || packetData.hep, packetData.futureCare].filter(Boolean).join(' ');
     }
@@ -100,18 +122,18 @@ export const AnikFinalReport = ({
 
   // Section 5: Final Billing & Clinical Sign-Off Text
   const getClinicalSignOffText = () => {
-    if (blankMode || !packetData) return '';
+    if (!isShow) return '';
     return packetData.finalBillingSignOff || packetData.clinicalSignOff || packetData.finalReport?.clinicalSignOff || packetData.finalReport?.billingSignOff || packetData.finalReport?.signOffText || '';
   };
   const clinicalSignOffText = getClinicalSignOffText();
 
   // Discharging Physician & Sign-off Date
-  const dischargingPhysicianName = blankMode || !packetData ? '' : (packetData.dischargingPhysician || packetData.dischargingPhysicianName || packetData.finalReport?.dischargingPhysician || packetData.renderingProviderName || packetData.providerName || packetData.provider?.name || packetData.provider?.fullName || '');
-  const dischargingPhysicianTitle = blankMode || !packetData ? '' : (packetData.dischargingPhysicianTitle || packetData.providerCredentials || packetData.providerTitle || packetData.provider?.credentials || packetData.provider?.title || '');
+  const dischargingPhysicianName = !isShow ? '' : (anikNote?.author || packetData.dischargingPhysician || packetData.dischargingPhysicianName || packetData.finalReport?.dischargingPhysician || packetData.renderingProviderName || packetData.providerName || packetData.provider?.name || packetData.provider?.fullName || '');
+  const dischargingPhysicianTitle = !isShow ? '' : (packetData.dischargingPhysicianTitle || packetData.providerCredentials || packetData.providerTitle || packetData.provider?.credentials || packetData.provider?.title || '');
   const dischargingPhysicianLine = [dischargingPhysicianName, dischargingPhysicianTitle].filter(Boolean).join(', ');
 
-  const facilityName = blankMode || !packetData ? '' : (packetData.facilityName || packetData.clinicName || packetData.providerFacility || packetData.provider?.clinicName || '');
-  const signOffDate = blankMode || !packetData ? '' : (packetData.signOffDate || packetData.finalReport?.signOffDate || packetData.signatureDate || packetData.dateSigned || '');
+  const facilityName = !isShow ? '' : (packetData.facilityName || packetData.clinicName || packetData.providerFacility || packetData.provider?.clinicName || '');
+  const signOffDate = !isShow ? '' : (anikNote?.date || packetData.signOffDate || packetData.finalReport?.signOffDate || packetData.signatureDate || packetData.dateSigned || '');
   const facilitySignOffLine = [
     facilityName,
     signOffDate ? `Date Signed: ${signOffDate}` : ''
