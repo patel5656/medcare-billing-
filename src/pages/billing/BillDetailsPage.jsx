@@ -70,6 +70,11 @@ export const BillDetailsPage = () => {
 
   const handlePostPayment = async (e) => {
     e.preventDefault();
+    const remainingBalance = bill?.totals?.balanceDue !== undefined ? Number(bill.totals.balanceDue) : (bill?.balanceDue !== undefined ? Number(bill.balanceDue) : 0);
+    if (Number(paymentForm.amount) > remainingBalance) {
+      addToast(`Payment amount ($${Number(paymentForm.amount).toFixed(2)}) cannot exceed remaining balance ($${remainingBalance.toFixed(2)}).`, 'warning');
+      return;
+    }
     try {
       const updated = await apiBillingService.postPayment(bill.id, {
         lineIndex: paymentForm.lineIndex,
@@ -81,7 +86,7 @@ export const BillDetailsPage = () => {
       setShowPaymentModal(false);
       addToast('Payment posted directly to database!', 'success');
     } catch (err) {
-      addToast('Failed to post payment', 'error');
+      addToast(err?.message || 'Failed to post payment', 'error');
     }
   };
 
