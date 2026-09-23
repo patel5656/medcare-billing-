@@ -45,9 +45,21 @@ export const DavEswtProcedureForm = ({
   const sex = isShow ? (packetData.patient?.sex || packetData.patientSex || packetData.sex || '') : '';
   const procDate = getProcedureDos();
 
+  const notes = isShow && Array.isArray(packetData?.clinicalNotes) ? packetData.clinicalNotes : [];
+  const davsNote = notes.find(n => {
+    if (!n) return false;
+    const t = (n.type || n.noteType || '').toUpperCase();
+    const p = (n.providerId || '').toLowerCase();
+    const title = (n.title || '').toUpperCase();
+    return t === 'DAVS_ESWT' || t === 'DAVS' || p === 'prov-davs' || title.includes('DAV');
+  });
+  const noteContent = davsNote ? (typeof davsNote.content === 'string' ? (() => { try { return JSON.parse(davsNote.content); } catch (e) { return {}; } })() : (davsNote.content || {})) : {};
+
   const rawAllergies = isShow ? (
     proc.allergies || 
     proc.knownAllergies || 
+    noteContent.allergies ||
+    noteContent.knownAllergies ||
     packetData?.allergies || 
     packetData?.knownAllergies || 
     packetData?.patient?.knownAllergies || 
@@ -55,17 +67,17 @@ export const DavEswtProcedureForm = ({
     ''
   ) : '';
   const allergies = Array.isArray(rawAllergies) ? rawAllergies.join(', ') : rawAllergies;
-  const bp = isShow ? (proc.bp || packetData.vitals?.bp || packetData.bp || '') : '';
-  const hr = isShow ? (proc.hr || packetData.vitals?.hr || packetData.hr || '') : '';
-  const ptHx = isShow ? (proc.ptHx || proc.history || packetData?.ptHx || packetData?.history || '') : '';
+  const bp = isShow ? (proc.bp || noteContent.bp || packetData.vitals?.bp || packetData.bp || '') : '';
+  const hr = isShow ? (proc.hr || noteContent.hr || packetData.vitals?.hr || packetData.hr || '') : '';
+  const ptHx = isShow ? (proc.ptHx || proc.history || noteContent.ptHx || noteContent.history || packetData?.ptHx || packetData?.history || '') : '';
 
-  const nerveBlock = isShow ? (proc.nerveBlock || packetData.nerveBlock || '') : '';
-  const treatmentAreas = isShow ? (proc.treatmentAreas || proc.treatmentArea || packetData.treatmentAreas || '') : '';
-  const barSetting = isShow ? (proc.barSetting || proc.bar || packetData.barSetting || '') : '';
-  const hzSetting = isShow ? (proc.hzSetting || proc.hz || packetData.hzSetting || '') : '';
-  const dose = isShow ? (proc.dose || packetData.dose || '') : '';
-  const totalWaves = isShow ? (proc.totalWaves || proc.total || packetData.totalWaves || '') : '';
-  const bltCream = isShow ? (proc.bltCream || packetData.bltCream || '') : '';
+  const nerveBlock = isShow ? (proc.nerveBlock || noteContent.nerveBlock || packetData.nerveBlock || '') : '';
+  const treatmentAreas = isShow ? (proc.treatmentAreas || proc.treatmentArea || proc.treatmentTargetAreas || noteContent.treatmentAreas || noteContent.treatmentArea || noteContent.treatmentTargetAreas || packetData.treatmentAreas || packetData.treatmentArea || '') : '';
+  const barSetting = isShow ? (proc.barSetting || proc.bar || noteContent.barSetting || noteContent.bar || packetData.barSetting || packetData.bar || '') : '';
+  const hzSetting = isShow ? (proc.hzSetting || proc.hz || noteContent.hzSetting || noteContent.hz || packetData.hzSetting || packetData.hz || '') : '';
+  const dose = isShow ? (proc.dose || noteContent.dose || packetData.dose || '') : '';
+  const totalWaves = isShow ? (proc.totalWaves || proc.total || proc.totalWavesDelivered || noteContent.totalWaves || noteContent.total || noteContent.totalWavesDelivered || packetData.totalWaves || packetData.total || '') : '';
+  const bltCream = isShow ? (proc.bltCream || noteContent.bltCream || packetData.bltCream || '') : '';
 
   const checklist = isShow ? (proc.checklist || proc.findingsChecklist || packetData.eswtChecklist || {}) : {};
   const isChecked = (key) => {
