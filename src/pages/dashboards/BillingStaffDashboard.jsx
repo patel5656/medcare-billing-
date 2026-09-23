@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 
 export const BillingStaffDashboard = () => {
   const settings = useSettings();
-  const [aging, setAging] = useState({ grandTotal: 138784, past90: 28790 });
+  const [aging, setAging] = useState({ grandTotal: 0, past90: 0 });
   const [fourBills, setFourBills] = useState([]);
   const [currentCase, setCurrentCase] = useState(null);
   const navigate = useNavigate();
@@ -20,11 +20,13 @@ export const BillingStaffDashboard = () => {
     }).catch(() => {});
 
     apiCaseService.getCases().then(cases => {
-      const target = cases && cases.length > 0 ? cases[0] : { id: 'case-001' };
-      setCurrentCase(target);
-      apiBillingService.getFourBillsByCase(target.id || target.caseId).then(res => {
-        if (res?.allBills) setFourBills(res.allBills);
-      }).catch(() => {});
+      if (cases && cases.length > 0) {
+        const target = cases[0];
+        setCurrentCase(target);
+        apiBillingService.getFourBillsByCase(target.id || target.caseId).then(res => {
+          if (res?.allBills) setFourBills(res.allBills);
+        }).catch(() => {});
+      }
     }).catch(() => {});
   }, []);
 
@@ -33,7 +35,7 @@ export const BillingStaffDashboard = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-on-surface">Billing Staff Multi-Provider Ledger Hub</h1>
-          <p className="text-xs text-on-surface-variant">6 Provider bill statements &amp; modalities, service line entry, payments, adjustments &amp; CMS-1500 claim previews</p>
+          <p className="text-xs text-on-surface-variant">Provider bill statements &amp; modalities, service line entry, payments, adjustments &amp; CMS-1500 claim previews</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate('/billing/create')} className="px-3 py-2 bg-secondary-container text-white rounded-lg text-xs font-bold shadow hover:bg-secondary flex items-center gap-1.5">
@@ -51,8 +53,8 @@ export const BillingStaffDashboard = () => {
             <span className="text-xs font-bold text-on-surface-variant">Total Practice Accounts Receivable</span>
             <DollarSign className="w-5 h-5 text-secondary-container" />
           </div>
-          <p className="text-2xl font-bold text-on-surface font-tabular">{formatCurrency(aging.grandTotal)}</p>
-          <p className="text-[11px] text-emerald-600 font-semibold">Across all 6 provider bills</p>
+          <p className="text-2xl font-bold text-on-surface font-tabular">{formatCurrency(aging.grandTotal || 0)}</p>
+          <p className="text-[11px] text-emerald-600 font-semibold">Across all provider bills</p>
         </div>
 
         <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm space-y-2">
@@ -60,7 +62,7 @@ export const BillingStaffDashboard = () => {
             <span className="text-xs font-bold text-on-surface-variant">90+ Days Past Due</span>
             <Clock className="w-5 h-5 text-amber-500" />
           </div>
-          <p className="text-2xl font-bold text-on-surface font-tabular">{formatCurrency(aging.past90)}</p>
+          <p className="text-2xl font-bold text-on-surface font-tabular">{formatCurrency(aging.past90 || 0)}</p>
           <p className="text-[11px] text-amber-600 font-semibold">Overdue collection follow-up</p>
         </div>
 
@@ -69,7 +71,7 @@ export const BillingStaffDashboard = () => {
             <span className="text-xs font-bold text-on-surface-variant">CMS-1500 Previews</span>
             <FileCheck className="w-5 h-5 text-blue-600" />
           </div>
-          <p className="text-2xl font-bold text-on-surface font-tabular">3 Generated</p>
+          <p className="text-2xl font-bold text-on-surface font-tabular">{fourBills.length} Generated</p>
           <p className="text-[11px] text-on-surface-variant">Red-grid visual claims ready</p>
         </div>
 
@@ -78,8 +80,8 @@ export const BillingStaffDashboard = () => {
             <span className="text-xs font-bold text-on-surface-variant">Pending Service Modalities</span>
             <AlertCircle className="w-5 h-5 text-amber-600" />
           </div>
-          <p className="text-2xl font-bold text-on-surface font-tabular">3 Modalities</p>
-          <p className="text-[11px] text-amber-600 font-semibold">Counselor, TPI &amp; TECAR Pending</p>
+          <p className="text-2xl font-bold text-on-surface font-tabular">{fourBills.filter(b => b.status === 'CONFIGURATION_PENDING' || b.status === 'DRAFT').length} Modalities</p>
+          <p className="text-[11px] text-amber-600 font-semibold">Pending Service Config</p>
         </div>
       </div>
 
@@ -87,7 +89,7 @@ export const BillingStaffDashboard = () => {
       <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-on-surface">
-            Case {currentCase?.caseId || currentCase?.id || 'CASE-2025-1227'} — {currentCase?.patientName || 'Demo Patient 001'} (Provider Bills Overview)
+            {currentCase ? `Case ${currentCase.caseId || currentCase.id} — ${currentCase.patientName || 'Unknown Patient'}` : 'Loading Case...'} (Provider Bills Overview)
           </h2>
           <button onClick={() => navigate('/billing/provider-bills')} className="text-xs font-bold text-secondary-container hover:underline flex items-center gap-1 cursor-pointer">
             Open Provider Bills Ledger <ChevronRight className="w-4 h-4" />
