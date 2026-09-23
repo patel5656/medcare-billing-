@@ -56,11 +56,13 @@ export const AnikLaserProcedureForm = ({
     ));
 
     if (uniqueDates.length > 0) {
-      if (pageIndex !== undefined && pageIndex !== null) {
-        return uniqueDates[pageIndex] || '';
+      if (pageIndex !== undefined && pageIndex !== null && uniqueDates[pageIndex]) {
+        return uniqueDates[pageIndex];
       }
-      return uniqueDates[0];
+      if (uniqueDates[0]) return uniqueDates[0];
     }
+
+    if (dos) return dos;
 
     return '';
   };
@@ -138,8 +140,8 @@ export const AnikLaserProcedureForm = ({
   const durationCompletedVal = blankMode || !procedureDos ? '' : (procedureData?.durationCompleted || packetData?.durationCompleted || '');
 
   // Provider Signature
-  const providerSignature = blankMode || !procedureDos ? '' : (procedureData?.providerSignature || procedureData?.providerName || packetData?.renderingProviderName || packetData?.providerName || '');
-  const signatureDate = blankMode || !procedureDos ? '' : (procedureData?.signatureDate || packetData?.signatureDate || '');
+  const providerSignature = blankMode ? '' : (procedureData?.providerSignature || procedureData?.providerName || anikNote?.author || anikNote?.signedBy || noteContent?.providerSignature || packetData?.renderingProviderName || packetData?.providerName || '');
+  const signatureDate = blankMode ? '' : (procedureData?.signatureDate || anikNote?.date || noteContent?.signatureDate || packetData?.signatureDate || '');
 
   const getInjuryDots = () => {
     if (blankMode || !packetData) return { front: [], back: [] };

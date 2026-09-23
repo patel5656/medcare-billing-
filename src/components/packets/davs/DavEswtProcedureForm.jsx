@@ -17,11 +17,24 @@ export const DavEswtProcedureForm = ({
   const isShow = !blankMode && packetData;
   const proc = procedureData || packetData?.procedures?.[pageIndex] || {};
 
+  const notes = isShow && Array.isArray(packetData?.clinicalNotes) ? packetData.clinicalNotes : [];
+  const davsNote = notes.find(n => {
+    if (!n) return false;
+    const t = (n.type || n.noteType || '').toUpperCase();
+    const p = (n.providerId || '').toLowerCase();
+    const title = (n.title || '').toUpperCase();
+    return t === 'DAVS_ESWT' || t === 'DAVS' || p === 'prov-davs' || title.includes('DAV');
+  });
+  const noteContent = davsNote ? (typeof davsNote.content === 'string' ? (() => { try { return JSON.parse(davsNote.content); } catch (e) { return {}; } })() : (davsNote.content || {})) : {};
+
   const getProcedureDos = () => {
     if (!isShow) return '';
     if (proc.dos || proc.dateOfService) return proc.dos || proc.dateOfService;
     if (packetData?.procedures?.[pageIndex]?.dos || packetData?.procedures?.[pageIndex]?.dateOfService) {
       return packetData.procedures[pageIndex].dos || packetData.procedures[pageIndex].dateOfService;
+    }
+    if (noteContent?.dos || noteContent?.dateOfService || noteContent?.procedureDos) {
+      return noteContent.dos || noteContent.dateOfService || noteContent.procedureDos;
     }
 
     const lines = (serviceLines && serviceLines.length > 0)
@@ -35,25 +48,18 @@ export const DavEswtProcedureForm = ({
       if (pageIndex !== undefined && pageIndex !== null && uniqueDates[pageIndex]) {
         return uniqueDates[pageIndex];
       }
+      if (uniqueDates[0]) return uniqueDates[0];
     }
+
+    if (dos) return dos;
 
     return '';
   };
 
-  const patientName = isShow ? (packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '') : '';
+  const patientName = isShow ? (packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.middleName ? packetData.patient.middleName + ' ' : ''}${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '') : '';
   const dob = isShow ? (packetData.patient?.dob || packetData.patientDob || packetData.dob || '') : '';
   const sex = isShow ? (packetData.patient?.sex || packetData.patientSex || packetData.sex || '') : '';
   const procDate = getProcedureDos();
-
-  const notes = isShow && Array.isArray(packetData?.clinicalNotes) ? packetData.clinicalNotes : [];
-  const davsNote = notes.find(n => {
-    if (!n) return false;
-    const t = (n.type || n.noteType || '').toUpperCase();
-    const p = (n.providerId || '').toLowerCase();
-    const title = (n.title || '').toUpperCase();
-    return t === 'DAVS_ESWT' || t === 'DAVS' || p === 'prov-davs' || title.includes('DAV');
-  });
-  const noteContent = davsNote ? (typeof davsNote.content === 'string' ? (() => { try { return JSON.parse(davsNote.content); } catch (e) { return {}; } })() : (davsNote.content || {})) : {};
 
   const rawAllergies = isShow ? (
     proc.allergies || 
@@ -86,8 +92,8 @@ export const DavEswtProcedureForm = ({
     return Boolean(checklist[key]);
   };
 
-  const providerSignature = isShow ? (proc.providerSignature || proc.author || proc.providerName || packetData.providerName || packetData.attendingProviderName || '') : '';
-  const sigDate = isShow ? (proc.signatureDate || proc.signedAt || proc.dateSigned || packetData?.signatureDate || packetData?.signedAt || packetData?.dateSigned || '') : '';
+  const providerSignature = isShow ? (proc.providerSignature || proc.author || proc.providerName || davsNote?.author || davsNote?.signedBy || noteContent?.providerSignature || packetData?.renderingProviderName || packetData?.providerName || packetData?.attendingProviderName || '') : '';
+  const sigDate = isShow ? (proc.signatureDate || proc.signedAt || proc.dateSigned || davsNote?.date || davsNote?.signedAt || noteContent?.signatureDate || packetData?.signatureDate || packetData?.signedAt || packetData?.dateSigned || '') : '';
 
   const currentInternalPage = formPage || (pageIndex + 1);
 
