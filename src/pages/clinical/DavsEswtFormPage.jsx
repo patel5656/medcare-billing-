@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
 import { apiPatientService } from '../../services/api/apiPatientService';
+import { apiCaseService } from '../../services/api/apiCaseService';
 import { useUIStore } from '../../store/uiStore';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Activity, CheckCircle2 } from 'lucide-react';
 
 export const DavsEswtFormPage = () => {
   const [patients, setPatients] = useState([]);
+  const [activeCaseId, setActiveCaseId] = useState('');
   const [formData, setFormData] = useState({
     patientId: '',
     patientName: '',
@@ -52,6 +54,20 @@ export const DavsEswtFormPage = () => {
     }
   };
 
+  const fetchPatientCases = async (id) => {
+    try {
+      const patientCases = await apiCaseService.getCases({ patientId: id });
+      if (Array.isArray(patientCases) && patientCases.length > 0) {
+        setActiveCaseId(patientCases[0].id || patientCases[0].caseId || '');
+      } else {
+        const p = patients.find(x => x.id === id);
+        setActiveCaseId(p?.caseId || '');
+      }
+    } catch (err) {
+      console.error('Failed to fetch patient cases', err);
+    }
+  };
+
   useEffect(() => {
     apiPatientService.getPatients().then(res => {
       const raw = Array.isArray(res) ? res : (res?.patients || []);
@@ -63,6 +79,7 @@ export const DavsEswtFormPage = () => {
           patientName: `${raw[0].firstName} ${raw[0].lastName}`.trim()
         }));
         fetchPreviousVitals(raw[0].id);
+        fetchPatientCases(raw[0].id);
       }
     }).catch(console.error);
   }, []);
@@ -71,10 +88,13 @@ export const DavsEswtFormPage = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
+      const selectedPatient = patients.find(p => p.id === formData.patientId);
+      const caseIdToUse = activeCaseId || selectedPatient?.caseId || 'case-001';
+
       const note = await apiClinicalNoteService.createNote({
         patientId: formData.patientId || 'pat-001',
         patientName: formData.patientName || 'Demo Patient',
-        caseId: 'case-001',
+        caseId: caseIdToUse,
         providerId: 'prov-davs',
         providerName: "DAV'S Anatomy",
         type: 'DAVS_ESWT',
@@ -133,6 +153,7 @@ export const DavsEswtFormPage = () => {
                     reaction: ''
                   }));
                   fetchPreviousVitals(p.id);
+                  fetchPatientCases(p.id);
                 }
               }}
               className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface font-bold text-secondary-container"
