@@ -752,9 +752,9 @@ export const TreatmentSessionsPage = () => {
             { id: 'PAIN', label: 'Pain Management' },
             { id: 'LASER', label: 'Laser Therapy' },
             { id: 'ESWT', label: 'Shockwave (ESWT)' },
-            { id: 'TPI', label: 'Trigger Point (Pending)' },
-            { id: 'TECAR', label: 'TECAR Therapy (Pending)' },
-            { id: 'COUNSEL', label: 'Counseling (Pending)' },
+            { id: 'TPI', label: 'Trigger Point' },
+            { id: 'TECAR', label: 'TECAR Therapy' },
+            { id: 'COUNSEL', label: 'Counseling' },
           ].map(mod => (
             <button
               key={mod.id}
