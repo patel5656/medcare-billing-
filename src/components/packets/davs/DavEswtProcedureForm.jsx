@@ -45,7 +45,16 @@ export const DavEswtProcedureForm = ({
   const sex = isShow ? (packetData.patient?.sex || packetData.patientSex || packetData.sex || '') : '';
   const procDate = getProcedureDos();
 
-  const allergies = isShow ? (proc.allergies || packetData.allergies || '') : '';
+  const rawAllergies = isShow ? (
+    proc.allergies || 
+    proc.knownAllergies || 
+    packetData?.allergies || 
+    packetData?.knownAllergies || 
+    packetData?.patient?.knownAllergies || 
+    packetData?.patient?.allergies || 
+    ''
+  ) : '';
+  const allergies = Array.isArray(rawAllergies) ? rawAllergies.join(', ') : rawAllergies;
   const bp = isShow ? (proc.bp || packetData.vitals?.bp || packetData.bp || '') : '';
   const hr = isShow ? (proc.hr || packetData.vitals?.hr || packetData.hr || '') : '';
   const ptHx = isShow ? (proc.ptHx || proc.history || packetData?.ptHx || packetData?.history || '') : '';
