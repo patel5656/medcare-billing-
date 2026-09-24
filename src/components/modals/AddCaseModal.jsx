@@ -28,6 +28,11 @@ const inputCls = (hasError) =>
 
 const labelCls = 'block text-xs font-bold text-slate-800 mb-1';
 
+const PAIN_DESCRIPTION_OPTIONS = [
+  'Sharp', 'Dull', 'Throbbing', 'Burning', 
+  'Radiating', 'Tingling', 'Stabbing', 'Numbness'
+];
+
 const INITIAL_CASE_DATA = {
   patientId: '',
   patientName: '',
@@ -44,6 +49,7 @@ const INITIAL_CASE_DATA = {
   policeReportNumber: '',
   emergencyTransport: 'NONE',
   chiefComplaint: '',
+  painDescription: [],
   injuryBodyParts: '',
   diagnosisCodes: ['M54.50', 'M54.2'], // Default common MVA diagnoses
   referringProviderName: '',
@@ -110,7 +116,12 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
         ...INITIAL_CASE_DATA,
         ...initialCase,
         patientId: initialCase.patientId || initialCase.patientName || '',
-        id: initialCase.id || initialCase.caseId
+        id: initialCase.id || initialCase.caseId,
+        painDescription: Array.isArray(initialCase.painDescription) 
+          ? initialCase.painDescription 
+          : (typeof initialCase.painDescription === 'string' 
+              ? JSON.parse(initialCase.painDescription) 
+              : [])
       });
       setErrors({});
     } else if (initialPatient && isOpen) {
@@ -136,6 +147,7 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
         ? patientObj.selectedInjuryAreas.join(', ')
         : (patientObj.injuryBodyParts || prev.injuryBodyParts || 'Neck, Low Back, Left Ankle'),
       chiefComplaint: patientObj.chiefComplaint || patientObj.patientNotes || prev.chiefComplaint || 'Cervicalgia, lumbar strain and soft tissue pain',
+      painDescription: Array.isArray(patientObj.painDescription) ? patientObj.painDescription : prev.painDescription || [],
       attorneyName: patientObj.referringAttorney || patientObj.attorneyName || prev.attorneyName || '',
       lawFirm: patientObj.lawFirm || patientObj.attorneyLawFirm || (patientObj.referringAttorney ? `${patientObj.referringAttorney}` : prev.lawFirm || ''),
       insuranceCompany: patientObj.primaryInsuranceCompany || prev.insuranceCompany || '',
@@ -178,6 +190,16 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
         return next;
       });
     }
+  };
+
+  const handleTogglePain = (pain) => {
+    setFormData(prev => {
+      const exists = prev.painDescription?.includes(pain);
+      const updated = exists
+        ? prev.painDescription.filter(p => p !== pain)
+        : [...(prev.painDescription || []), pain];
+      return { ...prev, painDescription: updated };
+    });
   };
 
   const handlePatientSelect = (pid) => {
@@ -971,6 +993,30 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
                   onChange={e => set('chiefComplaint', e.target.value)}
                   placeholder="e.g. Neck pain radiating to left shoulder, lower back stiffness, headaches post-collision..."
                 />
+              </div>
+
+              <div>
+                <label className={labelCls}>Pain Description (Select all that apply)</label>
+                <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                  {PAIN_DESCRIPTION_OPTIONS.map(pain => {
+                    const isSelected = formData.painDescription?.includes(pain);
+                    return (
+                      <button
+                        key={pain}
+                        type="button"
+                        onClick={() => handleTogglePain(pain)}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-colors border cursor-pointer ${
+                          isSelected 
+                            ? 'bg-teal-100 text-teal-800 border-teal-300' 
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {isSelected && <span className="mr-1">✓</span>}
+                        {pain}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>

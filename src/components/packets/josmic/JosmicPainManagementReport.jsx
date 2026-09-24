@@ -33,18 +33,34 @@ const getPainDescriptionChecked = (label, packetData) => {
 
 const getPainLocationChecked = (label, packetData) => {
   if (!packetData) return false;
+  
+  // 1. Patient Profile - "Chief Complaints & Injury Areas" Mapping
+  const injuryAreas = packetData.selectedInjuryAreas || packetData.patient?.selectedInjuryAreas || [];
+  const injuryText = Array.isArray(injuryAreas) ? injuryAreas.join(' ').toLowerCase() : String(injuryAreas).toLowerCase();
+  
+  if (label === 'Neck' && injuryText.includes('neck')) return true;
+  if (label === 'M.Back' && injuryText.includes('mid back')) return true;
+  if (label === 'L.Back' && injuryText.includes('lower back')) return true;
+  if ((label === 'R.Shoulder' || label === 'L.Shoulder') && injuryText.includes('shoulder')) return true;
+  if ((label === 'R.Knee' || label === 'L.Knee') && injuryText.includes('knee')) return true;
+  if (label === 'Headache' && injuryText.includes('headache')) return true;
+
+  // 2. Original Form Fields Mapping
   const locs = packetData.painLocation || packetData.injuryBodyParts;
   if (Array.isArray(locs)) {
-    return locs.some(l => l.toLowerCase().includes(label.toLowerCase()));
+    if (locs.some(l => l.toLowerCase().includes(label.toLowerCase()))) return true;
   }
   if (typeof locs === 'string' && locs) {
     if (locs.toLowerCase().includes(label.toLowerCase())) return true;
   }
+  
+  // 3. ICD-10 Code Mapping
   const dx = packetData.diagnosisCodes || [];
   if (label === 'Neck' && dx.some(c => String(c).startsWith('S13') || String(c).startsWith('M54.2'))) return true;
   if (label === 'U.Back' && dx.some(c => String(c).startsWith('S13') || String(c).startsWith('S23'))) return true;
   if (label === 'M.Back' && dx.some(c => String(c).startsWith('S23'))) return true;
   if (label === 'L.Back' && dx.some(c => String(c).startsWith('S33') || String(c).startsWith('M54.5') || String(c).startsWith('M54.6'))) return true;
+  
   return false;
 };
 
