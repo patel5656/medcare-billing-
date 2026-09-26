@@ -81,7 +81,17 @@ const INJURY_AREAS = [
   'Knee / Lower Extremity',
   'Headaches / Concussion',
   'Anxiety / PTSD Symptoms',
-  'Whiplash / Myofascial Pain'
+  'Whiplash / Myofascial Pain',
+  'Hip',
+  'Ankle',
+  'Foot',
+  'Elbow',
+  'Wrist',
+  'Hand',
+  'Hip / Glute',
+  'Thigh',
+  'Calf',
+  'Other Treatment Areas (Specify)'
 ];
 
 const INITIAL_FORM_DATA = {
@@ -143,6 +153,7 @@ const INITIAL_FORM_DATA = {
   currentMedications: '',
   pastMedicalHistory: '',
   selectedInjuryAreas: [],
+  otherInjuryAreaSpecify: '',
   accidentDate: '',
   mechanismOfInjury: '',
   patientNotes: '',
@@ -1165,6 +1176,18 @@ export const AddPatientPage = () => {
                     );
                   })}
                 </div>
+                {formData.selectedInjuryAreas.includes('Other Treatment Areas (Specify)') && (
+                  <div className="mt-3">
+                    <label className={labelCls}>Specify Other Treatment Area(s)</label>
+                    <input
+                      type="text"
+                      className={inputCls()}
+                      placeholder="Enter other treatment areas..."
+                      value={formData.otherInjuryAreaSpecify}
+                      onChange={e => set('otherInjuryAreaSpecify', e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
