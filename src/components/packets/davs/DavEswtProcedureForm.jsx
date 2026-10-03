@@ -1,5 +1,6 @@
 // src/components/packets/davs/DavEswtProcedureForm.jsx
 import React from 'react';
+import bodyImage from '../../../assets/body_image.png';
 
 /**
  * DAV'S ESWT Procedure Form (Radial Device) - 3-Page Structure
@@ -97,51 +98,98 @@ export const DavEswtProcedureForm = ({
 
   const currentInternalPage = formPage || (pageIndex + 1);
 
-  const getInjuryDots = () => {
-    if (!isShow) return { front: [], back: [] };
+  const getInjuryMarks = () => {
+    if (!isShow) return [];
     const injuryAreas = packetData?.selectedInjuryAreas || packetData?.patient?.selectedInjuryAreas || [];
     const areas = Array.isArray(injuryAreas) ? injuryAreas : [];
     
-    const dots = { front: [], back: [] };
-    const dotStyle = "fill-emerald-500/60 stroke-emerald-700 stroke-1";
+    const marks = [];
+    const checkStyle = "absolute text-emerald-800 font-black text-sm md:text-base transform -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]";
+
+    const addMark = (key, top, left) => {
+      marks.push(
+        <span key={key} className={checkStyle} style={{ top: `${top}%`, left: `${left}%` }}>
+          ✓
+        </span>
+      );
+    };
 
     if (areas.includes('Shoulder / Rotator Cuff')) {
-      dots.front.push(<circle key="f-shoulder-l" cx="25" cy="42" r="4" className={dotStyle} />);
-      dots.front.push(<circle key="f-shoulder-r" cx="75" cy="42" r="4" className={dotStyle} />);
-      dots.back.push(<circle key="b-shoulder-l" cx="25" cy="42" r="4" className={dotStyle} />);
-      dots.back.push(<circle key="b-shoulder-r" cx="75" cy="42" r="4" className={dotStyle} />);
+      addMark('l-shoulder', 22.8, 24.5);
+      addMark('r-shoulder', 21.5, 90);
     }
     if (areas.includes('Lower Back / Lumbar')) {
-      dots.back.push(<circle key="b-lower-back" cx="50" cy="98" r="4" className={dotStyle} />);
+      addMark('l-lower-back', 39.5, 23);
     }
     if (areas.includes('Neck / Cervical Spine')) {
-      dots.front.push(<circle key="f-neck" cx="50" cy="35" r="4" className={dotStyle} />);
-      dots.back.push(<circle key="b-neck" cx="50" cy="35" r="4" className={dotStyle} />);
+      addMark('l-neck', 15.5, 24.5);
     }
     if (areas.includes('Knee / Lower Extremity')) {
-      dots.front.push(<circle key="f-knee-l" cx="30" cy="135" r="4" className={dotStyle} />);
-      dots.front.push(<circle key="f-knee-r" cx="70" cy="135" r="4" className={dotStyle} />);
+      addMark('l-knee', 62.5, 24.5);
+      addMark('r-knee', 63.8, 90);
     }
     if (areas.includes('Mid Back / Thoracic')) {
-      dots.back.push(<circle key="b-mid-back" cx="50" cy="65" r="4" className={dotStyle} />);
+      addMark('l-upper-back', 31.0, 24.5);
     }
     if (areas.includes('Headaches / Concussion')) {
-      dots.front.push(<circle key="f-head" cx="50" cy="18" r="4" className={dotStyle} />);
-      dots.back.push(<circle key="b-head" cx="50" cy="18" r="4" className={dotStyle} />);
+      addMark('r-head', 13.5, 90);
     }
     if (areas.includes('Whiplash / Myofascial Pain')) {
-      dots.back.push(<circle key="b-whiplash-neck" cx="50" cy="35" r="4" className={dotStyle} />);
-      dots.back.push(<circle key="b-whiplash-upper" cx="50" cy="48" r="4" className={dotStyle} />);
+      addMark('l-neck-whip', 15.5, 24.5);
+      addMark('l-upper-back-whip', 31.0, 24.5);
     }
     if (areas.includes('Anxiety / PTSD Symptoms')) {
-      dots.front.push(<circle key="f-anxiety" cx="50" cy="18" r="4" className={dotStyle} />);
-      dots.back.push(<circle key="b-anxiety" cx="50" cy="18" r="4" className={dotStyle} />);
+      addMark('r-head-anx', 13.5, 90);
+    }
+    if (areas.includes('Hip')) {
+      addMark('l-hip', 49.0, 24.5);
+    }
+    if (areas.includes('Ankle')) {
+      addMark('l-ankle', 78.5, 24.5);
+      addMark('r-ankle', 78.5, 90);
+    }
+    if (areas.includes('Foot')) {
+      addMark('l-foot', 86.0, 24.5);
+      addMark('r-foot', 86.0, 90);
+    }
+    if (areas.includes('Elbow')) {
+      addMark('r-elbow', 28.5, 90);
+    }
+    if (areas.includes('Wrist')) {
+      addMark('r-wrist', 35.6, 90);
+    }
+    if (areas.includes('Hand')) {
+      addMark('r-hand', 42.6, 90);
+    }
+    if (areas.includes('Hip / Glute')) {
+      addMark('r-hip-glute', 49.7, 90);
+    }
+    if (areas.includes('Thigh')) {
+      addMark('r-thigh', 56.7, 90);
+    }
+    if (areas.includes('Calf')) {
+      addMark('r-calf', 71.0, 90);
     }
 
-    return dots;
+    if (areas.includes('Other Treatment Areas (Specify)')) {
+      const specifyText = packetData?.otherInjuryAreaSpecify || packetData?.patient?.otherInjuryAreaSpecify || '';
+      if (specifyText) {
+        marks.push(
+          <span 
+            key="other-specify" 
+            className="absolute text-emerald-800 font-bold text-[10px] md:text-xs z-10 whitespace-nowrap uppercase transform -translate-y-1/2" 
+            style={{ bottom: '6.5%', left: '45%' }}
+          >
+            {specifyText}
+          </span>
+        );
+      }
+    }
+
+    return marks;
   };
 
-  const anatomicalDots = getInjuryDots();
+  const anatomicalMarks = getInjuryMarks();
 
   return (
     <div
@@ -190,47 +238,10 @@ export const DavEswtProcedureForm = ({
               FINDINGS:
             </div>
             
-            {/* SVG Anatomical Human Body (Front & Back) */}
-            <div className="my-1 flex items-center justify-center gap-4 py-2">
-              {/* Front Figure */}
-              <div className="flex flex-col items-center">
-                <svg viewBox="0 0 100 220" className="w-20 h-44 stroke-slate-800 stroke-2 fill-none">
-                  <circle cx="50" cy="18" r="12" />
-                  <circle cx="46" cy="17" r="1.5" className="fill-slate-800" />
-                  <circle cx="54" cy="17" r="1.5" className="fill-slate-800" />
-                  <line x1="46" y1="30" x2="46" y2="38" />
-                  <line x1="54" y1="30" x2="54" y2="38" />
-                  <path d="M 46 38 Q 20 44 14 75 L 10 120 Q 12 126 18 122 L 24 82 L 30 115 L 30 135 L 70 135 L 70 115 L 76 82 L 82 122 Q 88 126 90 120 L 86 75 Q 80 44 54 38 Z" />
-                  <path d="M 36 60 Q 50 66 64 60" className="stroke-1 stroke-slate-400" />
-                  <path d="M 40 85 Q 50 90 60 85" className="stroke-1 stroke-slate-400" />
-                  <path d="M 32 135 L 30 190 Q 28 205 24 212 L 42 212 L 46 190 L 50 145 L 54 190 L 58 212 L 76 212 Q 72 205 70 190 L 68 135 Z" />
-                  {anatomicalDots.front}
-                </svg>
-                <span className="text-[9px] font-bold text-slate-500 mt-1">Right (Front)</span>
-              </div>
-
-              {/* Back Figure */}
-              <div className="flex flex-col items-center">
-                <svg viewBox="0 0 100 220" className="w-20 h-44 stroke-slate-800 stroke-2 fill-none">
-                  <circle cx="50" cy="18" r="12" />
-                  <line x1="46" y1="30" x2="46" y2="38" />
-                  <line x1="54" y1="30" x2="54" y2="38" />
-                  <line x1="50" y1="38" x2="50" y2="125" className="stroke-1 stroke-slate-400 stroke-dasharray-2" />
-                  <path d="M 32 48 Q 40 54 42 68" className="stroke-1 stroke-slate-400" />
-                  <path d="M 68 48 Q 60 54 58 68" className="stroke-1 stroke-slate-400" />
-                  <path d="M 46 38 Q 20 44 14 75 L 10 120 Q 12 126 18 122 L 24 82 L 30 115 L 30 135 L 70 135 L 70 115 L 76 82 L 82 122 Q 88 126 90 120 L 86 75 Q 80 44 54 38 Z" />
-                  <path d="M 30 135 Q 50 148 70 135" className="stroke-1 stroke-slate-400" />
-                  <path d="M 32 135 L 30 190 Q 28 205 24 212 L 42 212 L 46 190 L 50 145 L 54 190 L 58 212 L 76 212 Q 72 205 70 190 L 68 135 Z" />
-                  {anatomicalDots.back}
-                </svg>
-                <span className="text-[9px] font-bold text-slate-500 mt-1">Left (Back)</span>
-              </div>
-            </div>
-
-            <div className="flex justify-between w-full text-[9px] text-slate-400 font-mono">
-              <span>Right</span>
-              <span>Left</span>
-              <span>Right</span>
+            {/* New PNG Anatomical Human Body with Checkmarks */}
+            <div className="relative w-full mx-auto mt-2 px-1 pb-2">
+              <img src={bodyImage} alt="Treatment Areas Diagram" className="w-full h-auto object-contain rounded-md" />
+              {anatomicalMarks}
             </div>
           </div>
 
