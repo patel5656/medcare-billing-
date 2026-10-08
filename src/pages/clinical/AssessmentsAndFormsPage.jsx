@@ -8,6 +8,7 @@ export const AssessmentsAndFormsPage = () => {
   const [activeTab, setActiveTab] = useState('ANIK');
   const [cases, setCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState('');
+  const [isCaseDropdownOpen, setIsCaseDropdownOpen] = useState(false);
 
   useEffect(() => {
     apiCaseService.getCases().then(res => {
@@ -29,20 +30,37 @@ export const AssessmentsAndFormsPage = () => {
         </div>
         
         {/* Global Case Selector */}
-        <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex items-center gap-2 max-w-sm w-full">
+        <div className="relative bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex items-center gap-2 max-w-sm w-full">
           <User className="w-5 h-5 text-teal-600 shrink-0 ml-1" />
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 relative">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">Select Patient Case</label>
-            <select
-              value={selectedCaseId}
-              onChange={(e) => setSelectedCaseId(e.target.value)}
-              className="w-full text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer truncate"
+            <button
+              onClick={() => setIsCaseDropdownOpen(!isCaseDropdownOpen)}
+              className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer focus:outline-none"
             >
-              <option value="">-- Select a Patient Case --</option>
-              {cases.map(c => (
-                <option key={c.id} value={c.id}>{c.patientName} ({c.caseId})</option>
-              ))}
-            </select>
+              <span className="block truncate pr-2">{selectedCase ? `${selectedCase.patientName} (${selectedCase.caseId})` : '-- Select a Patient Case --'}</span>
+              <svg className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isCaseDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            
+            {isCaseDropdownOpen && (
+              <div className="absolute top-full right-0 mt-4 w-80 bg-white border border-slate-200 rounded-lg shadow-xl z-[100] max-h-60 overflow-y-auto">
+                <div 
+                  className="px-3 py-2.5 text-xs text-slate-500 hover:bg-slate-50 cursor-pointer border-b border-slate-100"
+                  onClick={() => { setSelectedCaseId(''); setIsCaseDropdownOpen(false); }}
+                >
+                  -- Select a Patient Case --
+                </div>
+                {cases.map(c => (
+                  <div 
+                    key={c.id} 
+                    className={`px-3 py-2.5 text-xs font-bold cursor-pointer hover:bg-slate-50 transition-colors ${selectedCaseId === c.id ? 'bg-teal-50 text-teal-700 border-l-2 border-teal-500' : 'text-slate-800 border-l-2 border-transparent'}`}
+                    onClick={() => { setSelectedCaseId(c.id); setIsCaseDropdownOpen(false); }}
+                  >
+                    {c.patientName} ({c.caseId})
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

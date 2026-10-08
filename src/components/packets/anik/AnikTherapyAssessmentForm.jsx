@@ -1,13 +1,17 @@
-// src/components/packets/anik/AnikTherapyAssessmentForm.jsx
 import React, { useState, useEffect } from 'react';
 import { apiCaseService } from '../../../services/api/apiCaseService';
+import { apiProviderService } from '../../../services/api/apiProviderService';
+import fmLogo from '../../../assets/fm-logo.jpeg';
 
 /**
- * ANIK Therapy Assessment Form - ANIK Reference PDF Page 7
+ * Therapy Assessment Form (Dynamic)
  * Dynamic patient, diagnosis, serviceLines, and clinical assessment data
  */
 export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
   const [assessments, setAssessments] = useState({});
+  const [providers, setProviders] = useState({});
+  const [selectedProviderId, setSelectedProviderId] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (packetData?.clinicalDocStorage?.['ANIK_ASSESSMENT']) {
@@ -15,7 +19,17 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
     } else if (packetData?.assessments) {
       setAssessments(packetData.assessments);
     }
+
+    // Fetch providers
+    apiProviderService.getProviders().then(data => {
+      setProviders(data);
+      if (packetData?.providerId) {
+        setSelectedProviderId(packetData.providerId);
+      }
+    }).catch(err => console.error(err));
   }, [packetData]);
+
+  const selectedProvider = providers[selectedProviderId];
 
   const updateAssessment = async (date, field, value) => {
     if (readOnly || blankMode || !packetData || !packetData.id) return;
@@ -92,6 +106,57 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
     return line && line.units > 1 ? ` X${line.units}` : '';
   };
 
+  const renderTreatmentsTable = (lines, dos) => {
+    if (!selectedProvider || !selectedProvider.availableServices || selectedProvider.availableServices.length === 0) {
+      return (
+        <div className="p-4 text-center text-slate-400 font-bold border-b border-[#722F37]">
+          No treatments available for the selected provider.
+        </div>
+      );
+    }
+    const services = selectedProvider.availableServices;
+    
+    // Group services into chunks of 5 for multiple rows if needed
+    const chunks = [];
+    for(let i = 0; i < services.length; i += 5) {
+       chunks.push(services.slice(i, i + 5));
+    }
+
+    return (
+      <table className="w-full text-center border-collapse">
+        <tbody>
+           {chunks.map((chunk, rowIdx) => (
+              <React.Fragment key={rowIdx}>
+                 <tr className="bg-slate-100 font-bold border-b border-[#722F37]">
+                    <th className="p-1 border-r border-[#722F37] w-24">{rowIdx === 0 ? 'DATE' : ''}</th>
+                    {chunk.map(svc => (
+                       <th key={svc.code} className="p-1 border-r border-[#722F37] text-[9px] uppercase leading-tight">
+                          {svc.description}<br/>{svc.code}
+                       </th>
+                    ))}
+                    {/* Fill empty cells if chunk < 5 */}
+                    {Array.from({length: 5 - chunk.length}).map((_, i) => (
+                       <th key={`empty-th-${i}`} className="p-1 border-r border-[#722F37]"></th>
+                    ))}
+                 </tr>
+                 <tr className="border-b border-[#722F37]">
+                    <td className="p-1 border-r border-[#722F37] font-bold">{rowIdx === 0 ? dos : ''}</td>
+                    {chunk.map(svc => (
+                       <td key={svc.code} className="p-1 border-r border-[#722F37] font-bold text-[#722F37]">
+                          {hasCpt(lines, svc.code) ? `✓${getCptUnits(lines, svc.code)}` : ''}
+                       </td>
+                    ))}
+                    {Array.from({length: 5 - chunk.length}).map((_, i) => (
+                       <td key={`empty-td-${i}`} className="p-1 border-r border-[#722F37]"></td>
+                    ))}
+                 </tr>
+              </React.Fragment>
+           ))}
+        </tbody>
+      </table>
+    );
+  };
+
   return (
     <div
       className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none"
@@ -99,13 +164,63 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
     >
       
       {/* Provider Header matching PDF Page 7 */}
-      <div className="text-center">
-        <h1 className="text-xl font-black uppercase text-[#722F37] tracking-tight italic">ANIK LASER THERAPY</h1>
-        <p className="text-[10px] font-bold text-slate-600">
-          10101 HARWIN DR.STE 274 HOUSTON TX 77036  OFFICE: 713-485-5712  CELL: 832-815-0959  FAX: 832-416-1502
-        </p>
-        <p className="text-[10px] text-[#722F37] font-semibold underline">Email: Aniklasertherapy@gmail.com</p>
-        <h2 className="text-sm font-extrabold uppercase mt-2 text-slate-900 tracking-wider">THERAPY ASSESSMENT</h2>
+      <div className="text-center pb-4 border-b-2 border-[#722F37] mb-4 relative">
+        {/* Dynamic Provider Dropdown */}
+        <div className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm p-3 rounded-xl border border-slate-200/80 inline-block text-left w-64 shadow-lg shadow-slate-200/50 print:hidden transition-all hover:shadow-xl z-[100]">
+          <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
+            Treating Provider
+          </label>
+          <div className="relative group">
+            <button 
+              type="button"
+              disabled={readOnly}
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-full text-left bg-white border border-slate-200 rounded-lg pl-3 pr-8 py-2 text-sm font-bold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#722F37]/30 focus:border-[#722F37] transition-all cursor-pointer hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+            >
+              <span className="block break-words whitespace-normal text-left">{selectedProvider ? selectedProvider.name : '[ Select Provider ]'}</span>
+            </button>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400 group-hover:text-[#722F37] transition-colors">
+              <svg className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+
+            {/* Custom Dropdown List */}
+            {isDropdownOpen && !readOnly && (
+              <div className="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-xl z-[100] max-h-60 overflow-y-auto">
+                <div 
+                  className="px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-50 cursor-pointer border-b border-slate-100"
+                  onClick={() => { setSelectedProviderId(''); setIsDropdownOpen(false); }}
+                >
+                  [ Select Provider ]
+                </div>
+                {Object.values(providers).map(p => (
+                  <div 
+                    key={p.id} 
+                    className={`px-3 py-2.5 text-sm font-bold cursor-pointer hover:bg-slate-50 ${selectedProviderId === p.id ? 'bg-slate-100 text-[#722F37]' : 'text-slate-800'}`}
+                    onClick={() => { setSelectedProviderId(p.id); setIsDropdownOpen(false); }}
+                  >
+                    {p.name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Logo and Facility Name */}
+        <div className="flex flex-col items-center justify-center space-y-1">
+           <img src={fmLogo} alt="FM Health Logo" className="h-16 w-auto object-contain mb-1 mix-blend-multiply" />
+           <h1 className="text-2xl font-black uppercase text-[#722F37] tracking-tight">{selectedProvider ? selectedProvider.name : 'FM HEALTH AND WELLNESS CENTER'}</h1>
+           <p className="text-xs font-bold text-slate-600">
+             9900 Westpark Dr, Houston, TX 77063
+           </p>
+           {selectedProvider?.contact?.phone && (
+              <p className="text-[10px] font-bold text-slate-600">
+                OFFICE: {selectedProvider.contact.phone}
+              </p>
+           )}
+        </div>
+        
+        <h2 className="text-lg font-extrabold uppercase mt-4 text-slate-900 tracking-wider">THERAPY ASSESSMENT</h2>
       </div>
 
       {/* Patient & Diagnosis Banner */}
@@ -139,44 +254,7 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
         return (
           <div key={dos} className="space-y-2 pt-2">
             <div className="border border-[#722F37] text-[10px] font-mono">
-              <table className="w-full text-center border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 font-bold border-b border-[#722F37]">
-                    <th className="p-1 border-r border-[#722F37] w-24">DATE</th>
-                    <th className="p-1 border-r border-[#722F37]">HOT PACK<br/>97010</th>
-                    <th className="p-1 border-r border-[#722F37]">TRACTION<br/>97012</th>
-                    <th className="p-1 border-r border-[#722F37]">ELEC-STIM<br/>97014</th>
-                    <th className="p-1 border-r border-[#722F37]">ULTRASOUND<br/>97035</th>
-                    <th className="p-1">MASSAGE<br/>97124</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-[#722F37]">
-                    <td className="p-1 border-r border-[#722F37] font-bold">{dos}</td>
-                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97010') && '✓'}</td>
-                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97012') && '✓'}</td>
-                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97014') && '✓'}</td>
-                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97035') && '✓'}</td>
-                    <td className="p-1 font-bold text-center">{hasCpt(lines, '97124') ? '✓' : ''}</td>
-                  </tr>
-                  <tr className="bg-slate-100 font-bold border-b border-[#722F37]">
-                    <td className="p-1 border-r border-[#722F37]">ROM EXERCISE<br/>97110</td>
-                    <td className="p-1 border-r border-[#722F37]">OFFICE VISIT<br/>99205</td>
-                    <td className="p-1 border-r border-[#722F37]">CMT SPINAL<br/>97140</td>
-                    <td className="p-1 border-r border-[#722F37]">Follow-up consult<br/>99213</td>
-                    <td colSpan="2" className="p-1">LASER THERAPY<br/>97039</td>
-                  </tr>
-                  <tr>
-                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97110') && '✓'}</td>
-                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '99205') && '✓'}</td>
-                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97140') && '✓'}</td>
-                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '99213') && '✓'}</td>
-                    <td colSpan="2" className="p-1 font-bold text-center">
-                      {hasCpt(lines, '97039') ? `✓${getCptUnits(lines, '97039')}` : ''}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              {renderTreatmentsTable(lines, dos)}
             </div>
 
             {/* Assessment Underlines */}
@@ -267,4 +345,3 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
     </div>
   );
 };
-

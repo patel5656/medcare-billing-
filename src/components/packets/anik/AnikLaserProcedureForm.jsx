@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import bodyImage from '../../../assets/body_image.png';
 
 import { EditableClinicalField } from '../EditableClinicalField';
+import { apiProviderService } from '../../../services/api/apiProviderService';
+import fmLogo from '../../../assets/fm-logo.jpeg';
 
 /**
- * ANIK Laser Therapy Procedure Form (Radial Device) - PDF Pages 8, 9, 10
+ * Laser Procedure Form (Radial Device)
  * Fully dynamic patient, clinical, treatment, date, and provider signature data.
  */
 export const AnikLaserProcedureForm = ({ 
@@ -16,6 +18,22 @@ export const AnikLaserProcedureForm = ({
   procedureData = null,
   serviceLines = []
 }) => {
+  const [providers, setProviders] = useState({});
+  const [selectedProviderId, setSelectedProviderId] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    // Fetch providers
+    apiProviderService.getProviders().then(data => {
+      setProviders(data);
+      if (packetData?.providerId) {
+        setSelectedProviderId(packetData.providerId);
+      }
+    }).catch(err => console.error(err));
+  }, [packetData]);
+
+  const selectedProvider = providers[selectedProviderId];
+
   const docKey = `ANIK_PROCEDURE_${pageIndex}`;
   const storage = packetData?.clinicalDocStorage?.[docKey] || {};
 
@@ -48,7 +66,7 @@ export const AnikLaserProcedureForm = ({
 
   const procedureDos = getProcedureDos();
 
-  // Find saved ANIK_LASER clinical note
+  // Find saved clinical note
   const notes = !blankMode && Array.isArray(packetData?.clinicalNotes) ? packetData.clinicalNotes : [];
   const anikNote = notes.find(n => {
     if (!n) return false;
@@ -125,6 +143,9 @@ export const AnikLaserProcedureForm = ({
   // Provider Signature
   const providerSignature = blankMode ? '' : (procedureData?.providerSignature || procedureData?.providerName || anikNote?.author || anikNote?.signedBy || noteContent?.providerSignature || packetData?.renderingProviderName || packetData?.providerName || '');
   const signatureDate = blankMode ? '' : (procedureData?.signatureDate || anikNote?.date || noteContent?.signatureDate || packetData?.signatureDate || '');
+
+  // Helper to check if a specific CPT exists in a given date's lines
+  const hasCpt = (lines, codePrefix) => Array.isArray(lines) && lines.some(l => l.cptCode && String(l.cptCode).startsWith(codePrefix));
 
   const getInjuryMarks = () => {
     if (blankMode || !packetData) return [];
@@ -221,14 +242,68 @@ export const AnikLaserProcedureForm = ({
 
   return (
     <div
-      className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-4 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:shadow-none print:border-none"
+      className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-4 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:shadow-none print:border-none"
       style={{ width: '100%', maxWidth: '850px', minHeight: '1100px' }}
     >
       
-      {/* Provider Heading & Title */}
-      <div className="text-center pb-2">
-        <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight">ANIK LASER THERAPY</h1>
-        <h2 className="text-sm font-bold uppercase mt-1 text-slate-800 tracking-wider">PROCEDURE FORM (RADIAL DEVICE)</h2>
+      {/* Provider Header */}
+      <div className="text-center pb-4 border-b-2 border-[#722F37] mb-4 relative">
+        {/* Dynamic Provider Dropdown */}
+        <div className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm p-3 rounded-xl border border-slate-200/80 inline-block text-left w-64 shadow-lg shadow-slate-200/50 print:hidden transition-all hover:shadow-xl z-[100]">
+          <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
+            Treating Provider
+          </label>
+          <div className="relative group">
+            <button 
+              type="button"
+              disabled={readOnly}
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-full text-left bg-white border border-slate-200 rounded-lg pl-3 pr-8 py-2 text-sm font-bold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#722F37]/30 focus:border-[#722F37] transition-all cursor-pointer hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+            >
+              <span className="block break-words whitespace-normal text-left">{selectedProvider ? selectedProvider.name : '[ Select Provider ]'}</span>
+            </button>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400 group-hover:text-[#722F37] transition-colors">
+              <svg className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+
+            {/* Custom Dropdown List */}
+            {isDropdownOpen && !readOnly && (
+              <div className="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-xl z-[100] max-h-60 overflow-y-auto">
+                <div 
+                  className="px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-50 cursor-pointer border-b border-slate-100"
+                  onClick={() => { setSelectedProviderId(''); setIsDropdownOpen(false); }}
+                >
+                  [ Select Provider ]
+                </div>
+                {Object.values(providers).map(p => (
+                  <div 
+                    key={p.id} 
+                    className={`px-3 py-2.5 text-sm font-bold cursor-pointer hover:bg-slate-50 ${selectedProviderId === p.id ? 'bg-slate-100 text-[#722F37]' : 'text-slate-800'}`}
+                    onClick={() => { setSelectedProviderId(p.id); setIsDropdownOpen(false); }}
+                  >
+                    {p.name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Logo and Facility Name */}
+        <div className="flex flex-col items-center justify-center space-y-1">
+           <img src={fmLogo} alt="FM Health Logo" className="h-16 w-auto object-contain mb-1 mix-blend-multiply" />
+           <h1 className="text-2xl font-black uppercase text-[#722F37] tracking-tight">{selectedProvider ? selectedProvider.name : 'FM HEALTH AND WELLNESS CENTER'}</h1>
+           <p className="text-xs font-bold text-slate-600">
+             9900 Westpark Dr, Houston, TX 77063
+           </p>
+           {selectedProvider?.contact?.phone && (
+              <p className="text-[10px] font-bold text-slate-600">
+                OFFICE: {selectedProvider.contact.phone}
+              </p>
+           )}
+        </div>
+        
+        <h2 className="text-sm font-bold uppercase mt-2 text-slate-800 tracking-wider">PROCEDURE FORM (RADIAL DEVICE)</h2>
       </div>
 
       {/* Demographics Row */}
@@ -312,7 +387,7 @@ export const AnikLaserProcedureForm = ({
           {/* Column 3: Check / Circle Observational Findings */}
           <div className="col-span-3 p-3 space-y-2 bg-slate-50">
             <span className="font-bold block text-[10px] uppercase text-slate-700 leading-tight">
-              Please check/circle (all that applies)
+              Applicable Treatments
             </span>
             <div className="space-y-1.5 text-xs font-mono">
               <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
@@ -323,26 +398,24 @@ export const AnikLaserProcedureForm = ({
                 <span>AAO X3</span>
                 {isFindingChecked('AAO_X3') || isFindingChecked('AAO X3') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
               </div>
-              <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
-                <span>Treatment A1</span>
-                {isFindingChecked('Treatment_A1') || isFindingChecked('Treatment A1') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
-              </div>
-              <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
-                <span>Treatment A2</span>
-                {isFindingChecked('Treatment_A2') || isFindingChecked('Treatment A2') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
-              </div>
-              <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
-                <span>Treatment A3</span>
-                {isFindingChecked('Treatment_A3') || isFindingChecked('Treatment A3') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
-              </div>
-              <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
-                <span>Treatment A4</span>
-                {isFindingChecked('Treatment_A4') || isFindingChecked('Treatment A4') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Treatment A5</span>
-                {isFindingChecked('Treatment_A5') || isFindingChecked('Treatment A5') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
-              </div>
+              
+              {selectedProvider && selectedProvider.availableServices ? selectedProvider.availableServices.map((svc, idx) => (
+                <div key={idx} className="flex items-center justify-between border-b border-slate-200 pb-0.5 mt-1">
+                  <span className="text-[9px] leading-tight break-words">{svc.description || svc.code}</span>
+                  {isFindingChecked(svc.code) || hasCpt(serviceLines, svc.code) ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                </div>
+              )) : (
+                <>
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
+                    <span className="text-[10px]">Treatment A1</span>
+                    <span className="text-slate-300">—</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
+                    <span className="text-[10px]">Treatment A2</span>
+                    <span className="text-slate-300">—</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -372,7 +445,7 @@ export const AnikLaserProcedureForm = ({
         <div className="pt-6 flex justify-between items-end text-xs font-mono">
           <div>
             <span>Health Care Provider Signature:</span>
-            <p className="font-bold text-sm text-slate-900 mt-2 underline">{providerSignature}</p>
+            <p className="font-bold text-sm text-slate-900 mt-2 underline">{providerSignature || (selectedProvider && selectedProvider.renderingProvider ? selectedProvider.renderingProvider.name : '')}</p>
           </div>
           <div>
             <span>Date:</span>

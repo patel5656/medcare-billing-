@@ -50,7 +50,7 @@ export const AppLayout = () => {
   return (
     <div className="app-shell flex flex-col bg-slate-50 font-sans antialiased text-slate-900 print:h-auto print:overflow-visible">
       {/* Top Header - 64px on mobile, 72px-80px on desktop */}
-      <header className="h-16 sm:h-20 shrink-0 border-b border-slate-200 bg-white z-30 print:hidden">
+      <header className="h-16 sm:h-20 shrink-0 border-b border-slate-200 bg-white z-[100] relative print:hidden">
         <TopHeader />
       </header>
 

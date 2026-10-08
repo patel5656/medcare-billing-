@@ -10,7 +10,7 @@
 export const PACKET_MANIFESTS = {
   'prov-anik': {
     providerId: 'prov-anik',
-    providerName: 'ANIK Laser Therapy',
+    providerName: 'FM Laser Therapy',
     totalPages: 16,
     pages: [
       { pageNumber: 1, id: 'anik-cover', type: 'COVER', title: 'Patient & Case Cover Page', componentKey: 'AnikCoverPage' },
@@ -34,7 +34,7 @@ export const PACKET_MANIFESTS = {
 
   'prov-davs': {
     providerId: 'prov-davs',
-    providerName: "DAV'S Anatomy",
+    providerName: "FM Dav's Anatomy",
     totalPages: 14,
     pages: [
       { pageNumber: 1, id: 'davs-cover', type: 'COVER', title: 'Patient & Case Cover Page', componentKey: 'DavCoverPage' },
@@ -56,7 +56,7 @@ export const PACKET_MANIFESTS = {
 
   'prov-josmic': {
     providerId: 'prov-josmic',
-    providerName: 'JOSMIC Wellness Center',
+    providerName: 'FM Health and Wellness Center',
     totalPages: 7,
     pages: [
       { pageNumber: 1, id: 'josmic-cover', type: 'COVER', title: 'Patient & Case Cover Page', componentKey: 'JosmicCoverPage' },

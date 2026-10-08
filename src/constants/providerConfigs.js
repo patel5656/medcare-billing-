@@ -3,19 +3,19 @@
 export const INITIAL_PROVIDER_CONFIGS = {
   josmic: {
     id: 'prov-josmic',
-    name: 'JOSMIC Wellness Center',
-    businessName: 'JOSMIC Wellness Center LLC',
+    name: 'FM Health and Wellness Center',
+    businessName: 'FM Health and Wellness Center LLC',
     serviceCategory: 'Pain Management Consultation',
     status: 'ACTIVE',
     isPlaceholder: false,
     cptCode: '99204',
     fee: '$1,214.00',
     address: {
-      street: '10101 Harwin Dr.',
-      suite: 'Suite 274',
+      street: '9900 Westpark Dr.',
+      suite: '',
       city: 'Houston',
       state: 'TX',
-      zipCode: '77036'
+      zipCode: '77063'
     },
     contact: {
       phone: '713-485-5712',
@@ -35,13 +35,13 @@ export const INITIAL_PROVIDER_CONFIGS = {
       npi: '1932847560'
     },
     serviceFacility: {
-      name: 'JOSMIC Wellness Center',
-      address: '10101 Harwin Dr, Suite 320, Houston, TX 77036',
+      name: 'FM Health and Wellness Center',
+      address: '9900 Westpark Dr, Houston, TX 77063',
       npi: '1932847560'
     },
     billingProvider: {
-      name: 'JOSMIC Wellness Center',
-      address: '10101 Harwin Dr, Suite 320, Houston, TX 77036',
+      name: 'FM Health and Wellness Center',
+      address: '9900 Westpark Dr, Houston, TX 77063',
       phone: '713-485-5712'
     },
     defaultPlaceOfService: '11',
@@ -68,26 +68,26 @@ export const INITIAL_PROVIDER_CONFIGS = {
         duration: '60 min',
         billingDescription: 'Pain Consult & Evaluation',
         placeOfService: '11',
-        clinicalTemplate: 'JOSMIC Pain Evaluation Report',
+        clinicalTemplate: 'FM Health Pain Evaluation Report',
         configurationStatus: 'COMPLETE'
       }
     ]
   },
   davs: {
     id: 'prov-davs',
-    name: "DAV'S Anatomy",
-    businessName: "DAV'S Anatomy Shockwave Therapy LLC",
+    name: "FM Dav's Anatomy",
+    businessName: "FM Dav's Anatomy Shockwave Therapy LLC",
     serviceCategory: 'Shockwave Therapy (ESWT)',
     status: 'ACTIVE',
     isPlaceholder: false,
     cptCode: '0101T',
     fee: '$1,000.00',
     address: {
-      street: '10101 Harwin Dr.',
-      suite: 'Suite 320',
+      street: '9900 Westpark Dr.',
+      suite: '',
       city: 'Houston',
       state: 'TX',
-      zipCode: '77036'
+      zipCode: '77063'
     },
     contact: {
       phone: '713-485-0208',
@@ -107,13 +107,13 @@ export const INITIAL_PROVIDER_CONFIGS = {
       npi: '1932847561'
     },
     serviceFacility: {
-      name: "DAV'S Anatomy",
-      address: '10101 Harwin Dr, Suite 320, Houston, TX 77036',
+      name: "FM Dav's Anatomy",
+      address: '9900 Westpark Dr, Houston, TX 77063',
       npi: '1932847561'
     },
     billingProvider: {
-      name: "DAV'S Anatomy",
-      address: '10101 Harwin Dr, Houston, TX 77036',
+      name: "FM Dav's Anatomy",
+      address: '9900 Westpark Dr, Houston, TX 77063',
       phone: '832-815-0959'
     },
     defaultPlaceOfService: '10',
@@ -141,26 +141,26 @@ export const INITIAL_PROVIDER_CONFIGS = {
         duration: '30 min',
         billingDescription: 'Shockwave / ESWT Therapy',
         placeOfService: '10',
-        clinicalTemplate: "DAV'S ESWT Therapy Record",
+        clinicalTemplate: "FM Dav's ESWT Therapy Record",
         configurationStatus: 'COMPLETE'
       }
     ]
   },
   anik: {
     id: 'prov-anik',
-    name: 'ANIK Laser Therapy',
-    businessName: 'ANIK Laser Therapy LLC',
+    name: 'FM Laser Therapy',
+    businessName: 'FM Laser Therapy LLC',
     serviceCategory: 'Laser Therapy (HILT)',
     status: 'ACTIVE',
     isPlaceholder: false,
     cptCode: '97039',
     fee: '$2,000.00',
     address: {
-      street: '10101 Harwin Dr.',
-      suite: 'Suite 274',
+      street: '9900 Westpark Dr.',
+      suite: '',
       city: 'Houston',
       state: 'TX',
-      zipCode: '77036'
+      zipCode: '77063'
     },
     contact: {
       phone: '713-485-5712',
@@ -180,13 +180,13 @@ export const INITIAL_PROVIDER_CONFIGS = {
       npi: '1932847562'
     },
     serviceFacility: {
-      name: 'ANIK Laser Therapy',
-      address: '10101 Harwin Dr, Suite 274, Houston, TX 77036',
+      name: 'FM Laser Therapy',
+      address: '9900 Westpark Dr, Houston, TX 77063',
       npi: '1932847562'
     },
     billingProvider: {
-      name: 'ANIK Laser Therapy',
-      address: '10101 Harwin Dr, Suite 274, Houston, TX 77036',
+      name: 'FM Laser Therapy',
+      address: '9900 Westpark Dr, Houston, TX 77063',
       phone: '713-485-5712'
     },
     defaultPlaceOfService: '11',
@@ -209,7 +209,7 @@ export const INITIAL_PROVIDER_CONFIGS = {
         duration: '45 min',
         billingDescription: 'Laser Procedure Form',
         placeOfService: '11',
-        clinicalTemplate: 'ANIK Laser Procedure Form',
+        clinicalTemplate: 'FM Laser Procedure Form',
         configurationStatus: 'COMPLETE'
       }
     ]
