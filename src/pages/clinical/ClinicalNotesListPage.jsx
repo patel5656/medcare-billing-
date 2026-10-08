@@ -78,6 +78,12 @@ export const ClinicalNotesListPage = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
+            onClick={() => navigate('/clinical-notes/counselor-session')}
+            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <Brain className="w-4 h-4 text-emerald-200" /> Full Counselor Session
+          </button>
+          <button
             onClick={() => setShowCounselorModal(true)}
             className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer"
           >

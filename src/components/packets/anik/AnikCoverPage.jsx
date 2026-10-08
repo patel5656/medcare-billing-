@@ -88,11 +88,11 @@ export const AnikCoverPage = ({
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       
       {/* Header */}
-      <div className="text-center border-b-2 border-slate-900 pb-6">
-        <h1 className="text-2xl font-black uppercase text-teal-800 tracking-tight">ANIK LASER THERAPY</h1>
+      <div className="text-center border-b-2 border-[#722F37] pb-6">
+        <h1 className="text-2xl font-black uppercase text-[#722F37] tracking-tight">ANIK LASER THERAPY</h1>
         <p className="text-xs font-bold text-slate-600">10101 HARWIN DR. STE 274 HOUSTON TX 77036</p>
         <p className="text-xs text-slate-600">OFFICE: 713-485-5712 | CELL: 832-815-0959 | FAX: 832-416-1502</p>
-        <p className="text-xs text-teal-700 font-semibold underline">Aniklasertherapy@gmail.com</p>
+        <p className="text-xs text-[#722F37] font-semibold underline">Aniklasertherapy@gmail.com</p>
       </div>
 
       <div className="bg-slate-100 p-6 rounded-xl border border-slate-300 space-y-4">
@@ -133,7 +133,7 @@ export const AnikCoverPage = ({
             <span className="text-slate-500 block font-bold">CASE STATUS:</span>
             {!caseStatus
               ? <div className="border-b border-slate-400 mt-1 w-28">&nbsp;</div>
-              : <strong className="text-teal-700 text-base font-black">{caseStatus}</strong>}
+              : <strong className="text-[#722F37] text-base font-black">{caseStatus}</strong>}
           </div>
         </div>
       </div>

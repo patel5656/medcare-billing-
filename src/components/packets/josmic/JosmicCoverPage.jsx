@@ -29,10 +29,10 @@ export const JosmicCoverPage = ({ blankMode = false, packetData = null, bill = n
     <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '48px 56px' }}>
 
       {/* Header */}
-      <div className="flex items-center justify-between border-b-2 border-slate-800 pb-5 mb-6">
+      <div className="flex items-center justify-between border-b-2 border-[#722F37] pb-5 mb-6">
         <div className="flex items-center gap-4">
           {/* Logo circle */}
-          <div className="w-16 h-16 rounded-full bg-teal-700 flex items-center justify-center flex-shrink-0">
+          <div className="w-16 h-16 rounded-full bg-[#722F37] flex items-center justify-center flex-shrink-0">
             <svg viewBox="0 0 80 80" className="w-12 h-12 text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="40" cy="40" r="38" fill="#0d9488" />
               {/* Body silhouette */}
@@ -45,7 +45,7 @@ export const JosmicCoverPage = ({ blankMode = false, packetData = null, bill = n
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-black uppercase text-teal-800 tracking-tight" style={{ fontFamily: 'serif' }}>JOSMIC WELLNESS CENTER</h1>
+            <h1 className="text-2xl font-black uppercase text-[#722F37] tracking-tight" style={{ fontFamily: 'serif' }}>JOSMIC WELLNESS CENTER</h1>
             <p className="text-[11px] font-bold text-slate-600">10101 HARWIN DR. STE 274 HOUSTON TX 77036</p>
             <p className="text-[11px] text-slate-600">OFFICE: 713-485-5712 &nbsp;|&nbsp; FAX: 832-416-1502</p>
           </div>

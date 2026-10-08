@@ -1,5 +1,6 @@
 // src/components/packets/davs/DavFinalNarrative.jsx
 import React from 'react';
+import { EditableClinicalField } from '../EditableClinicalField';
 
 export const DavFinalNarrative = ({ reportPage = 1, blankMode = false, packetData = null }) => {
   const narrative = packetData?.narrativeReport || packetData?.finalNarrative || packetData?.finalReport || {};
@@ -36,14 +37,16 @@ export const DavFinalNarrative = ({ reportPage = 1, blankMode = false, packetDat
   // Discharge Summary & Outcomes Clinical Text
   const getDischargeSummaryText = () => {
     if (blankMode || !packetData) return '';
+    const storage = packetData?.clinicalDocStorage?.['DAVS_FINAL'] || {};
+    
     if (reportPage === 1) {
-      return narrative.page1Summary || narrative.dischargeSummary || narrative.outcomes || narrative.summaryOfTreatment || packetData.dischargeSummary || packetData.outcomes || packetData.summaryOfTreatment || '';
+      return storage.page1Summary || narrative.page1Summary || narrative.dischargeSummary || narrative.outcomes || narrative.summaryOfTreatment || packetData.dischargeSummary || packetData.outcomes || packetData.summaryOfTreatment || '';
     }
     if (reportPage === 2) {
-      return narrative.page2Summary || narrative.dischargeSummaryPage2 || narrative.secondaryOutcomes || narrative.dischargeSummary || narrative.outcomes || packetData.dischargeSummaryPage2 || packetData.dischargeSummary || packetData.outcomes || '';
+      return storage.page2Summary || narrative.page2Summary || narrative.dischargeSummaryPage2 || narrative.secondaryOutcomes || narrative.dischargeSummary || narrative.outcomes || packetData.dischargeSummaryPage2 || packetData.dischargeSummary || packetData.outcomes || '';
     }
     if (reportPage === 3) {
-      return narrative.page3Summary || narrative.dischargeSummaryPage3 || narrative.tertiaryOutcomes || narrative.dischargeSummary || narrative.outcomes || packetData.dischargeSummaryPage3 || packetData.dischargeSummary || packetData.outcomes || '';
+      return storage.page3Summary || narrative.page3Summary || narrative.dischargeSummaryPage3 || narrative.tertiaryOutcomes || narrative.dischargeSummary || narrative.outcomes || packetData.dischargeSummaryPage3 || packetData.dischargeSummary || packetData.outcomes || '';
     }
     return '';
   };
@@ -71,7 +74,7 @@ export const DavFinalNarrative = ({ reportPage = 1, blankMode = false, packetDat
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       <div className="flex justify-between items-start border-b border-slate-300 pb-4">
         <div>
-          <h1 className="text-lg font-black text-teal-800 uppercase italic">DAV'S ANATOMY</h1>
+          <h1 className="text-lg font-black text-[#722F37] uppercase italic">DAV'S ANATOMY</h1>
           <p className="text-[10px] text-slate-600">SHOCKWAVE THERAPY NARRATIVE DISCHARGE REPORT</p>
         </div>
         <div className="text-right font-mono text-[10px]">
@@ -80,15 +83,23 @@ export const DavFinalNarrative = ({ reportPage = 1, blankMode = false, packetDat
         </div>
       </div>
 
-      <div className="bg-slate-50 p-4 border border-slate-200 text-xs font-mono grid grid-cols-2 gap-2">
+      <div className="bg-[#F9ECEC] p-4 border border-[#E8D3D3] text-xs font-mono grid grid-cols-2 gap-2">
         <div>PATIENT: {blankMode ? <span className="border-b border-slate-400 inline-block w-28">&nbsp;</span> : <strong>{patientName}</strong>}</div>
         <div>TOTAL ESWT SESSIONS: {blankMode ? <span className="border-b border-slate-400 inline-block w-28">&nbsp;</span> : <strong>{eswtSessionsText}</strong>}</div>
       </div>
 
       <div className="flex-1 space-y-4 text-xs leading-relaxed text-slate-800 flex flex-col justify-between pt-2">
         <div>
-          <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900">DISCHARGE SUMMARY & OUTCOMES</h2>
-          <p className="mt-2">{dischargeSummaryText}</p>
+          <h2 className="font-bold border-b border-[#E8D3D3] pb-1 text-[#722F37]">DISCHARGE SUMMARY & OUTCOMES</h2>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="DAVS_FINAL"
+            field={`page${reportPage}Summary`}
+            value={dischargeSummaryText} 
+            readOnly={blankMode || !packetData} 
+            minHeightClass="min-h-[20rem]" 
+            className="hover:bg-[#F9ECEC] focus:bg-[#F9ECEC] focus:ring-[#722F37]"
+          />
         </div>
 
         <div className="border-t border-slate-300 pt-4 font-mono text-xs">

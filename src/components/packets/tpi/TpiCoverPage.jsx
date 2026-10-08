@@ -32,7 +32,7 @@ export const TpiCoverPage = ({ blankMode = false, packetData = null, bill = null
     <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '48px 56px' }}>
 
       {/* Header */}
-      <div className="flex items-center justify-between border-b-2 border-slate-800 pb-5 mb-6">
+      <div className="flex items-center justify-between border-b-2 border-[#722F37] pb-5 mb-6">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-amber-600 flex items-center justify-center flex-shrink-0">
             <svg viewBox="0 0 24 24" className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth="2">

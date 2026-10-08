@@ -41,7 +41,7 @@ export const PaperTextField = ({
           type="text"
           value={value}
           onChange={handleChange}
-          className={`w-full bg-transparent border-b border-dashed border-slate-300 focus:border-teal-600 focus:bg-teal-50/50 text-slate-900 font-bold uppercase p-0.5 outline-none font-mono print:border-none print:bg-transparent print:p-0 print:shadow-none print:outline-none print:text-black ${
+          className={`w-full bg-transparent border-b border-dashed border-slate-300 focus:border-teal-600 focus:bg-[#F9ECEC]/50 text-slate-900 font-bold uppercase p-0.5 outline-none font-mono print:border-none print:bg-transparent print:p-0 print:shadow-none print:outline-none print:text-black ${
             source === 'MANUAL' ? 'bg-amber-50 text-amber-900 border-amber-400 print:bg-transparent print:border-none' : ''
           } ${className}`}
           style={{ fontSize: `${fontSize}px` }}

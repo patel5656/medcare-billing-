@@ -8,28 +8,30 @@ const getMusclesTableData = (packetData) => {
   return [];
 };
 
-export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
-  const patientNameVal = blankMode || !packetData ? '' : (packetData.patientName || '');
-  
-  const serviceDates = serviceLines && serviceLines.length > 0
-    ? [...new Set(serviceLines.map(l => l.dos || l.dateOfService).filter(Boolean))]
-    : [];
+import { EditableClinicalField } from '../EditableClinicalField';
+
+export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false, packetData = null }) => {
+  const serviceDates = packetData?.serviceDates || [];
   const activeDos = blankMode ? '' : (dos || (serviceDates.length > 0 ? serviceDates[0] : (packetData?.procedureDos || packetData?.serviceDate || '')));
+  
+  const patientNameVal = blankMode || !packetData ? '' : (packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '');
+  const docKey = activeDos ? `TPI_PROCEDURE_${activeDos}` : 'TPI_PROCEDURE';
+  const storage = packetData?.clinicalDocStorage?.[docKey] || {};
 
   const signatureDateVal = blankMode || !packetData ? '' : (packetData.signatureDate || packetData.signedAt || packetData.dischargeDate || '');
   const providerNameVal = blankMode || !packetData ? '' : (packetData.operatingProviderName || packetData.referringProviderName || packetData.providerName || packetData.attendingProviderName || '');
 
-  const preOpDiagText = blankMode || !packetData ? '' : (packetData.preOpDiagnosis || packetData.preOperativeDiagnosis || (packetData.diagnosisCodes && packetData.diagnosisCodes.length > 0 ? packetData.diagnosisCodes.join(', ') : ''));
-  const medInjectedText = blankMode || !packetData ? '' : (packetData.medicationInjected || packetData.medicationsInjected || packetData.medication || '');
-  const totalVolumeText = blankMode || !packetData ? '' : (packetData.totalVolume || packetData.needlesUsed || packetData.volumeAndNeedles || '');
-  const procedureDescText = blankMode || !packetData ? '' : (packetData.procedureDescription || packetData.procedureNotes || packetData.technique || '');
+  const preOpDiagText = blankMode || !packetData ? '' : (storage.preOpDiagnosis || packetData.preOpDiagnosis || packetData.preOperativeDiagnosis || (packetData.diagnosisCodes && packetData.diagnosisCodes.length > 0 ? packetData.diagnosisCodes.join(', ') : ''));
+  const medInjectedText = blankMode || !packetData ? '' : (storage.medicationInjected || packetData.medicationInjected || packetData.medicationsInjected || packetData.medication || '');
+  const totalVolumeText = blankMode || !packetData ? '' : (storage.totalVolume || packetData.totalVolume || packetData.needlesUsed || packetData.volumeAndNeedles || '');
+  const procedureDescText = blankMode || !packetData ? '' : (storage.procedureDescription || packetData.procedureDescription || packetData.procedureNotes || packetData.technique || '');
 
   const musclesList = blankMode ? [] : getMusclesTableData(packetData);
 
   return (
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       {/* Header */}
-      <div className="border-b-2 border-slate-800 pb-4 mb-6 text-center">
+      <div className="border-b-2 border-[#722F37] pb-4 mb-6 text-center">
         <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>TRIGGER POINT INJECTION PROCEDURE</h1>
         <p className="text-xs font-bold text-slate-600 mt-1">OPERATIVE REPORT</p>
       </div>
@@ -50,13 +52,15 @@ export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false
       <div className="mb-6">
         <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">Pre-Operative Diagnosis</h2>
         <div className="text-xs font-mono px-2">
-          <div
-            contentEditable={!readOnly}
-            suppressContentEditableWarning
-            className="text-slate-700 border border-slate-300 p-2 min-h-[40px] bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-text"
-          >
-            {preOpDiagText}
-          </div>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey={docKey}
+            field="preOpDiagnosis"
+            value={preOpDiagText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[40px]"
+            className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-amber-500"
+          />
         </div>
       </div>
 
@@ -66,23 +70,27 @@ export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false
         <div className="grid grid-cols-2 gap-4 text-xs font-mono px-2">
           <div>
             <span className="font-bold block mb-1">Medication Injected:</span>
-            <div
-              contentEditable={!readOnly}
-              suppressContentEditableWarning
-              className="text-slate-700 border border-slate-300 p-2 min-h-[38px] bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-text"
-            >
-              {medInjectedText}
-            </div>
+            <EditableClinicalField 
+              packetData={packetData}
+              docKey={docKey}
+              field="medicationInjected"
+              value={medInjectedText} 
+              readOnly={readOnly || blankMode || !packetData}
+              minHeightClass="min-h-[38px]"
+              className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-amber-500"
+            />
           </div>
           <div>
             <span className="font-bold block mb-1">Total Volume / Needles Used:</span>
-            <div
-              contentEditable={!readOnly}
-              suppressContentEditableWarning
-              className="text-slate-700 border border-slate-300 p-2 min-h-[38px] bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-text"
-            >
-              {totalVolumeText}
-            </div>
+            <EditableClinicalField 
+              packetData={packetData}
+              docKey={docKey}
+              field="totalVolume"
+              value={totalVolumeText} 
+              readOnly={readOnly || blankMode || !packetData}
+              minHeightClass="min-h-[38px]"
+              className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-amber-500"
+            />
           </div>
         </div>
         
@@ -122,13 +130,15 @@ export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false
       <div className="mb-6">
         <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">Procedure Description</h2>
         <div className="text-xs font-mono px-2">
-          <div
-            contentEditable={!readOnly}
-            suppressContentEditableWarning
-            className="text-slate-700 border border-slate-300 p-2 min-h-[100px] bg-slate-50 leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white cursor-text"
-          >
-            {procedureDescText}
-          </div>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey={docKey}
+            field="procedureDescription"
+            value={procedureDescText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[100px]"
+            className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-amber-500"
+          />
         </div>
       </div>
 

@@ -56,6 +56,7 @@ const ALL_SECTIONS = (dashboardPath) => [
     items: [
       { label: 'Documents Repository', path: '/documents', icon: 'FileSpreadsheet' },
       { label: 'Patient Packet Builder', path: '/documents/packet-builder', icon: 'Layers' },
+      { label: 'AI Doctor Note', path: '/documents/ai-doctor-note', icon: 'Bot' },
     ],
   },
   {

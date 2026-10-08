@@ -23,21 +23,24 @@ const getMuscleChecked = (label, packetData) => {
   return false;
 };
 
+import { EditableClinicalField } from '../EditableClinicalField';
+
 export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
+  const storage = packetData?.clinicalDocStorage?.['TPI_ASSESSMENT'] || {};
   const patientNameVal = blankMode || !packetData ? '' : (packetData.patientName || '');
   const evalDateVal = blankMode || !packetData ? '' : (packetData.initialDate || packetData.evalDate || packetData.assessmentDate || '');
   const signatureDateVal = blankMode || !packetData ? '' : (packetData.signatureDate || packetData.signedAt || packetData.dischargeDate || '');
   const providerNameVal = blankMode || !packetData ? '' : (packetData.referringProviderName || packetData.providerName || packetData.attendingProviderName || '');
 
   const painScore = blankMode ? null : getPainScore(packetData);
-  const chiefComplaintText = blankMode || !packetData ? '' : (packetData.chiefComplaint || packetData.painDescription || packetData.mechanismOfInjury || '');
-  const palpationFindingsText = blankMode || !packetData ? '' : (packetData.palpationFindings || packetData.palpation || packetData.physicalExam?.palpation || '');
-  const treatmentPlanText = blankMode || !packetData ? '' : (packetData.treatmentPlan || packetData.plan || packetData.planRecommendations || '');
+  const chiefComplaintText = blankMode || !packetData ? '' : (storage.chiefComplaint || packetData.chiefComplaint || packetData.painDescription || packetData.mechanismOfInjury || '');
+  const palpationFindingsText = blankMode || !packetData ? '' : (storage.palpationFindings || packetData.palpationFindings || packetData.palpation || packetData.physicalExam?.palpation || '');
+  const treatmentPlanText = blankMode || !packetData ? '' : (storage.treatmentPlan || packetData.treatmentPlan || packetData.plan || packetData.planRecommendations || '');
 
   return (
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       {/* Header */}
-      <div className="border-b-2 border-slate-800 pb-4 mb-6 text-center">
+      <div className="border-b-2 border-[#722F37] pb-4 mb-6 text-center">
         <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>TRIGGER POINT ASSESSMENT</h1>
         <p className="text-xs font-bold text-slate-600 mt-1">CLINICAL EVALUATION &amp; FINDINGS</p>
       </div>
@@ -70,13 +73,15 @@ export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetD
           </div>
           <div>
             <span className="font-bold block mb-1">Chief Complaint / Pain Description:</span>
-            <div
-              contentEditable={!readOnly}
-              suppressContentEditableWarning
-              className="border border-slate-300 p-2 min-h-[60px] text-slate-700 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
-            >
-              {chiefComplaintText}
-            </div>
+            <EditableClinicalField 
+              packetData={packetData}
+              docKey="TPI_ASSESSMENT"
+              field="chiefComplaint"
+              value={chiefComplaintText} 
+              readOnly={readOnly || blankMode || !packetData}
+              minHeightClass="min-h-[60px]"
+              className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-amber-500"
+            />
           </div>
         </div>
       </div>
@@ -101,13 +106,15 @@ export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetD
           </div>
           <div>
             <span className="font-bold block mb-2">Palpation Findings:</span>
-            <div
-              contentEditable={!readOnly}
-              suppressContentEditableWarning
-              className="text-slate-700 border border-slate-300 p-2 min-h-[80px] bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
-            >
-              {palpationFindingsText}
-            </div>
+            <EditableClinicalField 
+              packetData={packetData}
+              docKey="TPI_ASSESSMENT"
+              field="palpationFindings"
+              value={palpationFindingsText} 
+              readOnly={readOnly || blankMode || !packetData}
+              minHeightClass="min-h-[80px]"
+              className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-amber-500"
+            />
           </div>
         </div>
       </div>
@@ -116,13 +123,15 @@ export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetD
       <div className="mb-6">
         <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">3. Treatment Plan</h2>
         <div className="text-xs font-mono px-2">
-          <div
-            contentEditable={!readOnly}
-            suppressContentEditableWarning
-            className="text-slate-700 border border-slate-300 p-2 min-h-[60px] bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
-          >
-            {treatmentPlanText}
-          </div>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="TPI_ASSESSMENT"
+            field="treatmentPlan"
+            value={treatmentPlanText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[60px]"
+            className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-amber-500"
+          />
         </div>
       </div>
 

@@ -1,6 +1,6 @@
-// src/components/packets/davs/DavEswtProcedureForm.jsx
 import React from 'react';
 import bodyImage from '../../../assets/body_image.png';
+import { EditableClinicalField } from '../EditableClinicalField';
 
 /**
  * DAV'S ESWT Procedure Form (Radial Device) - 3-Page Structure
@@ -17,6 +17,7 @@ export const DavEswtProcedureForm = ({
 }) => {
   const isShow = !blankMode && packetData;
   const proc = procedureData || packetData?.procedures?.[pageIndex] || {};
+  const storage = packetData?.clinicalDocStorage?.[`DAV_ESWT_${pageIndex}`] || {};
 
   const notes = isShow && Array.isArray(packetData?.clinicalNotes) ? packetData.clinicalNotes : [];
   const davsNote = notes.find(n => {
@@ -73,18 +74,18 @@ export const DavEswtProcedureForm = ({
     packetData?.patient?.allergies || 
     ''
   ) : '';
-  const allergies = Array.isArray(rawAllergies) ? rawAllergies.join(', ') : rawAllergies;
-  const bp = isShow ? (proc.bp || noteContent.bp || packetData.vitals?.bp || packetData.bp || '') : '';
-  const hr = isShow ? (proc.hr || noteContent.hr || packetData.vitals?.hr || packetData.hr || '') : '';
-  const ptHx = isShow ? (proc.ptHx || proc.history || noteContent.ptHx || noteContent.history || packetData?.ptHx || packetData?.history || '') : '';
+  const allergies = storage.allergies || (Array.isArray(rawAllergies) ? rawAllergies.join(', ') : rawAllergies);
+  const bp = storage.bp || (isShow ? (proc.bp || noteContent.bp || packetData.vitals?.bp || packetData.bp || '') : '');
+  const hr = storage.hr || (isShow ? (proc.hr || noteContent.hr || packetData.vitals?.hr || packetData.hr || '') : '');
+  const ptHx = storage.ptHx || (isShow ? (proc.ptHx || proc.history || noteContent.ptHx || noteContent.history || packetData?.ptHx || packetData?.history || '') : '');
 
-  const nerveBlock = isShow ? (proc.nerveBlock || noteContent.nerveBlock || packetData.nerveBlock || '') : '';
+  const nerveBlock = storage.nerveBlock || (isShow ? (proc.nerveBlock || noteContent.nerveBlock || packetData.nerveBlock || '') : '');
   const treatmentAreas = isShow ? (proc.treatmentAreas || proc.treatmentArea || proc.treatmentTargetAreas || noteContent.treatmentAreas || noteContent.treatmentArea || noteContent.treatmentTargetAreas || packetData.treatmentAreas || packetData.treatmentArea || '') : '';
-  const barSetting = isShow ? (proc.barSetting || proc.bar || noteContent.barSetting || noteContent.bar || packetData.barSetting || packetData.bar || '') : '';
-  const hzSetting = isShow ? (proc.hzSetting || proc.hz || noteContent.hzSetting || noteContent.hz || packetData.hzSetting || packetData.hz || '') : '';
-  const dose = isShow ? (proc.dose || noteContent.dose || packetData.dose || '') : '';
-  const totalWaves = isShow ? (proc.totalWaves || proc.total || proc.totalWavesDelivered || noteContent.totalWaves || noteContent.total || noteContent.totalWavesDelivered || packetData.totalWaves || packetData.total || '') : '';
-  const bltCream = isShow ? (proc.bltCream || noteContent.bltCream || packetData.bltCream || '') : '';
+  const barSetting = storage.barSetting || (isShow ? (proc.barSetting || proc.bar || noteContent.barSetting || noteContent.bar || packetData.barSetting || packetData.bar || '') : '');
+  const hzSetting = storage.hzSetting || (isShow ? (proc.hzSetting || proc.hz || noteContent.hzSetting || noteContent.hz || packetData.hzSetting || packetData.hz || '') : '');
+  const dose = storage.dose || (isShow ? (proc.dose || noteContent.dose || packetData.dose || '') : '');
+  const totalWaves = storage.totalWaves || (isShow ? (proc.totalWaves || proc.total || proc.totalWavesDelivered || noteContent.totalWaves || noteContent.total || noteContent.totalWavesDelivered || packetData.totalWaves || packetData.total || '') : '');
+  const bltCream = storage.bltCream || (isShow ? (proc.bltCream || noteContent.bltCream || packetData.bltCream || '') : '');
 
   const checklist = isShow ? (proc.checklist || proc.findingsChecklist || packetData.eswtChecklist || {}) : {};
   const isChecked = (key) => {
@@ -104,13 +105,13 @@ export const DavEswtProcedureForm = ({
     const areas = Array.isArray(injuryAreas) ? injuryAreas : [];
     
     const marks = [];
-    const checkStyle = "absolute text-emerald-800 font-black text-sm md:text-base transform -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]";
-
     const addMark = (key, top, left) => {
       marks.push(
-        <span key={key} className={checkStyle} style={{ top: `${top}%`, left: `${left}%` }}>
-          ✓
-        </span>
+        <div key={key} className="treatment-checkbox absolute" style={{ top: `${top}%`, left: `${left}%` }}>
+          <span className="checkbox-box">
+            <span className="checkbox-checkmark text-emerald-800 font-black text-sm md:text-base select-none pointer-events-none drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">✓</span>
+          </span>
+        </div>
       );
     };
 
@@ -200,8 +201,8 @@ export const DavEswtProcedureForm = ({
       {/* Top Header & Internal Page Number */}
       <div className="flex justify-between items-start">
         <div className="flex-1 text-center pl-16">
-          <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight">DAV'S ANATOMY</h1>
-          <h2 className="text-sm font-bold uppercase mt-1 text-slate-800 tracking-wider">ESWT PROCEDURE FORM (RADIAL DEVICE)</h2>
+          <h1 className="text-2xl font-black uppercase text-[#722F37] tracking-tight">DAV'S ANATOMY</h1>
+          <h2 className="text-sm font-bold uppercase mt-1 text-[#722F37] tracking-wider">ESWT PROCEDURE FORM (RADIAL DEVICE)</h2>
         </div>
         <div className="text-right font-mono text-[10px] text-slate-500">
           <p>PAGE {currentInternalPage} OF 3</p>
@@ -222,19 +223,19 @@ export const DavEswtProcedureForm = ({
           Intro: Patient presents for extracorporeal shockwave treatment. The patient has been advised of the risks and the benefits of the procedure and has signed consent.
         </p>
 
-        <div className="flex justify-between items-center text-xs py-1 border-b border-slate-300">
-          <div><strong>ALLERGIES:</strong> <span className="underline ml-1">{allergies}</span></div>
-          <div><strong>BP:</strong> <span className="underline ml-1">{bp}</span></div>
-          <div><strong>HR:</strong> <span className="underline ml-1">{hr}</span></div>
-          <div><strong>PT Hx:</strong> <span className="underline ml-1">{ptHx}</span></div>
+        <div className="flex justify-between items-center text-xs py-1 border-b border-slate-300 gap-2">
+          <div className="flex-1 flex items-center"><strong>ALLERGIES:</strong> <EditableClinicalField packetData={packetData} docKey={`DAV_ESWT_${pageIndex}`} field="allergies" value={allergies} readOnly={readOnly || blankMode} inputType="input" className="ml-1 w-full border-b border-dashed border-slate-400 font-mono" /></div>
+          <div className="flex items-center"><strong>BP:</strong> <EditableClinicalField packetData={packetData} docKey={`DAV_ESWT_${pageIndex}`} field="bp" value={bp} readOnly={readOnly || blankMode} inputType="input" className="ml-1 w-20 border-b border-dashed border-slate-400 font-mono text-center" /></div>
+          <div className="flex items-center"><strong>HR:</strong> <EditableClinicalField packetData={packetData} docKey={`DAV_ESWT_${pageIndex}`} field="hr" value={hr} readOnly={readOnly || blankMode} inputType="input" className="ml-1 w-12 border-b border-dashed border-slate-400 font-mono text-center" /></div>
+          <div className="flex items-center"><strong>PT Hx:</strong> <EditableClinicalField packetData={packetData} docKey={`DAV_ESWT_${pageIndex}`} field="ptHx" value={ptHx} readOnly={readOnly || blankMode} inputType="input" className="ml-1 w-24 border-b border-dashed border-slate-400 font-mono" /></div>
         </div>
 
         {/* -- 3-COLUMN FINDINGS & ANATOMICAL BODY DIAGRAM -- */}
-        <div className="border-2 border-slate-800 rounded-lg overflow-hidden grid grid-cols-12 text-xs">
+        <div className="border-2 border-[#722F37] rounded-lg overflow-hidden grid grid-cols-12 text-xs">
           
           {/* Column 1: Human Body Anatomical Diagram */}
-          <div className="col-span-5 border-r-2 border-slate-800 p-2 bg-slate-50 flex flex-col items-center justify-between">
-            <div className="w-full text-left font-bold text-[11px] uppercase tracking-wider text-slate-900">
+          <div className="col-span-5 border-r-2 border-[#722F37] p-2 bg-[#F9ECEC] flex flex-col items-center justify-between">
+            <div className="w-full text-left font-bold text-[11px] uppercase tracking-wider text-[#722F37]">
               FINDINGS:
             </div>
             
@@ -246,46 +247,44 @@ export const DavEswtProcedureForm = ({
           </div>
 
           {/* Column 2: Parameters & Settings */}
-          <div className="col-span-4 border-r-2 border-slate-800 p-3 space-y-2 bg-white">
-            <div>
-              <span className="font-bold block text-slate-900">Nerve Block Injections:</span>
-              <span className="font-semibold text-slate-700">{nerveBlock ? <strong className="underline">{nerveBlock}</strong> : ''}</span>
+          <div className="col-span-4 border-r-2 border-[#722F37] p-3 space-y-2 bg-white">
+            <div className="flex items-center">
+              <span className="font-bold block text-[#722F37] mr-2">Nerve Block Injections:</span>
+              <EditableClinicalField packetData={packetData} docKey={`DAV_ESWT_${pageIndex}`} field="nerveBlock" value={nerveBlock} readOnly={readOnly || blankMode} inputType="input" className="w-16 border-b border-dashed border-slate-400 font-mono font-bold" />
             </div>
 
             <div>
-              <span className="font-bold block text-slate-900">Treatment Area(s):</span>
+              <span className="font-bold block text-[#722F37]">Treatment Area(s):</span>
               <p className="font-semibold text-slate-800 underline">{treatmentAreas}</p>
             </div>
 
             <div className="space-y-1 text-xs">
-              <div>
-                <span className="font-bold text-slate-900">Bar:</span>
-                <span className="ml-2 font-mono underline">{barSetting}</span>
+              <div className="flex items-center">
+                <span className="font-bold text-[#722F37] w-12">Bar:</span>
+                <EditableClinicalField packetData={packetData} docKey={`DAV_ESWT_${pageIndex}`} field="barSetting" value={barSetting} readOnly={readOnly || blankMode} inputType="input" className="w-16 border-b border-dashed border-slate-400 font-mono ml-2" />
               </div>
-              <div>
-                <span className="font-bold text-slate-900">Hz:</span>
-                <span className="ml-2 font-mono underline">{hzSetting}</span>
+              <div className="flex items-center">
+                <span className="font-bold text-[#722F37] w-12">Hz:</span>
+                <EditableClinicalField packetData={packetData} docKey={`DAV_ESWT_${pageIndex}`} field="hzSetting" value={hzSetting} readOnly={readOnly || blankMode} inputType="input" className="w-16 border-b border-dashed border-slate-400 font-mono ml-2" />
               </div>
-              <div>
-                <span className="font-bold text-slate-900">Dose:</span>
-                <span className="ml-2 font-mono underline">{dose}</span>
+              <div className="flex items-center">
+                <span className="font-bold text-[#722F37] w-12">Dose:</span>
+                <EditableClinicalField packetData={packetData} docKey={`DAV_ESWT_${pageIndex}`} field="dose" value={dose} readOnly={readOnly || blankMode} inputType="input" className="w-16 border-b border-dashed border-slate-400 font-mono ml-2" />
               </div>
-              <div className="pt-1 border-t border-slate-200">
-                <span className="font-bold block text-slate-900">Total:</span>
-                <span className="font-mono text-sm font-black text-emerald-800 underline">{totalWaves}</span>
+              <div className="pt-1 border-t border-[#E8D3D3] mt-2 flex items-center">
+                <span className="font-bold text-[#722F37] w-12">Total:</span>
+                <EditableClinicalField packetData={packetData} docKey={`DAV_ESWT_${pageIndex}`} field="totalWaves" value={totalWaves} readOnly={readOnly || blankMode} inputType="input" className="w-20 border-b border-dashed border-slate-400 font-mono font-black text-emerald-800 ml-2" />
               </div>
-              <div className="pt-1 text-[10px]">
-                <span className="font-bold block">BLT Cream Applied:</span>
-                <span className="font-bold text-emerald-800">
-                  {bltCream === 'YES' ? 'YES [✓] / NO [ ]' : (bltCream === 'NO' ? 'YES [ ] / NO [✓]' : 'YES [ ] / NO [ ]')}
-                </span>
+              <div className="pt-1 text-[10px] flex items-center">
+                <span className="font-bold text-[#722F37] mr-2">BLT Cream Applied (YES/NO):</span>
+                <EditableClinicalField packetData={packetData} docKey={`DAV_ESWT_${pageIndex}`} field="bltCream" value={bltCream} readOnly={readOnly || blankMode} inputType="input" className="w-12 border-b border-dashed border-slate-400 font-mono font-bold text-emerald-800 uppercase text-center" />
               </div>
             </div>
           </div>
 
           {/* Column 3: Observational Findings Checklist */}
-          <div className="col-span-3 p-3 space-y-2 bg-slate-50">
-            <span className="font-bold block text-[10px] uppercase text-slate-700 leading-tight">
+          <div className="col-span-3 p-3 space-y-2 bg-[#F9ECEC]">
+            <span className="font-bold block text-[10px] uppercase text-[#722F37] leading-tight">
               Please check/circle (all that applies)
             </span>
 

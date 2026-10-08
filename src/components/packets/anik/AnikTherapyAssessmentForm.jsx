@@ -1,5 +1,6 @@
 // src/components/packets/anik/AnikTherapyAssessmentForm.jsx
 import React, { useState, useEffect } from 'react';
+import { apiCaseService } from '../../../services/api/apiCaseService';
 
 /**
  * ANIK Therapy Assessment Form - ANIK Reference PDF Page 7
@@ -9,20 +10,35 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
   const [assessments, setAssessments] = useState({});
 
   useEffect(() => {
-    if (packetData?.assessments) {
+    if (packetData?.clinicalDocStorage?.['ANIK_ASSESSMENT']) {
+      setAssessments(packetData.clinicalDocStorage['ANIK_ASSESSMENT']);
+    } else if (packetData?.assessments) {
       setAssessments(packetData.assessments);
     }
   }, [packetData]);
 
-  const updateAssessment = (date, field, value) => {
-    if (readOnly) return;
-    setAssessments(prev => ({
-      ...prev,
-      [date]: {
-        ...(prev[date] || {}),
-        [field]: value
-      }
-    }));
+  const updateAssessment = async (date, field, value) => {
+    if (readOnly || blankMode || !packetData || !packetData.id) return;
+    
+    setAssessments(prev => {
+      const nextState = {
+        ...prev,
+        [date]: {
+          ...(prev[date] || {}),
+          [field]: value
+        }
+      };
+
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const updatedStorage = { ...currentStorage, ['ANIK_ASSESSMENT']: nextState };
+      
+      apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage }).catch(err => {
+        console.error('Failed to save assessment', err);
+      });
+      packetData.clinicalDocStorage = updatedStorage;
+
+      return nextState;
+    });
   };
 
   // Extract patient name
@@ -84,11 +100,11 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
       
       {/* Provider Header matching PDF Page 7 */}
       <div className="text-center">
-        <h1 className="text-xl font-black uppercase text-teal-800 tracking-tight italic">ANIK LASER THERAPY</h1>
+        <h1 className="text-xl font-black uppercase text-[#722F37] tracking-tight italic">ANIK LASER THERAPY</h1>
         <p className="text-[10px] font-bold text-slate-600">
           10101 HARWIN DR.STE 274 HOUSTON TX 77036  OFFICE: 713-485-5712  CELL: 832-815-0959  FAX: 832-416-1502
         </p>
-        <p className="text-[10px] text-teal-700 font-semibold underline">Email: Aniklasertherapy@gmail.com</p>
+        <p className="text-[10px] text-[#722F37] font-semibold underline">Email: Aniklasertherapy@gmail.com</p>
         <h2 className="text-sm font-extrabold uppercase mt-2 text-slate-900 tracking-wider">THERAPY ASSESSMENT</h2>
       </div>
 
@@ -122,39 +138,39 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
 
         return (
           <div key={dos} className="space-y-2 pt-2">
-            <div className="border border-slate-900 text-[10px] font-mono">
+            <div className="border border-[#722F37] text-[10px] font-mono">
               <table className="w-full text-center border-collapse">
                 <thead>
-                  <tr className="bg-slate-100 font-bold border-b border-slate-900">
-                    <th className="p-1 border-r border-slate-900 w-24">DATE</th>
-                    <th className="p-1 border-r border-slate-900">HOT PACK<br/>97010</th>
-                    <th className="p-1 border-r border-slate-900">TRACTION<br/>97012</th>
-                    <th className="p-1 border-r border-slate-900">ELEC-STIM<br/>97014</th>
-                    <th className="p-1 border-r border-slate-900">ULTRASOUND<br/>97035</th>
+                  <tr className="bg-slate-100 font-bold border-b border-[#722F37]">
+                    <th className="p-1 border-r border-[#722F37] w-24">DATE</th>
+                    <th className="p-1 border-r border-[#722F37]">HOT PACK<br/>97010</th>
+                    <th className="p-1 border-r border-[#722F37]">TRACTION<br/>97012</th>
+                    <th className="p-1 border-r border-[#722F37]">ELEC-STIM<br/>97014</th>
+                    <th className="p-1 border-r border-[#722F37]">ULTRASOUND<br/>97035</th>
                     <th className="p-1">MASSAGE<br/>97124</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-slate-900">
-                    <td className="p-1 border-r border-slate-900 font-bold">{dos}</td>
-                    <td className="p-1 border-r border-slate-900">{hasCpt(lines, '97010') && '✓'}</td>
-                    <td className="p-1 border-r border-slate-900">{hasCpt(lines, '97012') && '✓'}</td>
-                    <td className="p-1 border-r border-slate-900">{hasCpt(lines, '97014') && '✓'}</td>
-                    <td className="p-1 border-r border-slate-900">{hasCpt(lines, '97035') && '✓'}</td>
+                  <tr className="border-b border-[#722F37]">
+                    <td className="p-1 border-r border-[#722F37] font-bold">{dos}</td>
+                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97010') && '✓'}</td>
+                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97012') && '✓'}</td>
+                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97014') && '✓'}</td>
+                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97035') && '✓'}</td>
                     <td className="p-1 font-bold text-center">{hasCpt(lines, '97124') ? '✓' : ''}</td>
                   </tr>
-                  <tr className="bg-slate-100 font-bold border-b border-slate-900">
-                    <td className="p-1 border-r border-slate-900">ROM EXERCISE<br/>97110</td>
-                    <td className="p-1 border-r border-slate-900">OFFICE VISIT<br/>99205</td>
-                    <td className="p-1 border-r border-slate-900">CMT SPINAL<br/>97140</td>
-                    <td className="p-1 border-r border-slate-900">Follow-up consult<br/>99213</td>
+                  <tr className="bg-slate-100 font-bold border-b border-[#722F37]">
+                    <td className="p-1 border-r border-[#722F37]">ROM EXERCISE<br/>97110</td>
+                    <td className="p-1 border-r border-[#722F37]">OFFICE VISIT<br/>99205</td>
+                    <td className="p-1 border-r border-[#722F37]">CMT SPINAL<br/>97140</td>
+                    <td className="p-1 border-r border-[#722F37]">Follow-up consult<br/>99213</td>
                     <td colSpan="2" className="p-1">LASER THERAPY<br/>97039</td>
                   </tr>
                   <tr>
-                    <td className="p-1 border-r border-slate-900">{hasCpt(lines, '97110') && '✓'}</td>
-                    <td className="p-1 border-r border-slate-900">{hasCpt(lines, '99205') && '✓'}</td>
-                    <td className="p-1 border-r border-slate-900">{hasCpt(lines, '97140') && '✓'}</td>
-                    <td className="p-1 border-r border-slate-900">{hasCpt(lines, '99213') && '✓'}</td>
+                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97110') && '✓'}</td>
+                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '99205') && '✓'}</td>
+                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '97140') && '✓'}</td>
+                    <td className="p-1 border-r border-[#722F37]">{hasCpt(lines, '99213') && '✓'}</td>
                     <td colSpan="2" className="p-1 font-bold text-center">
                       {hasCpt(lines, '97039') ? `✓${getCptUnits(lines, '97039')}` : ''}
                     </td>

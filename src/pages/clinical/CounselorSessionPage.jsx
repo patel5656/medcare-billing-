@@ -1,6 +1,8 @@
 // src/pages/clinical/CounselorSessionPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
+import { apiCaseService } from '../../services/api/apiCaseService';
+import { apiCptService } from '../../services/api/apiCptService';
 import { useUIStore } from '../../store/uiStore';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -28,18 +30,20 @@ export const CounselorSessionPage = () => {
   const navigate = useNavigate();
   const { addToast } = useUIStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [cases, setCases] = useState([]);
+  const [cptList, setCptList] = useState(CPT_CODES);
 
   // Form State
   const [formData, setFormData] = useState({
-    patientId: 'pat-001',
-    patientName: 'Demo Patient 001 (SAMPLE TESTING)',
-    caseId: 'CASE-2025-1227',
+    patientId: '',
+    patientName: '',
+    caseId: '',
     providerId: 'prov-counselor',
     providerName: 'Counselor Practice (Hope Behavioral Health)',
     counselorName: 'Jordan Miller, LCSW, BCD',
     counselorNpi: '1487965213',
-    sessionDate: '2026-08-10',
-    sessionTime: '10:00 AM',
+    sessionDate: new Date().toISOString().split('T')[0],
+    sessionTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     cptCode: '90834',
     duration: '45 min',
     sessionType: 'Individual Psychotherapy',
@@ -64,6 +68,36 @@ export const CounselorSessionPage = () => {
     homeworkAssigned: 'Daily 10-minute progressive relaxation log and driving anxiety thought journal.',
     lockOnSave: false
   });
+
+  useEffect(() => {
+    apiCaseService.getCases()
+      .then(res => {
+        if (res && res.length > 0) {
+          setCases(res);
+          const first = res[0];
+          setFormData(prev => ({
+            ...prev,
+            caseId: first.id || first.caseId,
+            patientId: first.patientId,
+            patientName: first.patientName || 'Unknown Patient'
+          }));
+        }
+      })
+      .catch(console.error);
+
+    apiCptService.getCptCodes()
+      .then(res => {
+        if (res && res.length > 0) {
+          setCptList(res.map(c => ({
+            code: c.code,
+            label: c.description || c.label || '',
+            duration: c.duration || '45 min',
+            fee: c.fee ? (String(c.fee).includes('$') ? c.fee : `$${c.fee}`) : '$180.00'
+          })));
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   const handleToggleDiagnosis = (code) => {
     setFormData(prev => {
@@ -139,23 +173,35 @@ export const CounselorSessionPage = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate('/billing/bills/bill-counselor-001')}
-            className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 transition flex items-center gap-1.5"
-          >
-            <Tag className="w-3.5 h-3.5" /> View Counselor Bill Statement
-          </button>
-        </div>
+
       </div>
 
       {/* Patient & Provider Header Bar */}
-      <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 shadow-sm grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+      <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 shadow-sm grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs items-center">
         <div>
-          <span className="text-slate-400 text-[10px] uppercase font-bold block">Patient Name & ID</span>
-          <strong className="text-white text-sm">{formData.patientName}</strong>
-          <p className="text-[11px] text-teal-300">Case: {formData.caseId}</p>
+          <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1.5">Select Patient Case *</span>
+          <select
+            value={formData.caseId}
+            onChange={(e) => {
+              const selected = cases.find(c => (c.id || c.caseId) === e.target.value);
+              if (selected) {
+                setFormData(p => ({
+                  ...p,
+                  caseId: selected.id || selected.caseId,
+                  patientId: selected.patientId,
+                  patientName: selected.patientName || 'Unknown Patient'
+                }));
+              }
+            }}
+            className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-teal-500 font-bold"
+          >
+            {cases.length === 0 && <option value="">Loading DB Cases...</option>}
+            {cases.map(c => (
+              <option key={c.id || c.caseId} value={c.id || c.caseId}>
+                {c.patientName} ({c.id || c.caseId})
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <span className="text-slate-400 text-[10px] uppercase font-bold block">Rendering Provider</span>
@@ -206,7 +252,7 @@ export const CounselorSessionPage = () => {
               <select
                 value={formData.cptCode}
                 onChange={e => {
-                  const cpt = CPT_CODES.find(c => c.code === e.target.value);
+                  const cpt = cptList.find(c => c.code === e.target.value);
                   setFormData(p => ({
                     ...p,
                     cptCode: e.target.value,
@@ -215,7 +261,7 @@ export const CounselorSessionPage = () => {
                 }}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-teal-700"
               >
-                {CPT_CODES.map(c => (
+                {cptList.map(c => (
                   <option key={c.code} value={c.code}>
                     {c.code} — {c.label} ({c.fee})
                   </option>

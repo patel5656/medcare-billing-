@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { PACKET_MANIFESTS } from '../../constants/packetManifests';
 import { apiBillingService } from '../../services/api/apiBillingService';
+import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
 import { mapBillToCms1500Claims } from '../../utils/cmsMapper';
 import { useUIStore } from '../../store/uiStore';
 
@@ -40,8 +41,10 @@ import { TecarCoverPage } from './tecar/TecarCoverPage';
 import { TecarAssessmentForm } from './tecar/TecarAssessmentForm';
 import { TecarProcedureForm } from './tecar/TecarProcedureForm';
 
-// General Final Report
 import { PatientFinalTreatmentReport } from './general/PatientFinalTreatmentReport';
+
+// AI Doctor's Note Workspace
+import { AiDoctorsNoteWorkspace } from './ai/AiDoctorsNoteWorkspace';
 
 import { 
   Printer, Download, Eye, Edit3, Lock, Unlock, ZoomIn, ZoomOut, 
@@ -62,6 +65,7 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   const manifest = PACKET_MANIFESTS[providerId] || PACKET_MANIFESTS['prov-anik'];
   const [bill, setBill] = useState(null);
   const [cmsClaims, setCmsClaims] = useState([]);
+  const [latestNote, setLatestNote] = useState(null);
   
   const [activeTabFilter, setActiveTabFilter] = useState('ALL');
   const [zoomLevel, setZoomLevel] = useState(getInitialZoom);
@@ -113,6 +117,19 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
           } else {
             setBill(null);
             setCmsClaims([]);
+          }
+
+          // Fetch latest clinical note for this case & provider
+          try {
+            const notes = await apiClinicalNoteService.getNotes({ caseId: caseIdentifier, providerId });
+            if (notes && notes.length > 0) {
+              const sorted = notes.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+              setLatestNote(sorted[0].content || sorted[0]);
+            } else {
+              setLatestNote(null);
+            }
+          } catch (e) {
+            console.error('Failed to fetch clinical note data:', e);
           }
         }
       } catch (err) {
@@ -185,8 +202,8 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     if (key === 'JosmicPainManagementReport') return <JosmicPainManagementReport reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={selectedCase} />;
 
     // Counselor Components
-    if (key === 'CounselorCoverPage') return <CounselorCoverPage blankMode={blankPracticeMode} packetData={selectedCase} />;
-    if (key === 'CounselorAssessmentForm') return <CounselorAssessmentForm blankMode={blankPracticeMode} packetData={selectedCase} />;
+    if (key === 'CounselorCoverPage') return <CounselorCoverPage blankMode={blankPracticeMode} packetData={latestNote || selectedCase} bill={bill} />;
+    if (key === 'CounselorAssessmentForm') return <CounselorAssessmentForm blankMode={blankPracticeMode} packetData={latestNote || selectedCase} bill={bill} />;
 
     // TPI Components
     if (key === 'TpiCoverPage') return <TpiCoverPage blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
@@ -210,10 +227,14 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
       
       {/* TOOLBAR CONTROLS (Hidden during printing) */}
-      <div className="bg-slate-900 text-white p-3 sm:p-4 rounded-xl border border-slate-800 shadow-xl space-y-3 print:hidden">
+      {activeTabFilter !== 'AI DOCTOR NOTE' && (
+      <div className="sticky top-0 z-40 print:hidden pt-1 pb-1">
+        {/* Solid background blocker to hide scrolling content above and around rounded corners */}
+        <div className="absolute -top-10 -left-10 -right-10 bottom-0 bg-[#f8fafc] z-[-1]"></div>
+        <div className="bg-slate-900 text-white p-3 sm:p-4 rounded-xl border border-slate-800 shadow-xl space-y-3">
         
         {/* Top Header Line */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -248,6 +269,16 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
             >
               {isLocked ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Unlock className="w-3.5 h-3.5" />}
               <span>{isLocked ? 'Locked' : 'Finalise'}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTabFilter(activeTabFilter === 'AI DOCTOR NOTE' ? 'ALL' : 'AI DOCTOR NOTE')}
+              className={`px-2.5 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1 transition ${
+                activeTabFilter === 'AI DOCTOR NOTE' ? 'bg-indigo-500 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-slate-800 text-indigo-400 border border-indigo-500/30 hover:bg-slate-700'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>AI Doctor Note</span>
             </button>
 
             <button
@@ -298,10 +329,10 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
               </button>
             ))}
           </div>
-
         </div>
-
       </div>
+      </div>
+      )}
 
       {qaMode && (
         <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs font-bold text-amber-900 flex items-center gap-2 print:hidden">
@@ -311,36 +342,44 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
       )}
 
       {/* CANVAS RENDERING CONTAINER - Fully Responsive Wrapper */}
-      <div className="overflow-x-auto p-2 sm:p-6 bg-slate-950 rounded-2xl border border-slate-800 flex justify-center print:bg-white print:p-0 print:border-none min-h-[450px]">
+      <div className={`overflow-x-auto p-2 sm:p-6 rounded-2xl border flex justify-center print:bg-white print:p-0 print:border-none min-h-[450px] ${activeTabFilter === 'AI DOCTOR NOTE' ? 'bg-slate-100 border-slate-300' : 'bg-slate-950 border-slate-800'}`}>
         
-        {/* FULL PACKET CONTINUOUS SCROLL FOR SELECTED TAB */}
-        <div id="printable-packet" className="w-full flex flex-col items-center space-y-6 print:space-y-0 print:m-0 print:p-0 print:block">
-          {filteredPages.map((pageDef) => (
-            <div key={pageDef.id} className="relative group w-full flex flex-col items-center print-page-item">
-              <div className="text-[10px] font-mono text-slate-400 font-bold mb-1 print:hidden self-center">
-                PAGE {pageDef.pageNumber} OF {manifest.totalPages} - {pageDef.title}
-              </div>
-              
-              {/* Scaled Sheet Container */}
-              <div
-                className="w-full flex justify-center overflow-x-auto print-page-sheet-wrapper print:min-h-0 print:h-auto print:m-0 print:p-0"
-                style={{ minHeight: `${1100 * zoomLevel + 20}px` }}
-              >
+        {activeTabFilter === 'AI DOCTOR NOTE' ? (
+          <AiDoctorsNoteWorkspace 
+            packetData={selectedCase} 
+            isLocked={isLocked} 
+            zoomLevel={zoomLevel} 
+            onBack={() => setActiveTabFilter('ALL')} 
+          />
+        ) : (
+          <div id="printable-packet" className="w-full flex flex-col items-center space-y-6 print:space-y-0 print:m-0 print:p-0 print:block">
+            {filteredPages.map((pageDef) => (
+              <div key={pageDef.id} className="relative group w-full flex flex-col items-center print-page-item">
+                <div className="text-[10px] font-mono text-slate-400 font-bold mb-1 print:hidden self-center">
+                  PAGE {pageDef.pageNumber} OF {manifest.totalPages} - {pageDef.title}
+                </div>
+                
+                {/* Scaled Sheet Container */}
                 <div
-                  className="print-page-sheet print:w-full print:max-w-none print:m-0 print:p-0"
-                  style={{
-                    transform: `scale(${zoomLevel})`,
-                    transformOrigin: 'top center',
-                    transition: 'transform 0.2s ease',
-                    marginBottom: `${(1 - zoomLevel) * -1100}px`
-                  }}
+                  className="w-full flex justify-center overflow-x-auto print-page-sheet-wrapper print:min-h-0 print:h-auto print:m-0 print:p-0"
+                  style={{ minHeight: `${1100 * zoomLevel + 20}px` }}
                 >
-                  {renderPageComponent(pageDef)}
+                  <div
+                    className="print-page-sheet print:w-full print:max-w-none print:m-0 print:p-0"
+                    style={{
+                      transform: `scale(${zoomLevel})`,
+                      transformOrigin: 'top center',
+                      transition: 'transform 0.2s ease',
+                      marginBottom: `${(1 - zoomLevel) * -1100}px`
+                    }}
+                  >
+                    {renderPageComponent(pageDef)}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
       </div>
 

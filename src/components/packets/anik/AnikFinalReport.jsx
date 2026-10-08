@@ -3,6 +3,8 @@ import React from 'react';
 import { formatCurrency } from '../../../utils/billingCalculations';
 import { useSettings } from '../../../utils/settingsCache';
 
+import { EditableClinicalField } from '../EditableClinicalField';
+
 export const AnikFinalReport = ({ 
   reportPage = 1, 
   readOnly = false,
@@ -12,6 +14,7 @@ export const AnikFinalReport = ({
   serviceLines = [],
   bill = null
 }) => {
+  const storage = packetData?.clinicalDocStorage?.['ANIK_FINAL'] || {};
   const settings = useSettings();
 
   const isShow = !blankMode && packetData;
@@ -83,6 +86,7 @@ export const AnikFinalReport = ({
   // Section 1: Summary of Treatment Completed
   const getTreatmentSummaryText = () => {
     if (!isShow) return '';
+    if (storage.treatmentSummary) return storage.treatmentSummary;
     return noteContent.comments || packetData.treatmentSummary || packetData.summaryOfTreatment || packetData.finalReport?.treatmentSummary || packetData.dischargeSummary || packetData.completedTreatmentSummary || '';
   };
   const treatmentSummaryText = getTreatmentSummaryText();
@@ -90,6 +94,7 @@ export const AnikFinalReport = ({
   // Section 2: Objective Re-examination Findings
   const getReexamFindingsText = () => {
     if (!isShow) return '';
+    if (storage.reexamFindings) return storage.reexamFindings;
     return packetData.reexaminationFindings || packetData.objectiveReexamFindings || packetData.finalReport?.reexaminationFindings || packetData.finalReport?.objectiveFindings || packetData.dischargeExamFindings || '';
   };
   const reexamFindingsText = getReexamFindingsText();
@@ -97,6 +102,7 @@ export const AnikFinalReport = ({
   // Section 3: Discharge Impression & Permanent Impairment
   const getDischargeImpressionText = () => {
     if (!isShow) return '';
+    if (storage.dischargeImpression) return storage.dischargeImpression;
     if (packetData.dischargeImpression || packetData.permanentImpairment) {
       return [packetData.dischargeImpression, packetData.permanentImpairment].filter(Boolean).join(' ');
     }
@@ -110,6 +116,7 @@ export const AnikFinalReport = ({
   // Section 4: Home Exercise Program & Future Care
   const getHomeExerciseProgramText = () => {
     if (!isShow) return '';
+    if (storage.homeExerciseProgram) return storage.homeExerciseProgram;
     if (packetData.homeExerciseProgram || packetData.futureCare || packetData.hep) {
       return [packetData.homeExerciseProgram || packetData.hep, packetData.futureCare].filter(Boolean).join(' ');
     }
@@ -123,6 +130,7 @@ export const AnikFinalReport = ({
   // Section 5: Final Billing & Clinical Sign-Off Text
   const getClinicalSignOffText = () => {
     if (!isShow) return '';
+    if (storage.clinicalSignOff) return storage.clinicalSignOff;
     return packetData.finalBillingSignOff || packetData.clinicalSignOff || packetData.finalReport?.clinicalSignOff || packetData.finalReport?.billingSignOff || packetData.finalReport?.signOffText || '';
   };
   const clinicalSignOffText = getClinicalSignOffText();
@@ -144,7 +152,7 @@ export const AnikFinalReport = ({
       
       <div className="flex justify-between items-start border-b border-slate-300 pb-4">
         <div>
-          <h1 className="text-lg font-black text-teal-800 uppercase italic">ANIK LASER THERAPY</h1>
+          <h1 className="text-lg font-black text-[#722F37] uppercase italic">ANIK LASER THERAPY</h1>
           <p className="text-[10px] text-slate-600">FINAL MEDICAL &amp; THERAPY DISCHARGE REPORT</p>
         </div>
         <div className="text-right font-mono text-[10px]">
@@ -163,26 +171,50 @@ export const AnikFinalReport = ({
       {reportPage === 1 && (
         <div className="space-y-4 text-xs leading-relaxed text-slate-800">
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900">1. SUMMARY OF TREATMENT COMPLETED</h2>
-          <p className="whitespace-pre-line min-h-[3rem]">
-            {treatmentSummaryText}
-          </p>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="ANIK_FINAL"
+            field="treatmentSummary"
+            value={treatmentSummaryText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[3rem]"
+            className="hover:bg-slate-50 focus:bg-white"
+          />
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900 pt-2">2. OBJECTIVE RE-EXAMINATION FINDINGS</h2>
-          <p className="whitespace-pre-line min-h-[3rem]">
-            {reexamFindingsText}
-          </p>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="ANIK_FINAL"
+            field="reexamFindings"
+            value={reexamFindingsText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[3rem]"
+            className="hover:bg-slate-50 focus:bg-white"
+          />
         </div>
       )}
 
       {reportPage === 2 && (
         <div className="space-y-4 text-xs leading-relaxed text-slate-800">
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900">3. DISCHARGE IMPRESSION &amp; PERMANENT IMPAIRMENT</h2>
-          <p className="whitespace-pre-line min-h-[3rem]">
-            {dischargeImpressionText}
-          </p>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="ANIK_FINAL"
+            field="dischargeImpression"
+            value={dischargeImpressionText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[3rem]"
+            className="hover:bg-slate-50 focus:bg-white"
+          />
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900 pt-2">4. HOME EXERCISE PROGRAM &amp; FUTURE CARE</h2>
-          <p className="whitespace-pre-line min-h-[3rem]">
-            {homeExerciseProgramText}
-          </p>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="ANIK_FINAL"
+            field="homeExerciseProgram"
+            value={homeExerciseProgramText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[3rem]"
+            className="hover:bg-slate-50 focus:bg-white"
+          />
         </div>
       )}
 
@@ -190,9 +222,15 @@ export const AnikFinalReport = ({
         <div className="space-y-4 text-xs leading-relaxed text-slate-800 flex flex-col justify-between h-[750px]">
           <div>
             <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900">5. FINAL BILLING &amp; CLINICAL SIGN-OFF</h2>
-            <p className="whitespace-pre-line min-h-[3rem]">
-              {clinicalSignOffText}
-            </p>
+            <EditableClinicalField 
+              packetData={packetData}
+              docKey="ANIK_FINAL"
+              field="clinicalSignOff"
+              value={clinicalSignOffText} 
+              readOnly={readOnly || blankMode || !packetData}
+              minHeightClass="min-h-[3rem]"
+              className="hover:bg-slate-50 focus:bg-white"
+            />
           </div>
           <div className="border-t border-slate-300 pt-4 font-mono text-xs">
             <p className="font-bold text-slate-900">DISCHARGING PHYSICIAN:</p>

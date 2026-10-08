@@ -1,6 +1,8 @@
 // src/components/packets/anik/AnikNarrativeReport.jsx
 import React from 'react';
 
+import { EditableClinicalField } from '../EditableClinicalField';
+
 export const AnikNarrativeReport = ({ 
   reportPage = 1, 
   readOnly = false,
@@ -9,6 +11,7 @@ export const AnikNarrativeReport = ({
   dos = '',
   serviceLines = []
 }) => {
+  const storage = packetData?.clinicalDocStorage?.['ANIK_NARRATIVE'] || {};
   // Patient Demographics
   const patientName = blankMode || !packetData ? '' : (packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '');
   const patientDob = blankMode || !packetData ? '' : (packetData.patientDob || packetData.patient?.dob || packetData.dob || '');
@@ -38,6 +41,7 @@ export const AnikNarrativeReport = ({
   // Section 1: HPI & Chief Complaints
   const getHpiText = () => {
     if (blankMode || !packetData) return '';
+    if (storage.hpi) return storage.hpi;
     if (packetData.hpi || packetData.historyOfPresentIllness) {
       return packetData.hpi || packetData.historyOfPresentIllness;
     }
@@ -65,6 +69,7 @@ export const AnikNarrativeReport = ({
   // Section 2: Physical & Neurological Examination
   const getPhysicalExamText = () => {
     if (blankMode || !packetData) return '';
+    if (storage.physicalExam) return storage.physicalExam;
     if (packetData.physicalExam || packetData.physicalExamination || packetData.neurologicalExam) {
       return packetData.physicalExam || packetData.physicalExamination || packetData.neurologicalExam;
     }
@@ -88,6 +93,7 @@ export const AnikNarrativeReport = ({
   // Section 3: Diagnostic Assessment & Clinical Impression
   const getDiagnosticImpressionText = () => {
     if (blankMode || !packetData) return '';
+    if (storage.diagnosticImpression) return storage.diagnosticImpression;
     if (packetData.diagnosticImpression || packetData.clinicalImpression) {
       return packetData.diagnosticImpression || packetData.clinicalImpression;
     }
@@ -101,6 +107,7 @@ export const AnikNarrativeReport = ({
   // Section 4: Plan of Care & Treatment Recommendations
   const getPlanOfCareText = () => {
     if (blankMode || !packetData) return '';
+    if (storage.planOfCare) return storage.planOfCare;
     if (packetData.planOfCare || packetData.treatmentRecommendations || packetData.treatmentPlan) {
       return packetData.planOfCare || packetData.treatmentRecommendations || packetData.treatmentPlan;
     }
@@ -113,6 +120,7 @@ export const AnikNarrativeReport = ({
   // Section 5: Prognosis & Disability Status
   const getPrognosisText = () => {
     if (blankMode || !packetData) return '';
+    if (storage.prognosis) return storage.prognosis;
     if (packetData.prognosis || packetData.prognosisAndDisability || packetData.disabilityStatus) {
       return [packetData.prognosis, packetData.disabilityStatus || packetData.prognosisAndDisability].filter(Boolean).join(' ');
     }
@@ -143,7 +151,7 @@ export const AnikNarrativeReport = ({
       
       <div className="flex justify-between items-start border-b border-slate-300 pb-4">
         <div>
-          <h1 className="text-lg font-black text-teal-800 uppercase italic">ANIK LASER THERAPY</h1>
+          <h1 className="text-lg font-black text-[#722F37] uppercase italic">ANIK LASER THERAPY</h1>
           <p className="text-[10px] text-slate-600">INITIAL CLINICAL NARRATIVE EVALUATION REPORT</p>
         </div>
         <div className="text-right font-mono text-[10px]">
@@ -162,26 +170,50 @@ export const AnikNarrativeReport = ({
       {reportPage === 1 && (
         <div className="space-y-4 text-xs leading-relaxed text-slate-800">
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900">1. CHIEF COMPLAINTS &amp; HISTORY OF PRESENT ILLNESS</h2>
-          <p className="whitespace-pre-line min-h-[3rem]">
-            {hpiText}
-          </p>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="ANIK_NARRATIVE"
+            field="hpi"
+            value={hpiText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[3rem]"
+            className="hover:bg-slate-50 focus:bg-white"
+          />
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900 pt-2">2. PHYSICAL &amp; NEUROLOGICAL EXAMINATION</h2>
-          <p className="whitespace-pre-line min-h-[3rem]">
-            {physicalExamText}
-          </p>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="ANIK_NARRATIVE"
+            field="physicalExam"
+            value={physicalExamText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[3rem]"
+            className="hover:bg-slate-50 focus:bg-white"
+          />
         </div>
       )}
 
       {reportPage === 2 && (
         <div className="space-y-4 text-xs leading-relaxed text-slate-800">
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900">3. DIAGNOSTIC ASSESSMENT &amp; CLINICAL IMPRESSION</h2>
-          <p className="whitespace-pre-line min-h-[3rem]">
-            {diagnosticImpressionText}
-          </p>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="ANIK_NARRATIVE"
+            field="diagnosticImpression"
+            value={diagnosticImpressionText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[3rem]"
+            className="hover:bg-slate-50 focus:bg-white"
+          />
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900 pt-2">4. PLAN OF CARE &amp; TREATMENT RECOMMENDATIONS</h2>
-          <p className="whitespace-pre-line min-h-[3rem]">
-            {planOfCareText}
-          </p>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="ANIK_NARRATIVE"
+            field="planOfCare"
+            value={planOfCareText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[3rem]"
+            className="hover:bg-slate-50 focus:bg-white"
+          />
         </div>
       )}
 
@@ -189,9 +221,15 @@ export const AnikNarrativeReport = ({
         <div className="space-y-4 text-xs leading-relaxed text-slate-800 flex flex-col justify-between h-[750px]">
           <div>
             <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900">5. PROGNOSIS &amp; DISABILITY STATUS</h2>
-            <p className="whitespace-pre-line min-h-[3rem]">
-              {prognosisText}
-            </p>
+            <EditableClinicalField 
+              packetData={packetData}
+              docKey="ANIK_NARRATIVE"
+              field="prognosis"
+              value={prognosisText} 
+              readOnly={readOnly || blankMode || !packetData}
+              minHeightClass="min-h-[3rem]"
+              className="hover:bg-slate-50 focus:bg-white"
+            />
           </div>
           <div className="border-t border-slate-300 pt-4 font-mono text-xs">
             <p className="font-bold text-slate-900">EVALUATING CLINICIAN:</p>

@@ -60,6 +60,7 @@ import { CmsPreviewPage } from '../pages/cms/CmsPreviewPage';
 // Document Pages
 import { DocumentListPage } from '../pages/documents/DocumentListPage';
 import { PacketBuilderPage } from '../pages/documents/PacketBuilderPage';
+import { AiDoctorNotePage } from '../pages/documents/AiDoctorNotePage';
 
 // Admin & Settings Pages
 import { StaffListPage } from '../pages/admin/StaffListPage';
@@ -156,6 +157,7 @@ export const AppRoutes = () => {
         <Route path="documents/packet-builder" element={<PacketBuilderPage />} />
         <Route path="documents/packets" element={<PacketBuilderPage />} />
         <Route path="documents/builder" element={<PacketBuilderPage />} />
+        <Route path="documents/ai-doctor-note" element={<AiDoctorNotePage />} />
 
         {/* Administration & Settings */}
         <Route path="admin/staff" element={<StaffListPage />} />

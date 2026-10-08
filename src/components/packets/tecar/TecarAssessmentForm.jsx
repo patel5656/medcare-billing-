@@ -24,21 +24,24 @@ const isTissueStatusChecked = (label, packetData) => {
   return false;
 };
 
+import { EditableClinicalField } from '../EditableClinicalField';
+
 export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
+  const storage = packetData?.clinicalDocStorage?.['TECAR_ASSESSMENT'] || {};
   const patientNameVal = blankMode || !packetData ? '' : (packetData.patientName || '');
   const evalDateVal = blankMode || !packetData ? '' : (packetData.initialDate || packetData.evalDate || packetData.assessmentDate || '');
   const signatureDateVal = blankMode || !packetData ? '' : (packetData.signatureDate || packetData.signedAt || packetData.dischargeDate || '');
   const providerNameVal = blankMode || !packetData ? '' : (packetData.referringProviderName || packetData.providerName || packetData.attendingProviderName || '');
 
   const painScore = blankMode ? null : getPainScore(packetData);
-  const painLocationQualityText = blankMode || !packetData ? '' : (packetData.painLocationQuality || packetData.painLocation || packetData.painDescription || '');
-  const palpationRomText = blankMode || !packetData ? '' : (packetData.palpationRom || packetData.palpationFindings || packetData.romFindings || packetData.physicalExam?.rom || '');
-  const treatmentPlanText = blankMode || !packetData ? '' : (packetData.tecarTreatmentPlan || packetData.treatmentPlan || packetData.plan || '');
+  const painLocationQualityText = blankMode || !packetData ? '' : (storage.painLocationQuality || packetData.painLocationQuality || packetData.painLocation || packetData.painDescription || '');
+  const palpationRomText = blankMode || !packetData ? '' : (storage.palpationRom || packetData.palpationRom || packetData.palpationFindings || packetData.romFindings || packetData.physicalExam?.rom || '');
+  const treatmentPlanText = blankMode || !packetData ? '' : (storage.treatmentPlan || packetData.tecarTreatmentPlan || packetData.treatmentPlan || packetData.plan || '');
 
   return (
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       {/* Header */}
-      <div className="border-b-2 border-slate-800 pb-4 mb-6 text-center">
+      <div className="border-b-2 border-[#722F37] pb-4 mb-6 text-center">
         <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>TECAR THERAPY ASSESSMENT</h1>
         <p className="text-xs font-bold text-slate-600 mt-1">CLINICAL EVALUATION &amp; TISSUE STATUS</p>
       </div>
@@ -63,7 +66,7 @@ export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packe
             <span className="font-bold">VAS Pain Scale (0-10):</span>
             <div className="flex gap-2">
               {[0,1,2,3,4,5,6,7,8,9,10].map(n => (
-                <div key={n} className={`w-6 h-6 border flex items-center justify-center ${painScore === n ? 'bg-rose-100 border-rose-500 font-bold text-slate-900' : 'border-slate-300 text-slate-400'}`}>
+                <div key={n} className={`w-6 h-6 border flex items-center justify-center ${painScore === n ? 'bg-[#F9ECEC] border-rose-500 font-bold text-slate-900' : 'border-slate-300 text-slate-400'}`}>
                   {n}
                 </div>
               ))}
@@ -71,9 +74,15 @@ export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packe
           </div>
           <div>
             <span className="font-bold block mb-1">Pain Location &amp; Quality:</span>
-            <div className="border border-slate-300 p-2 min-h-[60px] text-slate-700 bg-slate-50">
-              {painLocationQualityText}
-            </div>
+            <EditableClinicalField 
+              packetData={packetData}
+              docKey="TECAR_ASSESSMENT"
+              field="painLocationQuality"
+              value={painLocationQualityText} 
+              readOnly={readOnly || blankMode || !packetData}
+              minHeightClass="min-h-[60px]"
+              className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-[#722F37]"
+            />
           </div>
         </div>
       </div>
@@ -95,9 +104,15 @@ export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packe
           </div>
           <div>
             <span className="font-bold block mb-1">Palpation &amp; ROM Findings:</span>
-            <div className="border border-slate-300 p-2 min-h-[60px] text-slate-700 bg-slate-50">
-              {palpationRomText}
-            </div>
+            <EditableClinicalField 
+              packetData={packetData}
+              docKey="TECAR_ASSESSMENT"
+              field="palpationRom"
+              value={palpationRomText} 
+              readOnly={readOnly || blankMode || !packetData}
+              minHeightClass="min-h-[60px]"
+              className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-[#722F37]"
+            />
           </div>
         </div>
       </div>
@@ -107,9 +122,15 @@ export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packe
         <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">3. Plan of Care</h2>
         <div className="text-xs font-mono px-2">
           <span className="font-bold block mb-1">TECAR Protocol &amp; Frequency:</span>
-          <div className="border border-slate-300 p-2 min-h-[60px] text-slate-700 bg-slate-50">
-            {treatmentPlanText}
-          </div>
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="TECAR_ASSESSMENT"
+            field="treatmentPlan"
+            value={treatmentPlanText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[60px]"
+            className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-[#722F37]"
+          />
         </div>
       </div>
 

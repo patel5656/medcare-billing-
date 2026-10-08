@@ -103,7 +103,7 @@ export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selected
     >
       <div className="space-y-6 flex-1 flex flex-col">
         {/* Statement Top Header */}
-        <div className="flex justify-between items-start border-b-2 border-slate-800 pb-4">
+        <div className="flex justify-between items-start border-b-2 border-[#722F37] pb-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">{providerName}</h1>
             <p className="text-xs sm:text-sm text-slate-600 font-medium mt-1">{providerAddress}</p>
@@ -143,7 +143,7 @@ export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selected
         {/* Service Line Table */}
         <div className="overflow-x-auto border border-slate-300 rounded-lg shadow-sm flex-1">
           <table className="w-full text-left text-xs sm:text-sm border-collapse">
-            <thead className="bg-slate-800 text-white uppercase font-bold text-xs border-b border-slate-800">
+            <thead className="bg-[#722F37] text-white uppercase font-bold text-xs border-b border-[#722F37]">
               <tr>
                 <th className="p-3 border-r border-slate-700 w-[14%]">Date of Service</th>
                 <th className="p-3 border-r border-slate-700 w-[11%]">Procedure</th>
@@ -184,13 +184,13 @@ export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selected
         <div className="pt-4 space-y-4 mt-auto">
           <div className="border border-slate-300 rounded-xl overflow-hidden shadow-sm">
             <table className="w-full text-center text-xs sm:text-sm font-tabular">
-              <thead className="bg-slate-800 text-white font-bold text-xs uppercase tracking-wider">
+              <thead className="bg-[#722F37] text-white font-bold text-xs uppercase tracking-wider">
                 <tr>
                   <th className="p-3 border-r border-slate-700">Current Due</th>
                   <th className="p-3 border-r border-slate-700">Past Due 30 Days</th>
                   <th className="p-3 border-r border-slate-700">Past Due 60 Days</th>
                   <th className="p-3 border-r border-slate-700">Past Due 90 Days</th>
-                  <th className="p-3 bg-slate-900 text-white font-bold">Balance Due</th>
+                  <th className="p-3 bg-[#722F37] text-white font-bold">Balance Due</th>
                 </tr>
               </thead>
               <tbody className="bg-white">

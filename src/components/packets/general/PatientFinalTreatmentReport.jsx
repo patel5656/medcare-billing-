@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { EditableClinicalField } from '../EditableClinicalField';
+
 export const PatientFinalTreatmentReport = ({ 
   reportPage = 1, 
   readOnly = false,
@@ -8,6 +10,7 @@ export const PatientFinalTreatmentReport = ({
   serviceLines = [],
   bill = null
 }) => {
+  const storage = packetData?.clinicalDocStorage?.['PATIENT_FINAL'] || {};
   // Extract patient info
   const patient = packetData?.patient || {};
   const lastName = blankMode || !packetData ? '' : (patient.lastName || '');
@@ -88,13 +91,13 @@ export const PatientFinalTreatmentReport = ({
     return fallback;
   };
 
-  const physicalExam = getClinicalContent(n => n.content?.physicalExam || n.soapObjective, 'Physical examination findings have not been documented.');
-  const goals = getClinicalContent(n => n.content?.goals || n.content?.treatmentGoals, 'Goals of treatment have not been documented.');
-  const progress = getClinicalContent(n => n.content?.progress || n.content?.outcome || n.soapAssessment, 'Progress and outcome information has not been documented.');
-  const followUp = getClinicalContent(n => n.content?.followUpRecommendations || n.content?.followUp, 'Follow-up recommendations have not been documented.');
-  const education = getClinicalContent(n => n.content?.patientEducation || n.content?.education, 'Patient education has not been documented.');
-  const carePlanStatus = getClinicalContent(n => n.content?.carePlanStatus || n.soapPlan, 'Care plan status has not been documented.');
-  const nextSteps = getClinicalContent(n => n.content?.nextSteps, 'Next steps have not been documented.');
+  const physicalExam = storage.physicalExam || getClinicalContent(n => n.content?.physicalExam || n.soapObjective, 'Physical examination findings have not been documented.');
+  const goals = storage.goals || getClinicalContent(n => n.content?.goals || n.content?.treatmentGoals, 'Goals of treatment have not been documented.');
+  const progress = storage.progress || getClinicalContent(n => n.content?.progress || n.content?.outcome || n.soapAssessment, 'Progress and outcome information has not been documented.');
+  const followUp = storage.followUp || getClinicalContent(n => n.content?.followUpRecommendations || n.content?.followUp, 'Follow-up recommendations have not been documented.');
+  const education = storage.education || getClinicalContent(n => n.content?.patientEducation || n.content?.education, 'Patient education has not been documented.');
+  const carePlanStatus = storage.carePlanStatus || getClinicalContent(n => n.content?.carePlanStatus || n.soapPlan, 'Care plan status has not been documented.');
+  const nextSteps = storage.nextSteps || getClinicalContent(n => n.content?.nextSteps, 'Next steps have not been documented.');
 
   return (
     <div className="w-[850px] max-w-full relative bg-white text-black font-sans shadow-2xl mx-auto border border-slate-300 p-12 space-y-8 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
@@ -198,9 +201,15 @@ export const PatientFinalTreatmentReport = ({
       {/* PHYSICAL EXAMINATION */}
       <div className="text-sm mt-8 space-y-2 text-justify">
         <p className="font-bold">Physical Examination:</p>
-        <p className="whitespace-pre-line ml-4">
-          {blankMode ? '' : physicalExam}
-        </p>
+        <EditableClinicalField 
+          packetData={packetData}
+          docKey="PATIENT_FINAL"
+          field="physicalExam"
+          value={physicalExam} 
+          readOnly={readOnly || blankMode}
+          minHeightClass="min-h-[3rem]"
+          className="ml-4 hover:bg-slate-50 focus:bg-white"
+        />
       </div>
 
       {/* TREATMENT OVERVIEW */}
@@ -222,33 +231,81 @@ export const PatientFinalTreatmentReport = ({
       {/* GOALS OF TREATMENT */}
       <div className="text-sm mt-8 space-y-2 text-justify">
         <p className="font-bold">Goals of Treatment:</p>
-        <p className="whitespace-pre-line">{blankMode ? '' : goals}</p>
+        <EditableClinicalField 
+          packetData={packetData}
+          docKey="PATIENT_FINAL"
+          field="goals"
+          value={goals} 
+          readOnly={readOnly || blankMode}
+          minHeightClass="min-h-[3rem]"
+          className="hover:bg-slate-50 focus:bg-white"
+        />
       </div>
 
       {/* PROGRESS AND OUTCOME */}
       <div className="text-sm mt-8 space-y-2 text-justify">
         <p className="font-bold">Progress and Outcome:</p>
-        <p className="whitespace-pre-line">{blankMode ? '' : progress}</p>
+        <EditableClinicalField 
+          packetData={packetData}
+          docKey="PATIENT_FINAL"
+          field="progress"
+          value={progress} 
+          readOnly={readOnly || blankMode}
+          minHeightClass="min-h-[3rem]"
+          className="hover:bg-slate-50 focus:bg-white"
+        />
       </div>
 
       {/* FOLLOW-UP RECOMMENDATIONS */}
       <div className="text-sm mt-8 space-y-2 text-justify">
         <p className="font-bold">Follow-Up Recommendations:</p>
-        <p className="whitespace-pre-line">{blankMode ? '' : followUp}</p>
+        <EditableClinicalField 
+          packetData={packetData}
+          docKey="PATIENT_FINAL"
+          field="followUp"
+          value={followUp} 
+          readOnly={readOnly || blankMode}
+          minHeightClass="min-h-[3rem]"
+          className="hover:bg-slate-50 focus:bg-white"
+        />
       </div>
 
       {/* PATIENT EDUCATION */}
       <div className="text-sm mt-8 space-y-2 text-justify">
         <p className="font-bold">Patient Education:</p>
-        <p className="whitespace-pre-line">{blankMode ? '' : education}</p>
+        <EditableClinicalField 
+          packetData={packetData}
+          docKey="PATIENT_FINAL"
+          field="education"
+          value={education} 
+          readOnly={readOnly || blankMode}
+          minHeightClass="min-h-[3rem]"
+          className="hover:bg-slate-50 focus:bg-white"
+        />
       </div>
 
       {/* CARE PLAN & NEXT STEPS */}
       <div className="text-sm mt-8 space-y-2 text-justify">
         <p className="font-bold">Care Plan:</p>
-        <p className="whitespace-pre-line">{blankMode ? '' : carePlanStatus}</p>
+        <EditableClinicalField 
+          packetData={packetData}
+          docKey="PATIENT_FINAL"
+          field="carePlanStatus"
+          value={carePlanStatus} 
+          readOnly={readOnly || blankMode}
+          minHeightClass="min-h-[3rem]"
+          className="hover:bg-slate-50 focus:bg-white"
+        />
         <p className="font-bold mt-4">Next Steps:</p>
-        <p className="whitespace-pre-line">{blankMode ? '' : nextSteps}</p>
+        <EditableClinicalField 
+          packetData={packetData}
+          docKey="PATIENT_FINAL"
+          field="nextSteps"
+          value={nextSteps} 
+          readOnly={readOnly || blankMode}
+          minHeightClass="min-h-[3rem]"
+          className="hover:bg-slate-50 focus:bg-white"
+        />
       </div>
 
       {/* PROVIDER SIGNATURE */}
@@ -258,7 +315,7 @@ export const PatientFinalTreatmentReport = ({
             latestNote.signatureUrl.startsWith('data:image') ? (
               <img src={latestNote.signatureUrl} alt="Provider Signature" className="max-h-14 object-contain mb-1" />
             ) : (
-              <span className="font-mono text-teal-800 text-xs italic mb-1">{latestNote.signatureUrl.replace('DIGITAL_SIG:', '')}</span>
+              <span className="font-mono text-[#722F37] text-xs italic mb-1">{latestNote.signatureUrl.replace('DIGITAL_SIG:', '')}</span>
             )
           )}
         </div>

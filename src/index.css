@@ -360,3 +360,28 @@ body {
   border: none !important; 
   box-shadow: none !important;
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   Treatment Areas Checkbox (Anatomical Diagram)
+   ───────────────────────────────────────────────────────────────── */
+.treatment-checkbox {
+    /* If the coordinate is for the center, this is needed. The user's CSS didn't include it, but the original inline styling did. To perfectly match their concept without touching top/left pixels: */
+    transform: translate(-50%, -50%);
+}
+
+.checkbox-box {
+    position: relative;
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkbox-checkmark {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    line-height: 1;
+}

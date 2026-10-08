@@ -1,5 +1,5 @@
-// src/components/packets/josmic/JosmicPainManagementReport.jsx
 import React from 'react';
+import { EditableClinicalField } from '../EditableClinicalField';
 
 const CB = ({ checked = false, label, blankMode }) => (
   <span className="inline-flex items-center gap-1 mr-3 text-[11px]">
@@ -101,7 +101,7 @@ const PageHeader = ({ page, blankMode, packetData }) => {
   return (
     <div className="flex items-center justify-between border-b-2 border-slate-700 pb-3 mb-4">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-teal-700 flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-[#722F37] flex items-center justify-center flex-shrink-0">
           <svg viewBox="0 0 80 80" className="w-7 h-7" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="40" cy="40" r="38" fill="#0d9488" />
             <ellipse cx="40" cy="22" rx="8" ry="9" fill="white" />
@@ -113,7 +113,7 @@ const PageHeader = ({ page, blankMode, packetData }) => {
           </svg>
         </div>
         <div>
-          <h1 className="text-lg font-black text-teal-800 uppercase tracking-tight" style={{ fontFamily: 'serif' }}>JOSMIC WELLNESS CENTER</h1>
+          <h1 className="text-lg font-black text-[#722F37] uppercase tracking-tight" style={{ fontFamily: 'serif' }}>JOSMIC WELLNESS CENTER</h1>
           <p className="text-[10px] font-bold text-slate-600">PAIN MANAGEMENT CONSULTATION &amp; EVALUATION REPORT</p>
           <p className="text-[9px] text-slate-500">10101 HARWIN DR. STE 274 HOUSTON TX 77036 &nbsp;|&nbsp; OFFICE: 713-485-5712 &nbsp;|&nbsp; FAX: 832-416-1502</p>
         </div>
@@ -138,10 +138,11 @@ const PatientInfoBar = ({ blankMode, packetData }) => {
 
 // --- PAGE 1 ------------------------------------------------------------------
 const Page1 = ({ blankMode, packetData }) => {
+  const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
   const dosDate = packetData?.initialDate || packetData?.accidentDate || '';
   const patientDob = packetData?.patient?.dob || packetData?.patientDob || '';
   const patientGender = packetData?.patient?.sex || packetData?.patientSex || packetData?.patient?.gender || '';
-  const chiefComplaintText = packetData?.chiefComplaint || packetData?.mechanismOfInjury || '';
+  const chiefComplaintText = storage.chiefComplaint || packetData?.chiefComplaint || packetData?.mechanismOfInjury || '';
 
   return (
     <div>
@@ -159,9 +160,8 @@ const Page1 = ({ blankMode, packetData }) => {
       <SectionHeader>1. Chief Complaint &amp; Pain Assessment</SectionHeader>
 
       <div className="text-[11px] mb-3">
-        <span className="font-bold">What is the primary reason for today's visit? </span>
-        <div className="border-b border-slate-400 mt-1 mb-1 w-full">{blankMode || !packetData ? '' : chiefComplaintText}&nbsp;</div>
-        <div className="border-b border-slate-400 mt-2 w-full">&nbsp;</div>
+        <span className="font-bold block mb-1">What is the primary reason for today's visit? </span>
+        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="chiefComplaint" value={chiefComplaintText} readOnly={blankMode} inputType="textarea" minHeightClass="min-h-[40px]" className="border-b border-dashed border-slate-400 w-full" />
       </div>
 
       <div className="mb-4">
@@ -173,7 +173,7 @@ const Page1 = ({ blankMode, packetData }) => {
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
           <span className="font-bold">Other:</span>
-          <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData.painDescriptionOther || '')}&nbsp;</div>
+          <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="painDescriptionOther" value={storage.painDescriptionOther || packetData?.painDescriptionOther || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
       </div>
 
@@ -190,7 +190,7 @@ const Page1 = ({ blankMode, packetData }) => {
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
           <span className="font-bold">Other:</span>
-          <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData.painLocationOther || '')}&nbsp;</div>
+          <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="painLocationOther" value={storage.painLocationOther || packetData?.painLocationOther || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
       </div>
 
@@ -205,7 +205,7 @@ const Page1 = ({ blankMode, packetData }) => {
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
           <span className="font-bold">Other:</span>
-          <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : getOtherMechanism(packetData)}&nbsp;</div>
+          <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="mechanismOther" value={storage.mechanismOther || getOtherMechanism(packetData)} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
       </div>
     </div>
@@ -262,9 +262,10 @@ const getRosNeurologicChecked = (label, packetData) => {
 
 // --- PAGE 2 ------------------------------------------------------------------
 const Page2 = ({ blankMode, packetData }) => {
-  const currentPain = packetData?.painSeverityCurrent || packetData?.painCurrent || packetData?.painScore || '';
-  const worstPain = packetData?.painSeverityWorst || packetData?.painWorst || '';
-  const bestPain = packetData?.painSeverityBest || packetData?.painBest || '';
+  const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
+  const currentPain = storage.painCurrent || packetData?.painSeverityCurrent || packetData?.painCurrent || packetData?.painScore || '';
+  const worstPain = storage.painWorst || packetData?.painSeverityWorst || packetData?.painWorst || '';
+  const bestPain = storage.painBest || packetData?.painSeverityBest || packetData?.painBest || '';
 
   return (
     <div>
@@ -275,17 +276,17 @@ const Page2 = ({ blankMode, packetData }) => {
         </div>
         <p className="font-bold mb-2">2.2 Pain Severity (0-10): rate in scale of severity</p>
         <div className="grid grid-cols-3 gap-4 mb-3 pl-2">
-          <div>
-            <span className="font-semibold">Current: </span>
-            <div className="border-b border-slate-400 inline-block w-12 font-mono">{blankMode || !packetData ? '' : currentPain}&nbsp;</div>
+          <div className="flex items-center">
+            <span className="font-semibold mr-1">Current: </span>
+            <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="painCurrent" value={currentPain} readOnly={blankMode} inputType="input" className="w-12 border-b border-dashed border-slate-400 font-mono text-center" />
           </div>
-          <div>
-            <span className="font-semibold">Worst: </span>
-            <div className="border-b border-slate-400 inline-block w-12 font-mono">{blankMode || !packetData ? '' : worstPain}&nbsp;</div>
+          <div className="flex items-center">
+            <span className="font-semibold mr-1">Worst: </span>
+            <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="painWorst" value={worstPain} readOnly={blankMode} inputType="input" className="w-12 border-b border-dashed border-slate-400 font-mono text-center" />
           </div>
-          <div>
-            <span className="font-semibold">Best: </span>
-            <div className="border-b border-slate-400 inline-block w-12 font-mono">{blankMode || !packetData ? '' : bestPain}&nbsp;</div>
+          <div className="flex items-center">
+            <span className="font-semibold mr-1">Best: </span>
+            <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="painBest" value={bestPain} readOnly={blankMode} inputType="input" className="w-12 border-b border-dashed border-slate-400 font-mono text-center" />
           </div>
         </div>
       </div>
@@ -299,7 +300,7 @@ const Page2 = ({ blankMode, packetData }) => {
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
           <span className="font-bold">Other:</span>
-          <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData?.aggravatingFactorsOther || '')}&nbsp;</div>
+          <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="aggravatingFactorsOther" value={storage.aggravatingFactorsOther || packetData?.aggravatingFactorsOther || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
       </div>
 
@@ -321,7 +322,7 @@ const Page2 = ({ blankMode, packetData }) => {
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
           <span className="font-bold">Other:</span>
-          <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData?.functionalLimitationsOther || '')}&nbsp;</div>
+          <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="functionalLimitationsOther" value={storage.functionalLimitationsOther || packetData?.functionalLimitationsOther || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
       </div>
 
@@ -337,7 +338,7 @@ const Page2 = ({ blankMode, packetData }) => {
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
           <span className="font-bold">Other:</span>
-          <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData?.medicalHistoryOther || '')}&nbsp;</div>
+          <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="medicalHistoryOther" value={storage.medicalHistoryOther || packetData?.medicalHistoryOther || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
       </div>
 
@@ -345,7 +346,7 @@ const Page2 = ({ blankMode, packetData }) => {
         <p className="font-bold mb-1">Surgical History:</p>
         <div className="flex items-center gap-3 pl-2">
           <span>Relevant prior surgery:</span>
-          <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData?.surgicalHistory || packetData?.pastSurgicalHistory || '')}&nbsp;</div>
+          <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="surgicalHistory" value={storage.surgicalHistory || packetData?.surgicalHistory || packetData?.pastSurgicalHistory || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
           <CB checked={getSurgicalNoneChecked(packetData)} label="None" blankMode={blankMode} />
         </div>
       </div>
@@ -353,11 +354,11 @@ const Page2 = ({ blankMode, packetData }) => {
       <div className="mb-2 text-[11px]">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold">Medications (current):</span>
-          <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData?.medications || packetData?.currentMedications || '')}&nbsp;</div>
+          <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="medications" value={storage.medications || packetData?.medications || packetData?.currentMedications || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
         <div className="flex items-center gap-2">
           <span className="font-bold">Allergies:</span>
-          <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData?.allergies || '')}&nbsp;</div>
+          <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="allergies" value={storage.allergies || packetData?.allergies || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
       </div>
 
@@ -511,7 +512,9 @@ const getOtherDiagnosis = (packetData) => {
 };
 
 // --- PAGE 3 ------------------------------------------------------------------
-const Page3 = ({ blankMode, packetData }) => (
+const Page3 = ({ blankMode, packetData }) => {
+  const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
+  return (
   <div>
     <div className="mb-3">
       <p className="font-bold text-[11px] mb-1">Musculoskeletal:</p>
@@ -577,13 +580,13 @@ const Page3 = ({ blankMode, packetData }) => (
           <span className="font-semibold w-16">Motor:</span>
           <CB checked={getNeuroMotorChecked('Normal', packetData)} label="Normal" blankMode={blankMode} />
           <span>Weakness in:</span>
-          <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData?.motorWeaknessIn || '')}&nbsp;</div>
+          <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="motorWeaknessIn" value={storage.motorWeaknessIn || packetData?.motorWeaknessIn || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
         <div className="flex items-center gap-3">
           <span className="font-semibold w-16">Sensory:</span>
           <CB checked={getNeuroSensoryChecked('Intact', packetData)} label="Intact" blankMode={blankMode} />
           <span>Diminished in:</span>
-          <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData?.sensoryDiminishedIn || '')}&nbsp;</div>
+          <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="sensoryDiminishedIn" value={storage.sensoryDiminishedIn || packetData?.sensoryDiminishedIn || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
         <div className="flex items-center gap-3">
           <span className="font-semibold w-16">Reflexes:</span>
@@ -623,10 +626,13 @@ const Page3 = ({ blankMode, packetData }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // --- PAGE 4 ------------------------------------------------------------------
-const Page4 = ({ blankMode, packetData }) => (
+const Page4 = ({ blankMode, packetData }) => {
+  const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
+  return (
   <div>
     <div className="pl-2 space-y-1.5 text-[11px] mb-4">
       <div className="flex items-center gap-2">
@@ -637,7 +643,7 @@ const Page4 = ({ blankMode, packetData }) => (
       </div>
       <div className="flex items-center gap-2">
         <span className="font-bold">Other:</span>
-        <div className="border-b border-slate-400 w-20 font-mono">{blankMode || !packetData ? '' : getOtherDiagnosis(packetData)}&nbsp;</div>
+        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="otherDiagnosis" value={storage.otherDiagnosis || getOtherDiagnosis(packetData)} readOnly={blankMode} inputType="input" className="w-48 border-b border-dashed border-slate-400 font-mono" />
       </div>
     </div>
 
@@ -661,7 +667,7 @@ const Page4 = ({ blankMode, packetData }) => (
       </div>
       <div className="flex items-center gap-2 mt-1.5 text-[11px] pl-2">
         <span className="font-bold">Other:</span>
-        <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData?.medicationsOther || packetData?.otherMedications || packetData?.plan?.otherMedications || '')}&nbsp;</div>
+        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="medicationsOther" value={storage.medicationsOther || packetData?.medicationsOther || packetData?.otherMedications || packetData?.plan?.otherMedications || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
       </div>
     </div>
 
@@ -674,7 +680,7 @@ const Page4 = ({ blankMode, packetData }) => (
       </div>
       <div className="flex items-center gap-2 mt-1.5 text-[11px] pl-2">
         <span className="font-bold">Specialist referral:</span>
-        <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData?.specialistReferral || packetData?.referral || packetData?.plan?.specialistReferral || '')}&nbsp;</div>
+        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="specialistReferral" value={storage.specialistReferral || packetData?.specialistReferral || packetData?.referral || packetData?.plan?.specialistReferral || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
       </div>
     </div>
 
@@ -687,7 +693,7 @@ const Page4 = ({ blankMode, packetData }) => (
       </div>
       <div className="flex items-center gap-2 mt-1.5 pl-2">
         <CB checked={getRestrictionsChecked('Off work', packetData)} label="Off work/school until:" blankMode={blankMode} />
-        <div className="border-b border-slate-400 w-28">{blankMode || !packetData ? '' : (packetData?.offWorkUntil || packetData?.restrictionsOffWorkUntil || packetData?.plan?.offWorkUntil || '')}&nbsp;</div>
+        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="offWorkUntil" value={storage.offWorkUntil || packetData?.offWorkUntil || packetData?.restrictionsOffWorkUntil || packetData?.plan?.offWorkUntil || ''} readOnly={blankMode} inputType="input" className="w-28 border-b border-dashed border-slate-400" />
       </div>
     </div>
 
@@ -700,7 +706,7 @@ const Page4 = ({ blankMode, packetData }) => (
       </div>
       <div className="flex items-center gap-2 mt-1.5 pl-2">
         <span className="font-bold">Referred to:</span>
-        <div className="border-b border-slate-400 flex-1">{blankMode || !packetData ? '' : (packetData?.referredTo || packetData?.plan?.referredTo || '')}&nbsp;</div>
+        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="referredTo" value={storage.referredTo || packetData?.referredTo || packetData?.plan?.referredTo || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
       </div>
     </div>
 
@@ -721,7 +727,8 @@ const Page4 = ({ blankMode, packetData }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // --- MAIN COMPONENT -----------------------------------------------------------
 export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, packetData = null }) => {

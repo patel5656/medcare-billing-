@@ -33,7 +33,7 @@ export const PaperCheckbox = ({
     >
       <div
         className={`relative flex items-center justify-center border ${
-          source === 'MANUAL' ? 'border-amber-600 bg-amber-50/50' : 'border-slate-800 bg-white'
+          source === 'MANUAL' ? 'border-amber-600 bg-amber-50/50' : 'border-[#722F37] bg-white'
         } print:border-black print:bg-transparent`}
         style={{ width: `${size}px`, height: `${size}px` }}
       >

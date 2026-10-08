@@ -32,7 +32,7 @@ export const TecarCoverPage = ({ blankMode = false, packetData = null, bill = nu
     <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '48px 56px' }}>
 
       {/* Header */}
-      <div className="flex items-center justify-between border-b-2 border-slate-800 pb-5 mb-6">
+      <div className="flex items-center justify-between border-b-2 border-[#722F37] pb-5 mb-6">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-rose-600 flex items-center justify-center flex-shrink-0">
             <svg viewBox="0 0 24 24" className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth="2">
@@ -40,7 +40,7 @@ export const TecarCoverPage = ({ blankMode = false, packetData = null, bill = nu
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-black uppercase text-rose-800 tracking-tight" style={{ fontFamily: 'serif' }}>TECAR THERAPY CLINIC</h1>
+            <h1 className="text-2xl font-black uppercase text-[#722F37] tracking-tight" style={{ fontFamily: 'serif' }}>TECAR THERAPY CLINIC</h1>
             <p className="text-[11px] font-bold text-slate-600">10101 HARWIN DR. STE 210 HOUSTON TX 77036</p>
             <p className="text-[11px] text-slate-600">OFFICE: 713-555-0210 &nbsp;|&nbsp; FAX: 832-555-0210</p>
           </div>
