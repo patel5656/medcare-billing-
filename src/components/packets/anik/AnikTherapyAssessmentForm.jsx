@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiCaseService } from '../../../services/api/apiCaseService';
 import { apiProviderService } from '../../../services/api/apiProviderService';
 import fmLogo from '../../../assets/fm-logo.jpeg';
@@ -12,6 +12,7 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
   const [providers, setProviders] = useState({});
   const [selectedProviderId, setSelectedProviderId] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     if (packetData?.clinicalDocStorage?.['ANIK_ASSESSMENT']) {
@@ -28,6 +29,20 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
       }
     }).catch(err => console.error(err));
   }, [packetData]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   const selectedProvider = providers[selectedProviderId];
 
@@ -205,31 +220,36 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
       style={{ width: '850px', minHeight: '1100px' }}
     >
       
-      {/* Provider Header matching PDF Page 7 */}
-      <div className="text-center pb-4 border-b-2 border-[#722F37] mb-4 relative">
-        {/* Dynamic Provider Dropdown */}
-        <div className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm p-3 rounded-xl border border-slate-200/80 inline-block text-left w-64 shadow-lg shadow-slate-200/50 print:hidden transition-all hover:shadow-xl z-[100]">
-          <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
-            Treating Provider
+      {/* Top Utility Bar: Provider Selector & Screen Notice (Hidden on Print) */}
+      <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 print:hidden text-xs">
+        <div className="flex items-center gap-2 text-slate-500 font-medium">
+          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Clinical Assessment Session</span>
+        </div>
+
+        {/* Compact Treating Provider Dropdown */}
+        <div ref={dropdownRef} className="relative flex items-center gap-2">
+          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+            Treating Provider:
           </label>
-          <div className="relative group">
+          <div className="relative">
             <button 
               type="button"
               disabled={readOnly}
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="w-full text-left bg-white border border-slate-200 rounded-lg pl-3 pr-8 py-2 text-sm font-bold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#722F37]/30 focus:border-[#722F37] transition-all cursor-pointer hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+              className="h-8 min-w-[200px] max-w-[280px] text-left bg-white border border-slate-300 hover:border-[#722F37] rounded-lg px-2.5 text-xs font-bold text-slate-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#722F37]/20 transition-all cursor-pointer flex items-center justify-between gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="block break-words whitespace-normal text-left">{selectedProvider ? selectedProvider.name : '[ Select Provider ]'}</span>
+              <span className="truncate">{selectedProvider ? selectedProvider.name : '[ Select Provider ]'}</span>
+              <svg className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400 group-hover:text-[#722F37] transition-colors">
-              <svg className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-            </div>
 
             {/* Custom Dropdown List */}
             {isDropdownOpen && !readOnly && (
-              <div className="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-xl z-[100] max-h-60 overflow-y-auto">
+              <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-[150] max-h-60 overflow-y-auto py-1">
                 <div 
-                  className="px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-50 cursor-pointer border-b border-slate-100"
+                  className="px-3 py-2 text-xs text-slate-400 hover:bg-slate-50 cursor-pointer border-b border-slate-100"
                   onClick={() => { setSelectedProviderId(''); setIsDropdownOpen(false); }}
                 >
                   [ Select Provider ]
@@ -237,7 +257,7 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
                 {Object.values(providers).map(p => (
                   <div 
                     key={p.id} 
-                    className={`px-3 py-2.5 text-sm font-bold cursor-pointer hover:bg-slate-50 ${selectedProviderId === p.id ? 'bg-slate-100 text-[#722F37]' : 'text-slate-800'}`}
+                    className={`px-3 py-2 text-xs font-bold cursor-pointer hover:bg-slate-50 transition-colors ${selectedProviderId === p.id ? 'bg-amber-50 text-[#722F37]' : 'text-slate-800'}`}
                     onClick={() => { setSelectedProviderId(p.id); setIsDropdownOpen(false); }}
                   >
                     {p.name}
@@ -247,7 +267,10 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
             )}
           </div>
         </div>
+      </div>
 
+      {/* Provider Header matching PDF Page 7 */}
+      <div className="text-center pb-4 border-b-2 border-[#722F37] mb-4">
         {/* Logo and Facility Name */}
         <div className="flex flex-col items-center justify-center space-y-1">
            <img src={fmLogo} alt="FM Health Logo" className="h-16 w-auto object-contain mb-1 mix-blend-multiply" />
