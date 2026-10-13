@@ -99,6 +99,48 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
   // Display up to 3 dates to fit on a single page
   const displayDates = sortedDates.slice(0, 3);
 
+  const isChecked = (fieldVal, key) => {
+    if (!fieldVal) return false;
+    if (Array.isArray(fieldVal)) return fieldVal.includes(key);
+    if (typeof fieldVal === 'string') return fieldVal === key;
+    return false;
+  };
+
+  const toggleAssessment = (dos, field, key) => {
+    if (readOnly || blankMode) return;
+    const currentVal = assessments[dos]?.[field];
+    let currentList = [];
+    if (Array.isArray(currentVal)) {
+      currentList = [...currentVal];
+    } else if (typeof currentVal === 'string' && currentVal) {
+      currentList = [currentVal];
+    }
+
+    let nextList;
+    if (currentList.includes(key)) {
+      nextList = currentList.filter(item => item !== key);
+    } else {
+      nextList = [...currentList, key];
+    }
+
+    updateAssessment(dos, field, nextList);
+  };
+
+  const handleDoubleClick = (e, dos, field, key) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (readOnly || blankMode) return;
+    const currentVal = assessments[dos]?.[field];
+    let currentList = [];
+    if (Array.isArray(currentVal)) {
+      currentList = [...currentVal];
+    } else if (typeof currentVal === 'string' && currentVal) {
+      currentList = [currentVal];
+    }
+    const nextList = currentList.filter(item => item !== key);
+    updateAssessment(dos, field, nextList);
+  };
+
   // Helper to check if a specific CPT exists in a given date's lines
   const hasCpt = (lines, codePrefix) => lines.some(l => l.cptCode && String(l.cptCode).startsWith(codePrefix));
   const getCptUnits = (lines, codePrefix) => {
@@ -262,74 +304,134 @@ export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false,
               <p className="font-bold">ASSESSMENT:</p>
               <div className="flex items-center gap-6">
                 <span>PATIENT TOLERANCE TO TREATMENT:</span>
-                <label className="cursor-pointer hover:opacity-80 transition-opacity duration-100">
-                  <input type="radio" name={`tol-${dos}`} checked={currentTol === 'WELL'} onChange={() => updateAssessment(dos, 'tol', 'WELL')} className="hidden" />
-                  <span>{currentTol === 'WELL' ? '__' : '____'}</span>
-                  {currentTol === 'WELL' && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{currentTol === 'WELL' ? '__ WELL' : ' WELL'}</span>
-                </label>
-                <label className="cursor-pointer hover:opacity-80 transition-opacity duration-100">
-                  <input type="radio" name={`tol-${dos}`} checked={currentTol === 'FAIRLY'} onChange={() => updateAssessment(dos, 'tol', 'FAIRLY')} className="hidden" />
-                  <span>{currentTol === 'FAIRLY' ? '__' : '____'}</span>
-                  {currentTol === 'FAIRLY' && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{currentTol === 'FAIRLY' ? '__ FAIRLY' : ' FAIRLY'}</span>
-                </label>
-                <label className="cursor-pointer hover:opacity-80 transition-opacity duration-100">
-                  <input type="radio" name={`tol-${dos}`} checked={currentTol === 'POORLY'} onChange={() => updateAssessment(dos, 'tol', 'POORLY')} className="hidden" />
-                  <span>{currentTol === 'POORLY' ? '__' : '____'}</span>
-                  {currentTol === 'POORLY' && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{currentTol === 'POORLY' ? '__ POORLY' : ' POORLY'}</span>
-                </label>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleAssessment(dos, 'tol', 'WELL')}
+                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'tol', 'WELL')}
+                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
+                  title="Click to toggle, double-click to remove"
+                >
+                  <span>{isChecked(currentTol, 'WELL') ? '__' : '____'}</span>
+                  {isChecked(currentTol, 'WELL') && <strong className="text-slate-900 font-black">✓</strong>}
+                  <span>{isChecked(currentTol, 'WELL') ? '__ WELL' : ' WELL'}</span>
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleAssessment(dos, 'tol', 'FAIRLY')}
+                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'tol', 'FAIRLY')}
+                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
+                  title="Click to toggle, double-click to remove"
+                >
+                  <span>{isChecked(currentTol, 'FAIRLY') ? '__' : '____'}</span>
+                  {isChecked(currentTol, 'FAIRLY') && <strong className="text-slate-900 font-black">✓</strong>}
+                  <span>{isChecked(currentTol, 'FAIRLY') ? '__ FAIRLY' : ' FAIRLY'}</span>
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleAssessment(dos, 'tol', 'POORLY')}
+                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'tol', 'POORLY')}
+                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
+                  title="Click to toggle, double-click to remove"
+                >
+                  <span>{isChecked(currentTol, 'POORLY') ? '__' : '____'}</span>
+                  {isChecked(currentTol, 'POORLY') && <strong className="text-slate-900 font-black">✓</strong>}
+                  <span>{isChecked(currentTol, 'POORLY') ? '__ POORLY' : ' POORLY'}</span>
+                </span>
               </div>
 
               <div className="flex items-center gap-4">
                 <span>APPEARS TO BE:</span>
-                <label className="cursor-pointer hover:opacity-80 transition-opacity duration-100">
-                  <input type="radio" name={`imp-${dos}`} checked={currentImp === 'IMPROVING'} onChange={() => updateAssessment(dos, 'imp', 'IMPROVING')} className="hidden" />
-                  <span>{currentImp === 'IMPROVING' ? '__' : '____'}</span>
-                  {currentImp === 'IMPROVING' && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{currentImp === 'IMPROVING' ? '__ IMPROVING' : ' IMPROVING'}</span>
-                </label>
-                <label className="cursor-pointer hover:opacity-80 transition-opacity duration-100">
-                  <input type="radio" name={`imp-${dos}`} checked={currentImp === 'IMPROVING_SLOWLY'} onChange={() => updateAssessment(dos, 'imp', 'IMPROVING_SLOWLY')} className="hidden" />
-                  <span>{currentImp === 'IMPROVING_SLOWLY' ? '__' : '____'}</span>
-                  {currentImp === 'IMPROVING_SLOWLY' && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{currentImp === 'IMPROVING_SLOWLY' ? '__ IMPROVING SLOWLY' : ' IMPROVING SLOWLY'}</span>
-                </label>
-                <label className="cursor-pointer hover:opacity-80 transition-opacity duration-100">
-                  <input type="radio" name={`imp-${dos}`} checked={currentImp === 'NO_CHANGE'} onChange={() => updateAssessment(dos, 'imp', 'NO_CHANGE')} className="hidden" />
-                  <span>{currentImp === 'NO_CHANGE' ? '__' : '____'}</span>
-                  {currentImp === 'NO_CHANGE' && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{currentImp === 'NO_CHANGE' ? '__ NO CHANGE' : ' NO CHANGE'}</span>
-                </label>
-                <label className="cursor-pointer hover:opacity-80 transition-opacity duration-100">
-                  <input type="radio" name={`imp-${dos}`} checked={currentImp === 'GETTING_WORSE'} onChange={() => updateAssessment(dos, 'imp', 'GETTING_WORSE')} className="hidden" />
-                  <span>{currentImp === 'GETTING_WORSE' ? '__' : '____'}</span>
-                  {currentImp === 'GETTING_WORSE' && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{currentImp === 'GETTING_WORSE' ? '__ GETTING WORSE' : ' GETTING WORSE'}</span>
-                </label>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleAssessment(dos, 'imp', 'IMPROVING')}
+                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'imp', 'IMPROVING')}
+                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
+                  title="Click to toggle, double-click to remove"
+                >
+                  <span>{isChecked(currentImp, 'IMPROVING') ? '__' : '____'}</span>
+                  {isChecked(currentImp, 'IMPROVING') && <strong className="text-slate-900 font-black">✓</strong>}
+                  <span>{isChecked(currentImp, 'IMPROVING') ? '__ IMPROVING' : ' IMPROVING'}</span>
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleAssessment(dos, 'imp', 'IMPROVING_SLOWLY')}
+                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'imp', 'IMPROVING_SLOWLY')}
+                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
+                  title="Click to toggle, double-click to remove"
+                >
+                  <span>{isChecked(currentImp, 'IMPROVING_SLOWLY') ? '__' : '____'}</span>
+                  {isChecked(currentImp, 'IMPROVING_SLOWLY') && <strong className="text-slate-900 font-black">✓</strong>}
+                  <span>{isChecked(currentImp, 'IMPROVING_SLOWLY') ? '__ IMPROVING SLOWLY' : ' IMPROVING SLOWLY'}</span>
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleAssessment(dos, 'imp', 'NO_CHANGE')}
+                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'imp', 'NO_CHANGE')}
+                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
+                  title="Click to toggle, double-click to remove"
+                >
+                  <span>{isChecked(currentImp, 'NO_CHANGE') ? '__' : '____'}</span>
+                  {isChecked(currentImp, 'NO_CHANGE') && <strong className="text-slate-900 font-black">✓</strong>}
+                  <span>{isChecked(currentImp, 'NO_CHANGE') ? '__ NO CHANGE' : ' NO CHANGE'}</span>
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleAssessment(dos, 'imp', 'GETTING_WORSE')}
+                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'imp', 'GETTING_WORSE')}
+                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
+                  title="Click to toggle, double-click to remove"
+                >
+                  <span>{isChecked(currentImp, 'GETTING_WORSE') ? '__' : '____'}</span>
+                  {isChecked(currentImp, 'GETTING_WORSE') && <strong className="text-slate-900 font-black">✓</strong>}
+                  <span>{isChecked(currentImp, 'GETTING_WORSE') ? '__ GETTING WORSE' : ' GETTING WORSE'}</span>
+                </span>
               </div>
 
               <div className="flex items-center gap-4">
                 <span>PATIENT CONTINUES TO HAVE:</span>
-                <label className="cursor-pointer hover:opacity-80 transition-opacity duration-100">
-                  <input type="radio" name={`care-${dos}`} checked={currentCare === 'CONTINUES_CARE'} onChange={() => updateAssessment(dos, 'care', 'CONTINUES_CARE')} className="hidden" />
-                  <span>{currentCare === 'CONTINUES_CARE' ? '__' : '____'}</span>
-                  {currentCare === 'CONTINUES_CARE' && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{currentCare === 'CONTINUES_CARE' ? '__ CONTINUES PRESENT CARE' : ' CONTINUES PRESENT CARE'}</span>
-                </label>
-                <label className="cursor-pointer hover:opacity-80 transition-opacity duration-100">
-                  <input type="radio" name={`care-${dos}`} checked={currentCare === 'REEVALUATE'} onChange={() => updateAssessment(dos, 'care', 'REEVALUATE')} className="hidden" />
-                  <span>{currentCare === 'REEVALUATE' ? '__' : '____'}</span>
-                  {currentCare === 'REEVALUATE' && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{currentCare === 'REEVALUATE' ? '__ REEVALUATE DUE TO CHANGES IN CONDITION' : ' REEVALUATE DUE TO CHANGES IN CONDITION'}</span>
-                </label>
-                <label className="cursor-pointer hover:opacity-80 transition-opacity duration-100">
-                  <input type="radio" name={`care-${dos}`} checked={currentCare === '30_DAY_REEVA'} onChange={() => updateAssessment(dos, 'care', '30_DAY_REEVA')} className="hidden" />
-                  <span>{currentCare === '30_DAY_REEVA' ? '__' : '____'}</span>
-                  {currentCare === '30_DAY_REEVA' && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{currentCare === '30_DAY_REEVA' ? '__ 30 DAY RE-EVA' : ' 30 DAY RE-EVA'}</span>
-                </label>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleAssessment(dos, 'care', 'CONTINUES_CARE')}
+                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'care', 'CONTINUES_CARE')}
+                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
+                  title="Click to toggle, double-click to remove"
+                >
+                  <span>{isChecked(currentCare, 'CONTINUES_CARE') ? '__' : '____'}</span>
+                  {isChecked(currentCare, 'CONTINUES_CARE') && <strong className="text-slate-900 font-black">✓</strong>}
+                  <span>{isChecked(currentCare, 'CONTINUES_CARE') ? '__ CONTINUES PRESENT CARE' : ' CONTINUES PRESENT CARE'}</span>
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleAssessment(dos, 'care', 'REEVALUATE')}
+                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'care', 'REEVALUATE')}
+                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
+                  title="Click to toggle, double-click to remove"
+                >
+                  <span>{isChecked(currentCare, 'REEVALUATE') ? '__' : '____'}</span>
+                  {isChecked(currentCare, 'REEVALUATE') && <strong className="text-slate-900 font-black">✓</strong>}
+                  <span>{isChecked(currentCare, 'REEVALUATE') ? '__ REEVALUATE DUE TO CHANGES IN CONDITION' : ' REEVALUATE DUE TO CHANGES IN CONDITION'}</span>
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleAssessment(dos, 'care', '30_DAY_REEVA')}
+                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'care', '30_DAY_REEVA')}
+                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
+                  title="Click to toggle, double-click to remove"
+                >
+                  <span>{isChecked(currentCare, '30_DAY_REEVA') ? '__' : '____'}</span>
+                  {isChecked(currentCare, '30_DAY_REEVA') && <strong className="text-slate-900 font-black">✓</strong>}
+                  <span>{isChecked(currentCare, '30_DAY_REEVA') ? '__ 30 DAY RE-EVA' : ' 30 DAY RE-EVA'}</span>
+                </span>
               </div>
             </div>
           </div>

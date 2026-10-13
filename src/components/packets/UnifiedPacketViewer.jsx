@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { PACKET_MANIFESTS } from '../../constants/packetManifests';
 import { apiBillingService } from '../../services/api/apiBillingService';
 import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
+import { apiCaseService } from '../../services/api/apiCaseService';
 import { mapBillToCms1500Claims } from '../../utils/cmsMapper';
 import { useUIStore } from '../../store/uiStore';
 
@@ -29,6 +30,15 @@ import { JosmicPainManagementReport } from './josmic/JosmicPainManagementReport'
 
 // Counselor Components
 import { CounselorCoverPage } from './counselor/CounselorCoverPage';
+import { CounselorTreatmentSummaryForm } from './counselor/CounselorTreatmentSummaryForm';
+import { CounselorPsychiatricReportForm } from './counselor/CounselorPsychiatricReportForm';
+import { CounselorDiagnosticImpressionForm } from './counselor/CounselorDiagnosticImpressionForm';
+import { CounselorCourseOfCareForm } from './counselor/CounselorCourseOfCareForm';
+import { CounselorSessionNotesPart1Form } from './counselor/CounselorSessionNotesPart1Form';
+import { CounselorSessionNotesPart2Form } from './counselor/CounselorSessionNotesPart2Form';
+import { CounselorDischargePlanForm } from './counselor/CounselorDischargePlanForm';
+import { CounselorBillingStatementPart1Form } from './counselor/CounselorBillingStatementPart1Form';
+import { CounselorBillingStatementPart2Form } from './counselor/CounselorBillingStatementPart2Form';
 import { CounselorAssessmentForm } from './counselor/CounselorAssessmentForm';
 
 // TPI Components
@@ -48,7 +58,7 @@ import { AiDoctorsNoteWorkspace } from './ai/AiDoctorsNoteWorkspace';
 
 import { 
   Printer, Download, Eye, Edit3, Lock, Unlock, ZoomIn, ZoomOut, 
-  Maximize2, ChevronLeft, ChevronRight, FileCheck, AlertCircle, Sparkles, FileText, RotateCcw
+  Maximize2, ChevronLeft, ChevronRight, FileCheck, AlertCircle, Sparkles, FileText, RotateCcw, User
 } from 'lucide-react';
 import { triggerPrint } from '../../utils/exportUtils';
 
@@ -63,6 +73,9 @@ const getInitialZoom = () => {
 
 export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = false, selectedCase = null }) => {
   const manifest = PACKET_MANIFESTS[providerId] || PACKET_MANIFESTS['prov-anik'];
+  const [internalCases, setInternalCases] = useState([]);
+  const [internalSelectedCaseId, setInternalSelectedCaseId] = useState('');
+  
   const [bill, setBill] = useState(null);
   const [cmsClaims, setCmsClaims] = useState([]);
   const [latestNote, setLatestNote] = useState(null);
@@ -74,6 +87,23 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   const [qaMode, setQaMode] = useState(false);
 
   const { addToast } = useUIStore();
+
+  // Load cases from DB if none provided
+  useEffect(() => {
+    if (!selectedCase) {
+      apiCaseService.getCases().then(res => {
+        setInternalCases(res || []);
+        if (res && res.length > 0) {
+          setInternalSelectedCaseId(res[0].id);
+        }
+      }).catch(err => {
+        console.error('Failed to load DB cases in UnifiedPacketViewer:', err);
+      });
+    }
+  }, [selectedCase]);
+
+  // Determine active effective case
+  const effectiveCase = selectedCase || internalCases.find(c => c.id === internalSelectedCaseId) || internalCases[0] || null;
 
   const billMap = { 
     'prov-anik': 'bill-anik-001', 
@@ -92,52 +122,64 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   useEffect(() => {
     const fetchBillAndClaims = async () => {
       try {
-        if (!selectedCase) return;
-        const caseIdentifier = selectedCase.id || selectedCase.caseId;
-        const res = await apiBillingService.getFourBillsByCase(caseIdentifier);
+        if (!effectiveCase) return;
+        const caseIdentifier = effectiveCase.id || effectiveCase.caseId;
+        const res = await apiBillingService.getFourBillsByCase(caseIdentifier).catch(() => null);
         
-        if (res && res.allBills) {
-          const providerBill = res.allBills.find(b => b.providerId === providerId);
-          if (providerBill) {
-            setBill(providerBill);
-            const providerConfig = {
-              id: providerId,
-              identifiers: providerBill.identifiers || { 
-                taxId: providerBill.providerTaxId || providerBill.provider?.identifiers?.taxId || '',
-                npi: providerBill.providerNpi || providerBill.provider?.identifiers?.npi || '',
-                ssnOrEin: providerBill.providerSsnOrEin || providerBill.provider?.identifiers?.ssnOrEin || 'EIN'
-              },
-              renderingProvider: providerBill.renderingProvider || {},
-              serviceFacility: providerBill.serviceFacility || {},
-              billingProvider: providerBill.billingProvider || {},
-              defaultPlaceOfService: '11',
-            };
-            const claims = mapBillToCms1500Claims(providerBill, selectedCase, providerConfig);
-            setCmsClaims(claims);
-          } else {
-            setBill(null);
-            setCmsClaims([]);
-          }
+        let providerBill = res?.allBills?.find(b => b.providerId === providerId);
+        if (!providerBill && effectiveCase?.bills && Array.isArray(effectiveCase.bills)) {
+          providerBill = effectiveCase.bills.find(b => b.providerId === providerId) || (providerId === 'prov-counselor' ? effectiveCase.bills[0] : null);
+        }
 
-          // Fetch latest clinical note for this case & provider
-          try {
-            const notes = await apiClinicalNoteService.getNotes({ caseId: caseIdentifier, providerId });
-            if (notes && notes.length > 0) {
-              const sorted = notes.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-              setLatestNote(sorted[0].content || sorted[0]);
+        if (providerBill) {
+          const lines = providerBill.serviceLines || providerBill.lineItems || [];
+          providerBill.serviceLines = lines;
+          providerBill.lineItems = lines;
+          setBill(providerBill);
+          const providerConfig = {
+            id: providerId,
+            identifiers: providerBill.identifiers || { 
+              taxId: providerBill.providerTaxId || providerBill.provider?.identifiers?.taxId || '',
+              npi: providerBill.providerNpi || providerBill.provider?.identifiers?.npi || '',
+              ssnOrEin: providerBill.providerSsnOrEin || providerBill.provider?.identifiers?.ssnOrEin || 'EIN'
+            },
+            renderingProvider: providerBill.renderingProvider || {},
+            serviceFacility: providerBill.serviceFacility || {},
+            billingProvider: providerBill.billingProvider || {},
+            defaultPlaceOfService: '11',
+          };
+          const claims = mapBillToCms1500Claims(providerBill, effectiveCase, providerConfig);
+          setCmsClaims(claims);
+        } else {
+          setBill(null);
+          setCmsClaims([]);
+        }
+
+        // Fetch latest clinical note for this case & provider
+        try {
+          const notes = await apiClinicalNoteService.getNotes({ caseId: caseIdentifier, providerId });
+          if (notes && notes.length > 0) {
+            const sorted = notes.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+            setLatestNote(sorted[0].content || sorted[0]);
+          } else if (effectiveCase?.clinicalNotes && effectiveCase.clinicalNotes.length > 0) {
+            const cNotes = effectiveCase.clinicalNotes.filter(n => n.providerId === providerId || providerId === 'prov-counselor');
+            if (cNotes.length > 0) {
+              setLatestNote(cNotes[0].content || cNotes[0]);
             } else {
               setLatestNote(null);
             }
-          } catch (e) {
-            console.error('Failed to fetch clinical note data:', e);
+          } else {
+            setLatestNote(null);
           }
+        } catch (e) {
+          console.error('Failed to fetch clinical note data:', e);
         }
       } catch (err) {
         console.error('Failed to fetch DB billing data:', err);
       }
     };
     fetchBillAndClaims();
-  }, [selectedCase, providerId]);
+  }, [effectiveCase?.id, effectiveCase?.caseId, providerId]);
 
   // Adjust zoom on screen resize
   useEffect(() => {
@@ -164,7 +206,7 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   const toggleBlankPracticeMode = () => {
     setBlankPracticeMode(!blankPracticeMode);
     addToast(
-      !blankPracticeMode ? 'Switched to Blank Practice Form (All fields empty for custom typing/printing).' : `Loaded Real Database Case Data (${selectedCase ? selectedCase.patientName : 'DB Case'}).`,
+      !blankPracticeMode ? 'Switched to Blank Practice Form (All fields empty for custom typing/printing).' : `Loaded Real Database Case Data (${effectiveCase ? effectiveCase.patientName : 'DB Case'}).`,
       'info'
     );
   };
@@ -176,7 +218,7 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   const renderPageComponent = (pageDef) => {
     const key = pageDef.componentKey;
     if (key === 'PrintableBillingStatement') {
-      return <PrintableBillingStatement bill={blankPracticeMode ? null : bill} pageIndex={pageDef.pageIndex || 0} selectedCase={selectedCase} />;
+      return <PrintableBillingStatement bill={blankPracticeMode ? null : bill} pageIndex={pageDef.pageIndex || 0} selectedCase={effectiveCase} providerId={providerId} />;
     }
     if (key === 'CmsRedGridForm') {
       const idx = pageDef.claimIndex !== undefined ? pageDef.claimIndex : 0;
@@ -185,38 +227,47 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     }
     
     // ANIK Components
-    if (key === 'AnikCoverPage') return <AnikCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
-    if (key === 'AnikTherapyAssessmentForm') return <AnikTherapyAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'AnikLaserProcedureForm') return <AnikLaserProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} pageIndex={pageDef.pageNumber ? pageDef.pageNumber - 8 : 0} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} procedureData={selectedCase?.procedures?.[pageDef.pageNumber ? pageDef.pageNumber - 8 : 0]} />;
-    if (key === 'AnikNarrativeReport') return <AnikNarrativeReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
-    if (key === 'AnikFinalReport') return <AnikFinalReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
+    if (key === 'AnikCoverPage') return <AnikCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
+    if (key === 'AnikTherapyAssessmentForm') return <AnikTherapyAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
+    if (key === 'AnikLaserProcedureForm') return <AnikLaserProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} pageIndex={pageDef.pageIndex !== undefined ? pageDef.pageIndex : (pageDef.pageNumber ? pageDef.pageNumber - 7 : 0)} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} procedureData={effectiveCase?.procedures?.[pageDef.pageIndex !== undefined ? pageDef.pageIndex : 0]} />;
+    if (key === 'AnikNarrativeReport') return <AnikNarrativeReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
+    if (key === 'AnikFinalReport') return <AnikFinalReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
 
     // DAV'S Components
-    if (key === 'DavCoverPage') return <DavCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
-    if (key === 'DavEswtProcedureForm') return <DavEswtProcedureForm pageIndex={pageDef.pageIndex !== undefined ? pageDef.pageIndex : (pageDef.pageNumber ? pageDef.pageNumber - 9 : 0)} formPage={pageDef.formPage || (pageDef.pageIndex !== undefined ? pageDef.pageIndex + 1 : (pageDef.pageNumber ? pageDef.pageNumber - 8 : 1))} dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} procedureData={selectedCase?.procedures?.[pageDef.pageIndex !== undefined ? pageDef.pageIndex : 0]} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
-    if (key === 'DavProgressNote') return <DavProgressNote notePage={pageDef.notePage} blankMode={blankPracticeMode} packetData={selectedCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
-    if (key === 'DavFinalNarrative') return <DavFinalNarrative reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={selectedCase} />;
+    if (key === 'DavCoverPage') return <DavCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
+    if (key === 'DavEswtProcedureForm') return <DavEswtProcedureForm pageIndex={pageDef.pageIndex !== undefined ? pageDef.pageIndex : (pageDef.pageNumber ? pageDef.pageNumber - 8 : 0)} formPage={pageDef.formPage || (pageDef.pageIndex !== undefined ? pageDef.pageIndex + 1 : (pageDef.pageNumber ? pageDef.pageNumber - 7 : 1))} dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} procedureData={effectiveCase?.procedures?.[pageDef.pageIndex !== undefined ? pageDef.pageIndex : 0]} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
+    if (key === 'DavProgressNote') return <DavProgressNote notePage={pageDef.notePage} blankMode={blankPracticeMode} packetData={effectiveCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
+    if (key === 'DavFinalNarrative') return <DavFinalNarrative reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={effectiveCase} />;
 
     // JOSMIC Components
-    if (key === 'JosmicCoverPage') return <JosmicCoverPage blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'JosmicPainManagementReport') return <JosmicPainManagementReport reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={selectedCase} />;
+    if (key === 'JosmicCoverPage') return <JosmicCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
+    if (key === 'JosmicPainManagementReport') return <JosmicPainManagementReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} />;
 
     // Counselor Components
-    if (key === 'CounselorCoverPage') return <CounselorCoverPage blankMode={blankPracticeMode} packetData={latestNote || selectedCase} bill={bill} />;
-    if (key === 'CounselorAssessmentForm') return <CounselorAssessmentForm blankMode={blankPracticeMode} packetData={latestNote || selectedCase} bill={bill} />;
+    if (key === 'CounselorCoverPage') return <CounselorCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase || latestNote} bill={bill} />;
+    if (key === 'CounselorTreatmentSummaryForm') return <CounselorTreatmentSummaryForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase || latestNote} bill={bill} />;
+    if (key === 'CounselorPsychiatricReportForm') return <CounselorPsychiatricReportForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase || latestNote} bill={bill} />;
+    if (key === 'CounselorDiagnosticImpressionForm') return <CounselorDiagnosticImpressionForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase || latestNote} bill={bill} />;
+    if (key === 'CounselorCourseOfCareForm') return <CounselorCourseOfCareForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase || latestNote} bill={bill} />;
+    if (key === 'CounselorSessionNotesPart1Form') return <CounselorSessionNotesPart1Form readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase || latestNote} bill={bill} />;
+    if (key === 'CounselorSessionNotesPart2Form') return <CounselorSessionNotesPart2Form readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase || latestNote} bill={bill} />;
+    if (key === 'CounselorDischargePlanForm') return <CounselorDischargePlanForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase || latestNote} bill={bill} />;
+    if (key === 'CounselorBillingStatementPart1Form') return <CounselorBillingStatementPart1Form readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase || latestNote} bill={bill} />;
+    if (key === 'CounselorBillingStatementPart2Form') return <CounselorBillingStatementPart2Form readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase || latestNote} bill={bill} />;
+    if (key === 'CounselorAssessmentForm') return <CounselorAssessmentForm blankMode={blankPracticeMode} packetData={latestNote || effectiveCase} bill={bill} />;
 
     // TPI Components
-    if (key === 'TpiCoverPage') return <TpiCoverPage blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'TpiAssessmentForm') return <TpiAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'TpiProcedureForm') return <TpiProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
+    if (key === 'TpiCoverPage') return <TpiCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
+    if (key === 'TpiAssessmentForm') return <TpiAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
+    if (key === 'TpiProcedureForm') return <TpiProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
 
     // TECAR Components
-    if (key === 'TecarCoverPage') return <TecarCoverPage blankMode={blankPracticeMode} packetData={selectedCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'TecarAssessmentForm') return <TecarAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'TecarProcedureForm') return <TecarProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? bill.serviceLines : []} />;
+    if (key === 'TecarCoverPage') return <TecarCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
+    if (key === 'TecarAssessmentForm') return <TecarAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
+    if (key === 'TecarProcedureForm') return <TecarProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
 
     // General Component
-    if (key === 'PatientFinalTreatmentReport') return <PatientFinalTreatmentReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={selectedCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
+    if (key === 'PatientFinalTreatmentReport') return <PatientFinalTreatmentReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
 
     return <div className="p-12 text-center text-xs text-slate-400">Component {key} placeholder</div>;
   };
@@ -243,9 +294,29 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
               <FileCheck className="w-4 h-4 text-teal-400 flex-shrink-0" />
               <span className="truncate">{manifest.providerName}</span>
             </h2>
-            <p className="text-[11px] text-slate-400 truncate mt-0.5">
-              {manifest.totalPages} Pages | {blankPracticeMode ? <span className="text-amber-400 font-bold">UNFILLED BLANK PRACTICE FORM</span> : <span>Case DB: <strong className="text-teal-300 font-bold">{selectedCase ? selectedCase.patientName : 'SELECT A CASE'}</strong></span>}
-            </p>
+            <div className="text-[11px] text-slate-400 truncate mt-0.5 flex items-center gap-2 flex-wrap">
+              <span>{manifest.totalPages} Pages</span>
+              <span>|</span>
+              {blankPracticeMode ? (
+                <span className="text-amber-400 font-bold">UNFILLED BLANK PRACTICE FORM</span>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <span>Case DB:</span>
+                  <strong className="text-teal-300 font-bold">{effectiveCase ? `${effectiveCase.patientName} (${effectiveCase.caseId})` : 'No Case Selected'}</strong>
+                  {internalCases.length > 0 && !selectedCase && (
+                    <select
+                      value={internalSelectedCaseId}
+                      onChange={(e) => setInternalSelectedCaseId(e.target.value)}
+                      className="ml-2 bg-slate-800 text-teal-300 text-[10px] font-bold border border-slate-700 rounded px-1.5 py-0.5 outline-none cursor-pointer"
+                    >
+                      {internalCases.map(c => (
+                        <option key={c.id} value={c.id}>{c.patientName} ({c.caseId})</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Action Buttons - Responsive row on mobile */}

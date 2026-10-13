@@ -2,8 +2,9 @@
 import React from 'react';
 import { formatCurrency } from '../../../utils/billingCalculations';
 import { useSettings } from '../../../utils/settingsCache';
+import { INITIAL_PROVIDER_CONFIGS } from '../../../constants/providerConfigs';
 
-export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selectedCase = null }) => {
+export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selectedCase = null, providerId = null }) => {
   const settings = useSettings();
 
   // Extract patient info from bill or selectedCase
@@ -42,38 +43,43 @@ export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selected
   const billToName = getBillToName();
   const billToAddress = bill?.billToAddress || selectedCase?.attorneyAddress || selectedCase?.lawFirmAddress || '';
 
-  const providerName = bill?.providerName || bill?.provider?.name || selectedCase?.providerName || selectedCase?.treatingClinic || '';
-  const providerAddress = bill?.providerAddress || bill?.provider?.address || selectedCase?.providerAddress || '';
-  const providerPhone = bill?.providerPhone || bill?.provider?.phone || selectedCase?.providerPhone || '';
-  const statementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || '';
-  const statementDate = bill?.statementDate || bill?.date || '';
+  const getProviderConfig = () => {
+    const pid = providerId || bill?.providerId || selectedCase?.providerId || 'prov-anik';
+    const key = pid.replace('prov-', '');
+    return INITIAL_PROVIDER_CONFIGS[key] || INITIAL_PROVIDER_CONFIGS['anik'];
+  };
+  const cfg = getProviderConfig();
+
+  const providerName = bill?.providerName || bill?.provider?.name || cfg?.name || selectedCase?.providerName || selectedCase?.treatingClinic || 'FM Laser Therapy';
+  const providerAddress = bill?.providerAddress || bill?.provider?.address || (cfg?.address ? `${cfg.address.street}, ${cfg.address.city}, ${cfg.address.state} ${cfg.address.zipCode}` : '9900 Westpark Dr, Houston, TX 77063');
+  const providerPhone = bill?.providerPhone || bill?.provider?.phone || cfg?.contact?.cell || cfg?.contact?.phone || '832-815-0959';
+  const statementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || selectedCase?.statementNumber || '121560';
+  const statementDate = bill?.statementDate || bill?.date || selectedCase?.incidentDate || selectedCase?.dateOfService || '04/13/2026';
 
   const rawLines = bill?.serviceLines || bill?.lineItems || bill?.items || selectedCase?.serviceLines || selectedCase?.items || [];
   
-  const displayItems = (rawLines.length > 8
-    ? (pageIndex === 0 ? rawLines.slice(0, 8) : rawLines.slice(8))
-    : (pageIndex === 0 ? rawLines : [])).map(item => {
-      const charge = Number(item.charge) || 0;
-      const insPay = Number(item.payments?.insurance || item.insurancePayment || item.insPay) || 0;
-      const patPay = Number(item.payments?.patient || item.patientPayment || item.patPay) || 0;
-      const adj = Number(item.adjustments || item.adjustment || item.adj) || 0;
-      const lineBal = item.lineBalance !== undefined && item.lineBalance !== null
-        ? Number(item.lineBalance)
-        : (item.balance !== undefined && item.balance !== null
-            ? Number(item.balance)
-            : Math.max(0, charge - (insPay + patPay + adj)));
-      return {
-        ...item,
-        dos: item.dos || item.dateOfService || item.date || '',
-        cptCode: item.cptCode || item.cpt || '',
-        description: item.description || item.serviceDescription || '',
-        charge,
-        insPay,
-        patPay,
-        adj,
-        lineBal
-      };
-    });
+  const displayItems = rawLines.map(item => {
+    const charge = Number(item.charge) || 0;
+    const insPay = Number(item.payments?.insurance || item.insurancePayment || item.insPay) || 0;
+    const patPay = Number(item.payments?.patient || item.patientPayment || item.patPay) || 0;
+    const adj = Number(item.adjustments || item.adjustment || item.adj) || 0;
+    const lineBal = item.lineBalance !== undefined && item.lineBalance !== null
+      ? Number(item.lineBalance)
+      : (item.balance !== undefined && item.balance !== null
+          ? Number(item.balance)
+          : Math.max(0, charge - (insPay + patPay + adj)));
+    return {
+      ...item,
+      dos: item.dos || item.dateOfService || item.date || '',
+      cptCode: item.cptCode || item.cpt || '',
+      description: item.description || item.serviceDescription || '',
+      charge,
+      insPay,
+      patPay,
+      adj,
+      lineBal
+    };
+  });
 
   const totalCharges = rawLines.reduce((sum, i) => sum + (Number(i.charge) || 0), 0);
   const totalInsPay = rawLines.reduce((sum, i) => sum + (Number(i.payments?.insurance || i.insurancePayment || i.insPay) || 0), 0);
@@ -94,7 +100,7 @@ export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selected
 
   const sumAging = agingCurrent + aging30 + aging60 + aging90;
   const finalCurrentDue = (sumAging === 0 && balanceDue > 0) ? balanceDue : agingCurrent;
-  const totalPages = 2;
+  const totalPages = 1;
 
   return (
     <div
@@ -180,32 +186,30 @@ export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selected
       </div>
 
       {/* Aging Grid Footer */}
-      {pageIndex === (rawLines.length > 8 ? 1 : 0) && (
-        <div className="pt-4 space-y-4 mt-auto">
-          <div className="border border-slate-300 rounded-xl overflow-hidden shadow-sm">
-            <table className="w-full text-center text-xs sm:text-sm font-tabular">
-              <thead className="bg-[#722F37] text-white font-bold text-xs uppercase tracking-wider">
-                <tr>
-                  <th className="p-3 border-r border-slate-700">Current Due</th>
-                  <th className="p-3 border-r border-slate-700">Past Due 30 Days</th>
-                  <th className="p-3 border-r border-slate-700">Past Due 60 Days</th>
-                  <th className="p-3 border-r border-slate-700">Past Due 90 Days</th>
-                  <th className="p-3 bg-[#722F37] text-white font-bold">Balance Due</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white">
-                <tr className="font-bold text-slate-900">
-                  <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(finalCurrentDue)}</td>
-                  <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(aging30)}</td>
-                  <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(aging60)}</td>
-                  <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(aging90)}</td>
-                  <td className="p-3.5 bg-slate-100 text-slate-950 font-black text-sm sm:text-base">{formatCurrency(balanceDue)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      <div className="pt-4 space-y-4 mt-auto">
+        <div className="border border-slate-300 rounded-xl overflow-hidden shadow-sm">
+          <table className="w-full text-center text-xs sm:text-sm font-tabular">
+            <thead className="bg-[#722F37] text-white font-bold text-xs uppercase tracking-wider">
+              <tr>
+                <th className="p-3 border-r border-slate-700">Current Due</th>
+                <th className="p-3 border-r border-slate-700">Past Due 30 Days</th>
+                <th className="p-3 border-r border-slate-700">Past Due 60 Days</th>
+                <th className="p-3 border-r border-slate-700">Past Due 90 Days</th>
+                <th className="p-3 bg-[#722F37] text-white font-bold">Balance Due</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white">
+              <tr className="font-bold text-slate-900">
+                <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(finalCurrentDue)}</td>
+                <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(aging30)}</td>
+                <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(aging60)}</td>
+                <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(aging90)}</td>
+                <td className="p-3.5 bg-slate-100 text-slate-950 font-black text-sm sm:text-base">{formatCurrency(balanceDue)}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -127,8 +127,8 @@ export const LoginPage = () => {
         {/* Middle Feature Highlights */}
         <div className="relative z-10 space-y-2 my-auto py-3 max-w-md hidden sm:block">
           {[
-            { icon: Stethoscope, title: 'Pain Management & Physician Consults', sub: 'JOSMIC Wellness Center (CPT 99204)' },
-            { icon: Activity, title: 'Shockwave ESWT & Laser Therapy', sub: "DAV'S Anatomy & ANIK Laser Procedures" },
+            { icon: Stethoscope, title: 'Pain Management & Physician Consults', sub: 'FM Health and Wellness Center (CPT 99204)' },
+            { icon: Activity, title: 'Shockwave ESWT & Laser Therapy', sub: 'FM Dav’s Anatomy & FM Laser Therapy' },
             { icon: Brain, title: 'Behavioral Health & Trauma Counseling', sub: 'PTSD & Psychotherapy (CPT 90834, 90791)' },
             { icon: Building2, title: 'Legal Lien & CMS-1500 Billing Integration', sub: 'Connected 4-Provider Statements & Ledgers' },
           ].map((item, idx) => {

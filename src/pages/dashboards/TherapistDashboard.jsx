@@ -49,10 +49,10 @@ export const TherapistDashboard = () => {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate('/clinical-notes/davs-eswt')} className="px-3 py-2 bg-teal-700 text-white rounded-xl text-xs font-bold shadow hover:bg-teal-800 flex items-center gap-1.5 cursor-pointer">
-            <Activity className="w-4 h-4" /> Log DAV'S ESWT Session
+            <Activity className="w-4 h-4" /> Log FM Dav’s ESWT Session
           </button>
           <button onClick={() => navigate('/clinical-notes/anik-laser')} className="px-3 py-2 bg-purple-700 text-white rounded-xl text-xs font-bold hover:bg-purple-800 flex items-center gap-1.5 cursor-pointer">
-            <Award className="w-4 h-4" /> Log ANIK Laser Session
+            <Award className="w-4 h-4" /> Log FM Laser Session
           </button>
         </div>
       </div>
@@ -91,7 +91,7 @@ export const TherapistDashboard = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-on-surface flex items-center gap-2">
               <Activity className="w-5 h-5 text-secondary-container" />
-              DAV'S Anatomy - ESWT Radial Device Form
+              FM Dav’s Anatomy - ESWT Radial Device Form
             </h2>
             <button onClick={() => navigate('/clinical-notes/davs-eswt')} className="text-xs font-bold text-secondary-container hover:underline flex items-center gap-1">
               Open Form <ChevronRight className="w-4 h-4" />
@@ -106,7 +106,7 @@ export const TherapistDashboard = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-on-surface flex items-center gap-2">
               <Award className="w-5 h-5 text-purple-600" />
-              ANIK Laser Therapy - Procedure Form
+              FM Laser Therapy - Procedure Form
             </h2>
             <button onClick={() => navigate('/clinical-notes/anik-laser')} className="text-xs font-bold text-secondary-container hover:underline flex items-center gap-1">
               Open Form <ChevronRight className="w-4 h-4" />

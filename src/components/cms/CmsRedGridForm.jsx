@@ -790,86 +790,88 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               const tDos = formatDos(line.toDos || line.fromDos || line.dos || claim.dos);
 
               return (
-                <div key={idx} className="h-[25px] min-h-[25px] max-h-[25px] overflow-hidden flex flex-col justify-between relative px-0.5 py-0.5">
+                <div key={idx} className="h-[25px] min-h-[25px] max-h-[25px] flex flex-col justify-between relative px-0.5 py-0.5">
                   {/* Left Outside Margin Line Number (1-6) */}
-                  <span className="absolute -left-3.5 top-1/2 -translate-y-1/2 font-sans font-bold text-[10px] text-[#991b1b]">
+                  <span className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-3 text-center font-sans font-bold text-[9.5px] text-[#991b1b] select-none pointer-events-none">
                     {idx + 1}
                   </span>
 
-                  {/* Top Sub-line: Note / Rendering Provider ID (Upper 24J) */}
-                  <div className="grid grid-cols-12 items-center text-[7px] font-bold leading-none h-[9px]">
-                    <div className="col-span-11 text-slate-700 uppercase tracking-tight overflow-hidden text-ellipsis whitespace-nowrap pl-1">
-                      {line.note && <span>Note: {line.note}</span>}
-                    </div>
-                    <div className="col-span-1 flex text-[7.5px] font-mono h-full items-center">
-                      <div className="flex-1"></div>
-                      <div className="flex-1"></div>
-                      <div className="flex-[2] h-full flex items-center justify-center">
-                        <FieldInput defaultValue={hasData ? (line.renderingId || '') : ''} readOnly={readOnly} className="w-full text-center text-[7.5px]" />
+                  <div className="h-full flex flex-col justify-between overflow-hidden">
+                    {/* Top Sub-line: Note / Rendering Provider ID (Upper 24J) */}
+                    <div className="grid grid-cols-12 items-center text-[7px] font-bold leading-none h-[9px]">
+                      <div className="col-span-11 text-slate-700 uppercase tracking-tight overflow-hidden text-ellipsis whitespace-nowrap pl-1">
+                        {line.note && <span>Note: {line.note}</span>}
+                      </div>
+                      <div className="col-span-1 flex text-[7.5px] font-mono h-full items-center">
+                        <div className="flex-1"></div>
+                        <div className="flex-1"></div>
+                        <div className="flex-[2] h-full flex items-center justify-center">
+                          <FieldInput defaultValue={hasData ? (line.renderingId || '') : ''} readOnly={readOnly} className="w-full text-center text-[7.5px]" />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Bottom Line: Main Grid Data */}
-                  <div className="grid grid-cols-12 text-center items-center font-bold h-[14px]">
-                    {/* 24.A Dates of Service */}
-                    <div className="col-span-3 text-[9px] border-r border-[#b91c1c]/20 flex">
-                      <div className="w-1/2 flex px-0.5 border-r border-slate-300">
-                        <FieldInput defaultValue={hasData ? fDos.mm : ''} readOnly={readOnly} className="w-1/3 text-center" />
-                        <FieldInput defaultValue={hasData ? fDos.dd : ''} readOnly={readOnly} className="w-1/3 text-center" />
-                        <FieldInput defaultValue={hasData ? fDos.yy : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                    {/* Bottom Line: Main Grid Data */}
+                    <div className="grid grid-cols-12 text-center items-center font-bold h-[14px]">
+                      {/* 24.A Dates of Service */}
+                      <div className="col-span-3 text-[9px] border-r border-[#b91c1c]/20 flex">
+                        <div className="w-1/2 flex px-0.5 border-r border-slate-300">
+                          <FieldInput defaultValue={hasData ? fDos.mm : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                          <FieldInput defaultValue={hasData ? fDos.dd : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                          <FieldInput defaultValue={hasData ? fDos.yy : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                        </div>
+                        <div className="w-1/2 flex px-0.5">
+                          <FieldInput defaultValue={hasData ? tDos.mm : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                          <FieldInput defaultValue={hasData ? tDos.dd : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                          <FieldInput defaultValue={hasData ? tDos.yy : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                        </div>
                       </div>
-                      <div className="w-1/2 flex px-0.5">
-                        <FieldInput defaultValue={hasData ? tDos.mm : ''} readOnly={readOnly} className="w-1/3 text-center" />
-                        <FieldInput defaultValue={hasData ? tDos.dd : ''} readOnly={readOnly} className="w-1/3 text-center" />
-                        <FieldInput defaultValue={hasData ? tDos.yy : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                      
+                      {/* 24.B Place of Service */}
+                      <div className="col-span-1 border-r border-[#b91c1c]/20">
+                        <FieldInput defaultValue={hasData ? (line.pos || '11') : ''} readOnly={readOnly} className="text-center" />
                       </div>
-                    </div>
-                    
-                    {/* 24.B Place of Service */}
-                    <div className="col-span-1 border-r border-[#b91c1c]/20">
-                      <FieldInput defaultValue={hasData ? (line.pos || '11') : ''} readOnly={readOnly} className="text-center" />
-                    </div>
 
-                    {/* 24.C EMG */}
-                    <div className="col-span-1 border-r border-[#b91c1c]/20">
-                      <FieldInput defaultValue={hasData ? (line.emg) : ''} readOnly={readOnly} className="text-center" />
-                    </div>
-
-                    {/* 24.D CPT & Modifiers */}
-                    <div className="col-span-3 border-r border-[#b91c1c]/20 flex items-center justify-between px-0.5 gap-0.5 text-[9px]">
-                      <FieldInput defaultValue={line.cpt || ''} readOnly={readOnly} placeholder="CPT" className="w-12 font-mono font-black text-slate-950 text-center" />
-                      <FieldInput defaultValue={line.mod1 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
-                      <FieldInput defaultValue={line.mod2 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
-                      <FieldInput defaultValue={line.mod3 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
-                      <FieldInput defaultValue={line.mod4 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
-                    </div>
-
-                    {/* 24.E Diagnosis Pointer */}
-                    <div className="col-span-1 border-r border-[#b91c1c]/20 font-black">
-                      <FieldInput defaultValue={line.diagPtr || ''} readOnly={readOnly} className="text-center" />
-                    </div>
-
-                    {/* 24.F Charges */}
-                    <div className="col-span-1 border-r border-[#b91c1c]/20 text-right pr-1 font-black">
-                      <FieldInput defaultValue={hasData ? cleanAmount(line.charge) : ''} readOnly={readOnly} className="text-right" />
-                    </div>
-
-                    {/* 24.G Units */}
-                    <div className="col-span-1 border-r border-[#b91c1c]/20 font-bold">
-                      <FieldInput defaultValue={hasData ? (line.units || '1') : ''} readOnly={readOnly} className="text-center" />
-                    </div>
-
-                    {/* 24.H-J Rendering NPI & ID Qual */}
-                    <div className="col-span-1 flex text-[8.5px] font-mono h-full items-center">
-                      <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
-                        <FieldInput defaultValue="" readOnly={readOnly} className="w-full text-center" />
+                      {/* 24.C EMG */}
+                      <div className="col-span-1 border-r border-[#b91c1c]/20">
+                        <FieldInput defaultValue={hasData ? (line.emg) : ''} readOnly={readOnly} className="text-center" />
                       </div>
-                      <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
-                        <FieldInput defaultValue={hasData ? 'NPI' : ''} readOnly={readOnly} className="w-full text-center text-[5.5px]" />
+
+                      {/* 24.D CPT & Modifiers */}
+                      <div className="col-span-3 border-r border-[#b91c1c]/20 flex items-center justify-between px-0.5 gap-0.5 text-[9px]">
+                        <FieldInput defaultValue={line.cpt || ''} readOnly={readOnly} placeholder="CPT" className="w-12 font-mono font-black text-slate-950 text-center" />
+                        <FieldInput defaultValue={line.mod1 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
+                        <FieldInput defaultValue={line.mod2 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
+                        <FieldInput defaultValue={line.mod3 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
+                        <FieldInput defaultValue={line.mod4 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
                       </div>
-                      <div className="flex-[2] h-full flex items-center justify-center">
-                        <FieldInput defaultValue={hasData ? (line.renderingNpi || claim.box33Npi || '') : ''} readOnly={readOnly} className="w-full text-center text-[5px] px-0 tracking-tighter" />
+
+                      {/* 24.E Diagnosis Pointer */}
+                      <div className="col-span-1 border-r border-[#b91c1c]/20 font-black">
+                        <FieldInput defaultValue={line.diagPtr || ''} readOnly={readOnly} className="text-center" />
+                      </div>
+
+                      {/* 24.F Charges */}
+                      <div className="col-span-1 border-r border-[#b91c1c]/20 text-right pr-1 font-black">
+                        <FieldInput defaultValue={hasData ? cleanAmount(line.charge) : ''} readOnly={readOnly} className="text-right" />
+                      </div>
+
+                      {/* 24.G Units */}
+                      <div className="col-span-1 border-r border-[#b91c1c]/20 font-bold">
+                        <FieldInput defaultValue={hasData ? (line.units || '1') : ''} readOnly={readOnly} className="text-center" />
+                      </div>
+
+                      {/* 24.H-J Rendering NPI & ID Qual */}
+                      <div className="col-span-1 flex text-[8.5px] font-mono h-full items-center">
+                        <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
+                          <FieldInput defaultValue="" readOnly={readOnly} className="w-full text-center" />
+                        </div>
+                        <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
+                          <FieldInput defaultValue={hasData ? 'NPI' : ''} readOnly={readOnly} className="w-full text-center text-[5.5px]" />
+                        </div>
+                        <div className="flex-[2] h-full flex items-center justify-center">
+                          <FieldInput defaultValue={hasData ? (line.renderingNpi || claim.box33Npi || '') : ''} readOnly={readOnly} className="w-full text-center text-[5px] px-0 tracking-tighter" />
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -83,13 +83,13 @@ export const AnikLaserFormPage = () => {
         patientName: formData.patientName || 'Demo Patient',
         caseId: activeCaseId || 'case-001',
         providerId: 'prov-anik',
-        providerName: 'ANIK Laser Therapy',
+        providerName: 'FM Laser Therapy',
         type: 'ANIK_LASER',
-        title: 'ANIK Laser Therapy Procedure Form',
+        title: 'FM Laser Therapy Procedure Form',
         author: 'Alex Rivera (Lead Therapist)',
         content: formData
       });
-      addToast('ANIK Laser Therapy Procedure Form saved!', 'success');
+      addToast('FM Laser Therapy Procedure Form saved!', 'success');
       navigate(`/clinical-notes/${note.id}/edit`);
     } catch (err) {
       addToast('Failed to save laser form', 'error');
@@ -105,7 +105,7 @@ export const AnikLaserFormPage = () => {
       </button>
 
       <div>
-        <h1 className="text-2xl font-bold text-on-surface">ANIK Laser Therapy - Class IV Laser Procedure Form</h1>
+        <h1 className="text-2xl font-bold text-on-surface">FM Laser Therapy - Class IV Laser Procedure Form</h1>
         <p className="text-xs text-on-surface-variant">Vitals verification, Wavelength (800nm), Duration (900s), Output (10.5W) & Total Energy (236,250 Joules)</p>
       </div>
 

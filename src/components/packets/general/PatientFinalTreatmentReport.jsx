@@ -113,7 +113,7 @@ export const PatientFinalTreatmentReport = ({
         </div>
 
         <div className="text-xs font-bold mt-2">
-          <p>{bill?.provider?.address?.street || '10101 HARWIN DR.STE 274 HOUSTON TX 77036'}</p>
+          <p>{bill?.provider?.address?.street || '9900 WESTPARK DR, HOUSTON, TX 77063'}</p>
           <p>
             OFFICE: {bill?.provider?.contact?.phone || '713-485-5712'} &nbsp;
             CELL: {bill?.provider?.contact?.cell || '832-815-0959'} &nbsp;

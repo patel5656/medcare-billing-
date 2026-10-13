@@ -144,7 +144,7 @@ export const ScheduleAppointmentModal = ({
         totalEstimatedCharge,
         cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(',').substring(0, 10),
         modifiers: serviceLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
-        providerName: selectedProv?.name || 'JOSMIC Wellness Center'
+        providerName: selectedProv?.name || 'FM Health and Wellness Center'
       });
       addToast(`Appointment scheduled for ${created.patientName || formData.patientName}!`, 'success');
       if (onAppointmentBooked) onAppointmentBooked(created);
@@ -283,12 +283,12 @@ export const ScheduleAppointmentModal = ({
               }}
               className={inputCls}
             >
-              <option value="prov-josmic">JOSMIC Wellness Center (Pain Management)</option>
-              <option value="prov-davs">DAV'S Anatomy (Shockwave ESWT)</option>
-              <option value="prov-anik">ANIK Laser Therapy (Laser Session)</option>
+              <option value="prov-josmic">FM Health and Wellness Center (Pain Management)</option>
+              <option value="prov-davs">FM Dav’s Anatomy (Shockwave ESWT)</option>
+              <option value="prov-anik">FM Laser Therapy (Laser Session)</option>
               <option value="prov-counselor">Counselor Practice (Behavioral Health &amp; PTSD)</option>
-              <option value="prov-tpi">Trigger Point Injection Clinic (Pain Management & Injections)</option>
-              <option value="prov-tecar">TECAR Therapy Clinic (Deep Tissue Radiofrequency)</option>
+              <option value="prov-tpi">FM Trigger Point Injection Clinic (Pain Management & Injections)</option>
+              <option value="prov-tecar">FM TECAR Therapy Clinic (Deep Tissue Radiofrequency)</option>
               {dbProviders
                 .filter(p => !['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor', 'prov-tpi', 'prov-tecar'].includes(p.id))
                 .map(p => (

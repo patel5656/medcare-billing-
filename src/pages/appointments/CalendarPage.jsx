@@ -383,7 +383,7 @@ export const CalendarPage = () => {
                       <span className="text-[10px] font-mono text-slate-400">{apt.date}</span>
                     </div>
                     <p className="text-xs text-slate-500 truncate flex items-center gap-1">
-                      <User className="w-3 h-3 text-slate-400" /> {apt.providerName || 'JOSMIC Wellness Center'}
+                      <User className="w-3 h-3 text-slate-400" /> {apt.providerName || 'FM Health and Wellness Center'}
                     </p>
                     {apt.patientPhone && (
                       <p className="text-xs text-slate-500 flex items-center gap-1 font-mono">

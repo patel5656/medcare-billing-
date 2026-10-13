@@ -1,5 +1,7 @@
 // src/components/packets/tecar/TecarAssessmentForm.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { EditableClinicalField } from '../EditableClinicalField';
+import { apiCaseService } from '../../../services/api/apiCaseService';
 
 const getPainScore = (packetData) => {
   if (!packetData) return null;
@@ -24,7 +26,14 @@ const isTissueStatusChecked = (label, packetData) => {
   return false;
 };
 
-import { EditableClinicalField } from '../EditableClinicalField';
+const TISSUE_ITEMS = [
+  'Edema / Swelling',
+  'Muscle Spasm / Hypertonicity',
+  'Fibrotic Tissue / Adhesions',
+  'Localized Inflammation',
+  'Trigger Points',
+  'Ischemia / Poor Perfusion'
+];
 
 export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
   const storage = packetData?.clinicalDocStorage?.['TECAR_ASSESSMENT'] || {};
@@ -33,7 +42,72 @@ export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packe
   const signatureDateVal = blankMode || !packetData ? '' : (packetData.signatureDate || packetData.signedAt || packetData.dischargeDate || '');
   const providerNameVal = blankMode || !packetData ? '' : (packetData.referringProviderName || packetData.providerName || packetData.attendingProviderName || '');
 
-  const painScore = blankMode ? null : getPainScore(packetData);
+  const defaultPainScore = blankMode ? null : getPainScore(packetData);
+  const [selectedPainScore, setSelectedPainScore] = useState(storage.painScore !== undefined ? storage.painScore : defaultPainScore);
+
+  const [tissueStatusState, setTissueStatusState] = useState(() => {
+    const overrides = storage.tissueStatusOverrides || {};
+    const init = {};
+    TISSUE_ITEMS.forEach(item => {
+      init[item] = overrides[item] !== undefined ? overrides[item] : isTissueStatusChecked(item, packetData);
+    });
+    return init;
+  });
+
+  useEffect(() => {
+    const overrides = storage.tissueStatusOverrides || {};
+    const updated = {};
+    TISSUE_ITEMS.forEach(item => {
+      updated[item] = overrides[item] !== undefined ? overrides[item] : isTissueStatusChecked(item, packetData);
+    });
+    setTissueStatusState(updated);
+    if (storage.painScore !== undefined) {
+      setSelectedPainScore(storage.painScore);
+    } else {
+      setSelectedPainScore(defaultPainScore);
+    }
+  }, [packetData?.id, JSON.stringify(storage.tissueStatusOverrides), storage.painScore]);
+
+  const toggleTissueStatus = async (item) => {
+    if (readOnly || blankMode) return;
+    const nextVal = !tissueStatusState[item];
+    const updated = { ...tissueStatusState, [item]: nextVal };
+    setTissueStatusState(updated);
+
+    if (!packetData?.id) return;
+    try {
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const docNamespace = currentStorage['TECAR_ASSESSMENT'] || {};
+      const currentOverrides = docNamespace.tissueStatusOverrides || {};
+      const updatedOverrides = { ...currentOverrides, [item]: nextVal };
+      const updatedDoc = { ...docNamespace, tissueStatusOverrides: updatedOverrides };
+      const updatedStorage = { ...currentStorage, ['TECAR_ASSESSMENT']: updatedDoc };
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+    } catch (err) {
+      console.error('Failed to update tissue status', err);
+    }
+  };
+
+  const handleSelectPainScore = async (n) => {
+    if (readOnly || blankMode) return;
+    const nextScore = selectedPainScore === n ? null : n;
+    setSelectedPainScore(nextScore);
+
+    if (!packetData?.id) return;
+    try {
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const docNamespace = currentStorage['TECAR_ASSESSMENT'] || {};
+      const updatedDoc = { ...docNamespace, painScore: nextScore };
+      const updatedStorage = { ...currentStorage, ['TECAR_ASSESSMENT']: updatedDoc };
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+    } catch (err) {
+      console.error('Failed to update pain score', err);
+    }
+  };
+
+  const painScore = blankMode ? null : selectedPainScore;
   const painLocationQualityText = blankMode || !packetData ? '' : (storage.painLocationQuality || packetData.painLocationQuality || packetData.painLocation || packetData.painDescription || '');
   const palpationRomText = blankMode || !packetData ? '' : (storage.palpationRom || packetData.palpationRom || packetData.palpationFindings || packetData.romFindings || packetData.physicalExam?.rom || '');
   const treatmentPlanText = blankMode || !packetData ? '' : (storage.treatmentPlan || packetData.tecarTreatmentPlan || packetData.treatmentPlan || packetData.plan || '');
@@ -42,7 +116,7 @@ export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packe
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       {/* Header */}
       <div className="border-b-2 border-[#722F37] pb-4 mb-6 text-center">
-        <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>TECAR THERAPY ASSESSMENT</h1>
+        <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>FM TECAR THERAPY ASSESSMENT</h1>
         <p className="text-xs font-bold text-slate-600 mt-1">CLINICAL EVALUATION &amp; TISSUE STATUS</p>
       </div>
 
@@ -66,7 +140,11 @@ export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packe
             <span className="font-bold">VAS Pain Scale (0-10):</span>
             <div className="flex gap-2">
               {[0,1,2,3,4,5,6,7,8,9,10].map(n => (
-                <div key={n} className={`w-6 h-6 border flex items-center justify-center ${painScore === n ? 'bg-[#F9ECEC] border-rose-500 font-bold text-slate-900' : 'border-slate-300 text-slate-400'}`}>
+                <div 
+                  key={n} 
+                  onClick={() => handleSelectPainScore(n)}
+                  className={`w-6 h-6 border flex items-center justify-center transition select-none ${!readOnly && !blankMode ? 'cursor-pointer hover:border-rose-400' : ''} ${painScore === n ? 'bg-[#F9ECEC] border-rose-500 font-bold text-slate-900' : 'border-slate-300 text-slate-400'}`}
+                >
                   {n}
                 </div>
               ))}
@@ -94,12 +172,21 @@ export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packe
           <div>
             <span className="font-bold block mb-2">Tissue Status Checklist:</span>
             <div className="grid grid-cols-3 gap-2 border border-slate-300 p-3 bg-slate-50">
-              {['Edema / Swelling', 'Muscle Spasm / Hypertonicity', 'Fibrotic Tissue / Adhesions', 'Localized Inflammation', 'Trigger Points', 'Ischemia / Poor Perfusion'].map((item) => (
-                <label key={item} className="flex items-center gap-2 cursor-default">
-                  <input type="checkbox" checked={isTissueStatusChecked(item, packetData)} readOnly className="rounded border-slate-400 text-teal-600" />
-                  <span className="text-[11px]">{item}</span>
-                </label>
-              ))}
+              {TISSUE_ITEMS.map((item) => {
+                const checked = !blankMode && Boolean(tissueStatusState[item]);
+                return (
+                  <div 
+                    key={item} 
+                    onClick={() => toggleTissueStatus(item)}
+                    className={`flex items-center gap-2 select-none ${readOnly || blankMode ? 'cursor-default' : 'cursor-pointer hover:opacity-80'}`}
+                  >
+                    <div className="w-4 h-4 border border-slate-400 rounded bg-white flex items-center justify-center text-xs font-bold text-slate-900 flex-shrink-0">
+                      {checked ? '✓' : ''}
+                    </div>
+                    <span className="text-[11px] text-slate-800">{item}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
           <div>

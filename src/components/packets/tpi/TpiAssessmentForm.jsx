@@ -1,5 +1,7 @@
 // src/components/packets/tpi/TpiAssessmentForm.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { EditableClinicalField } from '../EditableClinicalField';
+import { apiCaseService } from '../../../services/api/apiCaseService';
 
 const getPainScore = (packetData) => {
   if (!packetData) return null;
@@ -23,7 +25,7 @@ const getMuscleChecked = (label, packetData) => {
   return false;
 };
 
-import { EditableClinicalField } from '../EditableClinicalField';
+const MUSCLE_ITEMS = ['Trapezius (Bilateral)', 'Levator Scapulae', 'Rhomboids', 'Quadratus Lumborum'];
 
 export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
   const storage = packetData?.clinicalDocStorage?.['TPI_ASSESSMENT'] || {};
@@ -32,7 +34,72 @@ export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetD
   const signatureDateVal = blankMode || !packetData ? '' : (packetData.signatureDate || packetData.signedAt || packetData.dischargeDate || '');
   const providerNameVal = blankMode || !packetData ? '' : (packetData.referringProviderName || packetData.providerName || packetData.attendingProviderName || '');
 
-  const painScore = blankMode ? null : getPainScore(packetData);
+  const defaultPainScore = blankMode ? null : getPainScore(packetData);
+  const [selectedPainScore, setSelectedPainScore] = useState(storage.painScore !== undefined ? storage.painScore : defaultPainScore);
+
+  const [muscleState, setMuscleState] = useState(() => {
+    const overrides = storage.muscleOverrides || {};
+    const init = {};
+    MUSCLE_ITEMS.forEach(label => {
+      init[label] = overrides[label] !== undefined ? overrides[label] : getMuscleChecked(label, packetData);
+    });
+    return init;
+  });
+
+  useEffect(() => {
+    const overrides = storage.muscleOverrides || {};
+    const updated = {};
+    MUSCLE_ITEMS.forEach(label => {
+      updated[label] = overrides[label] !== undefined ? overrides[label] : getMuscleChecked(label, packetData);
+    });
+    setMuscleState(updated);
+    if (storage.painScore !== undefined) {
+      setSelectedPainScore(storage.painScore);
+    } else {
+      setSelectedPainScore(defaultPainScore);
+    }
+  }, [packetData?.id, JSON.stringify(storage.muscleOverrides), storage.painScore]);
+
+  const toggleMuscle = async (label) => {
+    if (readOnly || blankMode) return;
+    const nextVal = !muscleState[label];
+    const updated = { ...muscleState, [label]: nextVal };
+    setMuscleState(updated);
+
+    if (!packetData?.id) return;
+    try {
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const docNamespace = currentStorage['TPI_ASSESSMENT'] || {};
+      const currentOverrides = docNamespace.muscleOverrides || {};
+      const updatedOverrides = { ...currentOverrides, [label]: nextVal };
+      const updatedDoc = { ...docNamespace, muscleOverrides: updatedOverrides };
+      const updatedStorage = { ...currentStorage, ['TPI_ASSESSMENT']: updatedDoc };
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+    } catch (err) {
+      console.error('Failed to update muscle status', err);
+    }
+  };
+
+  const handleSelectPainScore = async (n) => {
+    if (readOnly || blankMode) return;
+    const nextScore = selectedPainScore === n ? null : n;
+    setSelectedPainScore(nextScore);
+
+    if (!packetData?.id) return;
+    try {
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const docNamespace = currentStorage['TPI_ASSESSMENT'] || {};
+      const updatedDoc = { ...docNamespace, painScore: nextScore };
+      const updatedStorage = { ...currentStorage, ['TPI_ASSESSMENT']: updatedDoc };
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+    } catch (err) {
+      console.error('Failed to update pain score', err);
+    }
+  };
+
+  const painScore = blankMode ? null : selectedPainScore;
   const chiefComplaintText = blankMode || !packetData ? '' : (storage.chiefComplaint || packetData.chiefComplaint || packetData.painDescription || packetData.mechanismOfInjury || '');
   const palpationFindingsText = blankMode || !packetData ? '' : (storage.palpationFindings || packetData.palpationFindings || packetData.palpation || packetData.physicalExam?.palpation || '');
   const treatmentPlanText = blankMode || !packetData ? '' : (storage.treatmentPlan || packetData.treatmentPlan || packetData.plan || packetData.planRecommendations || '');
@@ -41,7 +108,7 @@ export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetD
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       {/* Header */}
       <div className="border-b-2 border-[#722F37] pb-4 mb-6 text-center">
-        <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>TRIGGER POINT ASSESSMENT</h1>
+        <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>FM TRIGGER POINT ASSESSMENT</h1>
         <p className="text-xs font-bold text-slate-600 mt-1">CLINICAL EVALUATION &amp; FINDINGS</p>
       </div>
 
@@ -65,7 +132,11 @@ export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetD
             <span className="font-bold">Pain Scale (0-10):</span>
             <div className="flex gap-2">
               {[0,1,2,3,4,5,6,7,8,9,10].map(n => (
-                <div key={n} className={`w-6 h-6 border flex items-center justify-center ${painScore === n ? 'bg-amber-100 border-amber-500 font-bold text-slate-900' : 'border-slate-300 text-slate-400'}`}>
+                <div 
+                  key={n} 
+                  onClick={() => handleSelectPainScore(n)}
+                  className={`w-6 h-6 border flex items-center justify-center transition select-none ${!readOnly && !blankMode ? 'cursor-pointer hover:border-amber-400' : ''} ${painScore === n ? 'bg-amber-100 border-amber-500 font-bold text-slate-900' : 'border-slate-300 text-slate-400'}`}
+                >
                   {n}
                 </div>
               ))}
@@ -93,12 +164,18 @@ export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetD
           <div>
             <span className="font-bold block mb-2">Affected Muscle Groups:</span>
             <ul className="space-y-1 text-slate-700">
-              {['Trapezius (Bilateral)', 'Levator Scapulae', 'Rhomboids', 'Quadratus Lumborum'].map(label => {
-                const isChecked = !blankMode && getMuscleChecked(label, packetData);
+              {MUSCLE_ITEMS.map(label => {
+                const isChecked = !blankMode && Boolean(muscleState[label]);
                 return (
-                  <li key={label} className="flex items-center gap-2">
-                    <div className={`w-3 h-3 border border-slate-400 ${isChecked ? 'bg-slate-800' : ''}`}></div>
-                    {label}
+                  <li 
+                    key={label} 
+                    onClick={() => toggleMuscle(label)}
+                    className={`flex items-center gap-2 select-none ${!readOnly && !blankMode ? 'cursor-pointer hover:text-slate-900' : ''}`}
+                  >
+                    <div className="w-3.5 h-3.5 border border-slate-600 inline-flex items-center justify-center text-[10px] font-bold bg-white flex-shrink-0">
+                      {isChecked ? '✓' : ''}
+                    </div>
+                    <span>{label}</span>
                   </li>
                 );
               })}
@@ -136,13 +213,35 @@ export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetD
       </div>
 
       {/* Footer */}
-      <div className="absolute bottom-12 left-14 right-14 border-t border-slate-300 pt-4 text-xs font-mono flex justify-between">
+      <div className="absolute bottom-12 left-14 right-14 border-t border-slate-300 pt-4 text-xs font-mono flex justify-between items-end">
         <div>
-          <div className="border-b border-slate-400 pb-1 mb-1 w-48 font-bold">{providerNameVal}&nbsp;</div>
+          <div className="border-b border-slate-400 min-h-[36px] flex items-end pb-0.5 mb-1 w-64">
+            <EditableClinicalField
+              packetData={packetData}
+              docKey="TPI_ASSESSMENT"
+              field="providerSignature"
+              value={blankMode ? '' : (storage.providerSignature !== undefined ? storage.providerSignature : (storage.providerName || providerNameVal))}
+              placeholder="Click to Sign"
+              readOnly={readOnly || blankMode}
+              inputType="signature"
+              className="w-full font-bold text-xs text-slate-900"
+            />
+          </div>
           <p className="text-slate-600">Provider Signature</p>
         </div>
         <div>
-          <div className="border-b border-slate-400 pb-1 mb-1 w-32">{signatureDateVal}&nbsp;</div>
+          <div className="border-b border-slate-400 min-h-[36px] flex items-end pb-0.5 mb-1 w-40">
+            <EditableClinicalField
+              packetData={packetData}
+              docKey="TPI_ASSESSMENT"
+              field="signatureDate"
+              value={blankMode ? '' : (storage.signatureDate !== undefined ? storage.signatureDate : signatureDateVal)}
+              placeholder="YYYY-MM-DD"
+              readOnly={readOnly || blankMode}
+              inputType="input"
+              className="w-full font-mono text-xs text-slate-900"
+            />
+          </div>
           <p className="text-slate-600">Date</p>
         </div>
       </div>

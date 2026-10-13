@@ -1,14 +1,74 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { EditableClinicalField } from '../EditableClinicalField';
+import { apiCaseService } from '../../../services/api/apiCaseService';
+import fmLogo from '../../../assets/fm-logo.jpeg';
 
-const CB = ({ checked = false, label, blankMode }) => (
-  <span className="inline-flex items-center gap-1 mr-3 text-[11px]">
-    <span className="w-3.5 h-3.5 border border-slate-600 inline-flex items-center justify-center text-[10px] font-bold bg-white flex-shrink-0">
-      {!blankMode && checked ? '✓' : ''}
+const CB = ({ 
+  checked = false, 
+  label, 
+  blankMode = false, 
+  readOnly = false,
+  packetData = null,
+  fieldKey = null,
+  onToggle = null,
+}) => {
+  const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT']?.checkboxOverrides || {};
+  
+  const isChecked = (fieldKey && storage[fieldKey] !== undefined)
+    ? storage[fieldKey]
+    : checked;
+
+  const [localChecked, setLocalChecked] = useState(isChecked);
+
+  useEffect(() => {
+    setLocalChecked(isChecked);
+  }, [isChecked]);
+
+  const handleToggle = async () => {
+    if (readOnly || blankMode) return;
+    
+    if (onToggle) {
+      onToggle();
+      return;
+    }
+
+    if (!fieldKey) return;
+
+    const nextVal = !localChecked;
+    setLocalChecked(nextVal);
+
+    if (!packetData?.id) return;
+
+    try {
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const docNamespace = currentStorage['JOSMIC_PAIN_REPORT'] || {};
+      const currentOverrides = docNamespace.checkboxOverrides || {};
+      const updatedOverrides = { ...currentOverrides, [fieldKey]: nextVal };
+      const updatedDoc = { ...docNamespace, checkboxOverrides: updatedOverrides };
+      const updatedStorage = { ...currentStorage, ['JOSMIC_PAIN_REPORT']: updatedDoc };
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+    } catch (err) {
+      console.error('Failed to toggle checkbox', err);
+    }
+  };
+
+  const isInteractive = !readOnly && !blankMode && (fieldKey || onToggle);
+
+  return (
+    <span
+      onClick={handleToggle}
+      className={`inline-flex items-center gap-1 mr-3 text-[11px] select-none ${
+        isInteractive ? 'cursor-pointer hover:opacity-80' : ''
+      }`}
+    >
+      <span className="w-3.5 h-3.5 border border-slate-600 inline-flex items-center justify-center text-[10px] font-bold bg-white flex-shrink-0">
+        {!blankMode && localChecked ? '✓' : ''}
+      </span>
+      <span>{label}</span>
     </span>
-    {label}
-  </span>
-);
+  );
+};
 
 const FieldLine = ({ label, value, blankMode, width = '180px' }) => (
   <div className="flex items-center gap-1.5 text-[11px] mb-1">
@@ -101,21 +161,11 @@ const PageHeader = ({ page, blankMode, packetData }) => {
   return (
     <div className="flex items-center justify-between border-b-2 border-slate-700 pb-3 mb-4">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#722F37] flex items-center justify-center flex-shrink-0">
-          <svg viewBox="0 0 80 80" className="w-7 h-7" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="40" cy="40" r="38" fill="#0d9488" />
-            <ellipse cx="40" cy="22" rx="8" ry="9" fill="white" />
-            <rect x="30" y="32" width="20" height="24" rx="4" fill="white" />
-            <rect x="24" y="33" width="8" height="18" rx="3" fill="white" />
-            <rect x="48" y="33" width="8" height="18" rx="3" fill="white" />
-            <rect x="31" y="56" width="8" height="16" rx="3" fill="white" />
-            <rect x="41" y="56" width="8" height="16" rx="3" fill="white" />
-          </svg>
-        </div>
+        <img src={fmLogo} alt="FM Health and Wellness Center" className="h-12 w-auto object-contain flex-shrink-0 mix-blend-multiply" />
         <div>
-          <h1 className="text-lg font-black text-[#722F37] uppercase tracking-tight" style={{ fontFamily: 'serif' }}>JOSMIC WELLNESS CENTER</h1>
+          <h1 className="text-lg font-black text-[#722F37] uppercase tracking-tight" style={{ fontFamily: 'serif' }}>FM HEALTH AND WELLNESS CENTER</h1>
           <p className="text-[10px] font-bold text-slate-600">PAIN MANAGEMENT CONSULTATION &amp; EVALUATION REPORT</p>
-          <p className="text-[9px] text-slate-500">10101 HARWIN DR. STE 274 HOUSTON TX 77036 &nbsp;|&nbsp; OFFICE: 713-485-5712 &nbsp;|&nbsp; FAX: 832-416-1502</p>
+          <p className="text-[9px] text-slate-500">9900 WESTPARK DR, HOUSTON, TX 77063 &nbsp;|&nbsp; OFFICE: 713-485-5712 &nbsp;|&nbsp; FAX: 832-416-1502</p>
         </div>
       </div>
       <div className="text-right font-mono text-[10px] text-slate-600 border border-slate-300 p-2 bg-slate-50">
@@ -137,7 +187,7 @@ const PatientInfoBar = ({ blankMode, packetData }) => {
 };
 
 // --- PAGE 1 ------------------------------------------------------------------
-const Page1 = ({ blankMode, packetData }) => {
+const Page1 = ({ blankMode, packetData, readOnly = false }) => {
   const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
   const dosDate = packetData?.initialDate || packetData?.accidentDate || '';
   const patientDob = packetData?.patient?.dob || packetData?.patientDob || '';
@@ -168,7 +218,15 @@ const Page1 = ({ blankMode, packetData }) => {
         <p className="font-bold text-[11px] mb-1.5">Pain Description (Check all that applies):</p>
         <div className="flex flex-wrap gap-y-1.5">
           {['Sharp', 'Dull', 'Throbbing', 'Burning', 'Radiating', 'Tingling', 'Stabbing', 'Numbness'].map(label => (
-            <CB key={label} checked={getPainDescriptionChecked(label, packetData)} label={label} blankMode={blankMode} />
+            <CB
+              key={label}
+              checked={getPainDescriptionChecked(label, packetData)}
+              label={label}
+              blankMode={blankMode}
+              readOnly={readOnly}
+              packetData={packetData}
+              fieldKey={`pd_${label}`}
+            />
           ))}
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
@@ -185,7 +243,15 @@ const Page1 = ({ blankMode, packetData }) => {
             'R.Knee', 'L.Knee', 'R.Ankle', 'L.Ankle', 'R.Wrist', 'L.Wrist', 'Joint pain',
             'Muscle pain', 'Headache', 'R.arm', 'L.arm', 'R.leg', 'L.leg', 'R.elbow', 'L.elbow'
           ].map(label => (
-            <CB key={label} checked={getPainLocationChecked(label, packetData)} label={label} blankMode={blankMode} />
+            <CB
+              key={label}
+              checked={getPainLocationChecked(label, packetData)}
+              label={label}
+              blankMode={blankMode}
+              readOnly={readOnly}
+              packetData={packetData}
+              fieldKey={`pl_${label}`}
+            />
           ))}
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
@@ -200,7 +266,15 @@ const Page1 = ({ blankMode, packetData }) => {
         <p className="font-bold text-[11px] mb-1.5">Mechanism of Injury (Select all that apply):</p>
         <div className="flex flex-wrap gap-y-1.5">
           {['Motor vehicle accident', 'Slip and Fall', 'Workplace injury', 'Sports injury', 'Assault'].map(label => (
-            <CB key={label} checked={getMechanismChecked(label, packetData)} label={label} blankMode={blankMode} />
+            <CB
+              key={label}
+              checked={getMechanismChecked(label, packetData)}
+              label={label}
+              blankMode={blankMode}
+              readOnly={readOnly}
+              packetData={packetData}
+              fieldKey={`moi_${label}`}
+            />
           ))}
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
@@ -261,7 +335,7 @@ const getRosNeurologicChecked = (label, packetData) => {
 };
 
 // --- PAGE 2 ------------------------------------------------------------------
-const Page2 = ({ blankMode, packetData }) => {
+const Page2 = ({ blankMode, packetData, readOnly = false }) => {
   const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
   const currentPain = storage.painCurrent || packetData?.painSeverityCurrent || packetData?.painCurrent || packetData?.painScore || '';
   const worstPain = storage.painWorst || packetData?.painSeverityWorst || packetData?.painWorst || '';
@@ -295,7 +369,7 @@ const Page2 = ({ blankMode, packetData }) => {
         <p className="font-bold text-[11px] mb-1.5">Aggravating Factors (Circle all that apply):</p>
         <div className="flex flex-wrap gap-y-1.5">
           {['Movement', 'Sitting/Standing', 'Walking', 'Bending', 'Lifting'].map(label => (
-            <CB key={label} checked={getAggravatingChecked(label, packetData)} label={label} blankMode={blankMode} />
+            <CB key={label} checked={getAggravatingChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`agg_${label}`} />
           ))}
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
@@ -308,7 +382,7 @@ const Page2 = ({ blankMode, packetData }) => {
         <p className="font-bold text-[11px] mb-1.5">Relieving Factors (Circle all that apply):</p>
         <div className="flex flex-wrap gap-y-1.5">
           {['Rest', 'Ice/Heat', 'Pain medications', 'Physical therapy', 'Nothing helps'].map(label => (
-            <CB key={label} checked={getRelievingChecked(label, packetData)} label={label} blankMode={blankMode} />
+            <CB key={label} checked={getRelievingChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`rel_${label}`} />
           ))}
         </div>
       </div>
@@ -317,7 +391,7 @@ const Page2 = ({ blankMode, packetData }) => {
         <p className="font-bold text-[11px] mb-1.5">Functional Limitations (Circle all that apply):</p>
         <div className="flex flex-wrap gap-y-1.5">
           {["Difficulty sleeping", "Trouble walking", "Can't return to work", "Reduced daily activities"].map(label => (
-            <CB key={label} checked={getFunctionalChecked(label, packetData)} label={label} blankMode={blankMode} />
+            <CB key={label} checked={getFunctionalChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`func_${label}`} />
           ))}
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
@@ -332,9 +406,9 @@ const Page2 = ({ blankMode, packetData }) => {
         <p className="font-bold text-[11px] mb-1.5">Relevant Medical History (Circle all that apply):</p>
         <div className="flex flex-wrap gap-y-1.5">
           {['Diabetes','Hypertension','Neuropathy','Depression/Anxiety','Previous pain management','Heart disease','Cancer','Arthritis','Asthma','High cholesterol','Depression','Anxiety','Lupus','Chronic pain'].map(item => (
-            <CB key={item} checked={getMedicalHistoryChecked(item, packetData)} label={item} blankMode={blankMode} />
+            <CB key={item} checked={getMedicalHistoryChecked(item, packetData)} label={item} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`pmh_${item}`} />
           ))}
-          <CB checked={getMedicalHistoryChecked('None', packetData)} label="None" blankMode={blankMode} />
+          <CB checked={getMedicalHistoryChecked('None', packetData)} label="None" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="pmh_None" />
         </div>
         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
           <span className="font-bold">Other:</span>
@@ -347,7 +421,7 @@ const Page2 = ({ blankMode, packetData }) => {
         <div className="flex items-center gap-3 pl-2">
           <span>Relevant prior surgery:</span>
           <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="surgicalHistory" value={storage.surgicalHistory || packetData?.surgicalHistory || packetData?.pastSurgicalHistory || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
-          <CB checked={getSurgicalNoneChecked(packetData)} label="None" blankMode={blankMode} />
+          <CB checked={getSurgicalNoneChecked(packetData)} label="None" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="surg_None" />
         </div>
       </div>
 
@@ -369,9 +443,9 @@ const Page2 = ({ blankMode, packetData }) => {
         <p className="font-bold text-[11px] mb-1">Neurologic:</p>
         <div className="flex flex-wrap gap-y-1.5 pl-2">
           {['Numbness', 'Tingling', 'Weakness', 'Balance issues', 'Headaches'].map(label => (
-            <CB key={label} checked={getRosNeurologicChecked(label, packetData)} label={label} blankMode={blankMode} />
+            <CB key={label} checked={getRosNeurologicChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`ros_neuro_${label}`} />
           ))}
-          <CB checked={getRosNeurologicChecked('None', packetData)} label="None" blankMode={blankMode} />
+          <CB checked={getRosNeurologicChecked('None', packetData)} label="None" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="ros_neuro_None" />
         </div>
       </div>
     </div>
@@ -512,7 +586,7 @@ const getOtherDiagnosis = (packetData) => {
 };
 
 // --- PAGE 3 ------------------------------------------------------------------
-const Page3 = ({ blankMode, packetData }) => {
+const Page3 = ({ blankMode, packetData, readOnly = false }) => {
   const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
   return (
   <div>
@@ -520,9 +594,9 @@ const Page3 = ({ blankMode, packetData }) => {
       <p className="font-bold text-[11px] mb-1">Musculoskeletal:</p>
       <div className="flex flex-wrap gap-y-1.5 pl-2">
         {['Joint stiffness', 'Muscle spasms', 'Swelling', 'Limited range of motion'].map(label => (
-          <CB key={label} checked={getRosMusculoskeletalChecked(label, packetData)} label={label} blankMode={blankMode} />
+          <CB key={label} checked={getRosMusculoskeletalChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`ros_msk_${label}`} />
         ))}
-        <CB checked={getRosMusculoskeletalChecked('None', packetData)} label="None" blankMode={blankMode} />
+        <CB checked={getRosMusculoskeletalChecked('None', packetData)} label="None" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="ros_msk_None" />
       </div>
     </div>
 
@@ -530,9 +604,9 @@ const Page3 = ({ blankMode, packetData }) => {
       <p className="font-bold text-[11px] mb-1">Psychiatric:</p>
       <div className="flex flex-wrap gap-y-1.5 pl-2">
         {['Anxiety', 'Depression', 'Sleep disturbance', 'PTSD symptoms'].map(label => (
-          <CB key={label} checked={getRosPsychiatricChecked(label, packetData)} label={label} blankMode={blankMode} />
+          <CB key={label} checked={getRosPsychiatricChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`ros_psych_${label}`} />
         ))}
-        <CB checked={getRosPsychiatricChecked('None', packetData)} label="None" blankMode={blankMode} />
+        <CB checked={getRosPsychiatricChecked('None', packetData)} label="None" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="ros_psych_None" />
       </div>
     </div>
 
@@ -543,7 +617,7 @@ const Page3 = ({ blankMode, packetData }) => {
       <p className="font-bold text-[11px] mb-1">Inspection:</p>
       <div className="flex flex-wrap gap-y-1.5 pl-2">
         {['No visible trauma', 'Bruising', 'Swelling', 'Surgical scars', 'Postural abnormalities'].map(label => (
-          <CB key={label} checked={getPhysicalExamInspectionChecked(label, packetData)} label={label} blankMode={blankMode} />
+          <CB key={label} checked={getPhysicalExamInspectionChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`pe_insp_${label}`} />
         ))}
       </div>
     </div>
@@ -553,13 +627,13 @@ const Page3 = ({ blankMode, packetData }) => {
       <div className="pl-2 space-y-1">
         <div className="flex items-center gap-3">
           <span>Tenderness:</span>
-          <CB checked={getPalpationTendernessChecked('Yes', packetData)} label="Yes" blankMode={blankMode} />
-          <CB checked={getPalpationTendernessChecked('No', packetData)} label="No" blankMode={blankMode} />
+          <CB checked={getPalpationTendernessChecked('Yes', packetData)} label="Yes" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="pe_tender_Yes" />
+          <CB checked={getPalpationTendernessChecked('No', packetData)} label="No" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="pe_tender_No" />
         </div>
         <div className="flex items-center gap-3">
           <span>Muscle spasm:</span>
-          <CB checked={getPalpationMuscleSpasmChecked('Yes', packetData)} label="Yes" blankMode={blankMode} />
-          <CB checked={getPalpationMuscleSpasmChecked('No', packetData)} label="No" blankMode={blankMode} />
+          <CB checked={getPalpationMuscleSpasmChecked('Yes', packetData)} label="Yes" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="pe_spasm_Yes" />
+          <CB checked={getPalpationMuscleSpasmChecked('No', packetData)} label="No" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="pe_spasm_No" />
         </div>
       </div>
     </div>
@@ -568,7 +642,7 @@ const Page3 = ({ blankMode, packetData }) => {
       <p className="font-bold mb-1">ROM (Range of Motion) - Check what is applicable:</p>
       <div className="flex flex-wrap gap-y-1.5 pl-2">
         {['Full', 'Limited - Painful', 'Severely restricted'].map(label => (
-          <CB key={label} checked={getRomChecked(label, packetData)} label={label} blankMode={blankMode} />
+          <CB key={label} checked={getRomChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`pe_rom_${label}`} />
         ))}
       </div>
     </div>
@@ -578,20 +652,20 @@ const Page3 = ({ blankMode, packetData }) => {
       <div className="pl-2 space-y-2">
         <div className="flex items-center gap-3">
           <span className="font-semibold w-16">Motor:</span>
-          <CB checked={getNeuroMotorChecked('Normal', packetData)} label="Normal" blankMode={blankMode} />
+          <CB checked={getNeuroMotorChecked('Normal', packetData)} label="Normal" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="neuro_motor_Normal" />
           <span>Weakness in:</span>
           <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="motorWeaknessIn" value={storage.motorWeaknessIn || packetData?.motorWeaknessIn || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
         <div className="flex items-center gap-3">
           <span className="font-semibold w-16">Sensory:</span>
-          <CB checked={getNeuroSensoryChecked('Intact', packetData)} label="Intact" blankMode={blankMode} />
+          <CB checked={getNeuroSensoryChecked('Intact', packetData)} label="Intact" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="neuro_sensory_Intact" />
           <span>Diminished in:</span>
           <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="sensoryDiminishedIn" value={storage.sensoryDiminishedIn || packetData?.sensoryDiminishedIn || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
         </div>
         <div className="flex items-center gap-3">
           <span className="font-semibold w-16">Reflexes:</span>
           {['Normal', 'Hypoactive', 'Hyperactive'].map(label => (
-            <CB key={label} checked={getNeuroReflexesChecked(label, packetData)} label={label} blankMode={blankMode} />
+            <CB key={label} checked={getNeuroReflexesChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`neuro_reflex_${label}`} />
           ))}
         </div>
       </div>
@@ -601,25 +675,25 @@ const Page3 = ({ blankMode, packetData }) => {
 
     <div className="pl-2 space-y-1.5 text-[11px] mb-3">
       <div className="flex items-center gap-2">
-        <CB checked={isDiagnosisCodeChecked('S13.4', packetData)} label="Cervical sprain/strain" blankMode={blankMode} />
+        <CB checked={isDiagnosisCodeChecked('S13.4', packetData)} label="Cervical sprain/strain" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="dx_S13.4" />
         <span className="text-slate-500 font-mono">(S13.4)</span>
       </div>
       <div className="flex items-center gap-2">
-        <CB checked={isDiagnosisCodeChecked('S23.3', packetData)} label="Thoracic sprain/strain" blankMode={blankMode} />
+        <CB checked={isDiagnosisCodeChecked('S23.3', packetData)} label="Thoracic sprain/strain" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="dx_S23.3" />
         <span className="text-slate-500 font-mono">(S23.3)</span>
       </div>
       <div className="flex items-center gap-2">
-        <CB checked={isDiagnosisCodeChecked('S33.5', packetData) || isDiagnosisCodeChecked('M54.5', packetData)} label="Lumbar strain" blankMode={blankMode} />
+        <CB checked={isDiagnosisCodeChecked('S33.5', packetData) || isDiagnosisCodeChecked('M54.5', packetData)} label="Lumbar strain" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="dx_S33.5" />
         <span className="text-slate-500 font-mono">(S33.5)</span>
       </div>
       <div className="flex items-center gap-2">
-        <CB checked={isDiagnosisCodeChecked('M79.1', packetData)} label="Myofascial pain syndrome" blankMode={blankMode} />
+        <CB checked={isDiagnosisCodeChecked('M79.1', packetData)} label="Myofascial pain syndrome" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="dx_M79.1" />
         <span className="text-slate-500 font-mono">(M79.1</span>
         <div className="border-b border-slate-400 w-12">{blankMode || !packetData ? '' : (packetData?.diagnosisCodes?.find(c => String(c).startsWith('M79.1'))?.replace('M79.1', '') || '')}&nbsp;</div>
         <span className="text-slate-500 font-mono">)</span>
       </div>
       <div className="flex items-center gap-2">
-        <CB checked={isDiagnosisCodeChecked('M54.1', packetData) || isDiagnosisCodeChecked('M54.4', packetData)} label="Radiculopathy" blankMode={blankMode} />
+        <CB checked={isDiagnosisCodeChecked('M54.1', packetData) || isDiagnosisCodeChecked('M54.4', packetData)} label="Radiculopathy" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="dx_M54.1" />
         <span className="text-slate-500 font-mono">(M54.</span>
         <div className="border-b border-slate-400 w-12">{blankMode || !packetData ? '' : (packetData?.diagnosisCodes?.find(c => String(c).startsWith('M54.'))?.replace('M54.', '') || '')}&nbsp;</div>
         <span className="text-slate-500 font-mono">)</span>
@@ -630,13 +704,13 @@ const Page3 = ({ blankMode, packetData }) => {
 };
 
 // --- PAGE 4 ------------------------------------------------------------------
-const Page4 = ({ blankMode, packetData }) => {
+const Page4 = ({ blankMode, packetData, readOnly = false }) => {
   const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
   return (
   <div>
     <div className="pl-2 space-y-1.5 text-[11px] mb-4">
       <div className="flex items-center gap-2">
-        <CB checked={isDiagnosisCodeChecked('G44.3', packetData)} label="Post-traumatic headache" blankMode={blankMode} />
+        <CB checked={isDiagnosisCodeChecked('G44.3', packetData)} label="Post-traumatic headache" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="dx_G44.3" />
         <span className="text-slate-500 font-mono">(G44.3</span>
         <div className="border-b border-slate-400 w-12">{blankMode || !packetData ? '' : (packetData?.diagnosisCodes?.find(c => String(c).startsWith('G44.3'))?.replace('G44.3', '') || '')}&nbsp;</div>
         <span className="text-slate-500 font-mono">)</span>
@@ -653,7 +727,7 @@ const Page4 = ({ blankMode, packetData }) => {
       <p className="font-bold text-[11px] mb-1.5">Diagnostics Ordered - check what is applicable:</p>
       <div className="flex flex-wrap gap-y-1.5 pl-2">
         {['X-ray', 'MRI', 'CT', 'EMG/NCS', 'None'].map(label => (
-          <CB key={label} checked={getDiagnosticsOrderedChecked(label, packetData)} label={label} blankMode={blankMode} />
+          <CB key={label} checked={getDiagnosticsOrderedChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`diag_${label}`} />
         ))}
       </div>
     </div>
@@ -662,7 +736,7 @@ const Page4 = ({ blankMode, packetData }) => {
       <p className="font-bold text-[11px] mb-1.5">Medications - check what is applicable:</p>
       <div className="flex flex-wrap gap-y-1.5 pl-2">
         {['NSAIDs', 'Muscle relaxants', 'Neuropathic agents', 'Pain medications'].map(label => (
-          <CB key={label} checked={getMedicationsChecked(label, packetData)} label={label} blankMode={blankMode} />
+          <CB key={label} checked={getMedicationsChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`med_${label}`} />
         ))}
       </div>
       <div className="flex items-center gap-2 mt-1.5 text-[11px] pl-2">
@@ -675,7 +749,7 @@ const Page4 = ({ blankMode, packetData }) => {
       <p className="font-bold text-[11px] mb-1.5">Interventions - check all that is applicable:</p>
       <div className="flex flex-wrap gap-y-1.5 pl-2">
         {['Physical therapy', 'Chiropractic care', 'Trigger point injections', 'Epidural steroid injection', 'Laser therapy', 'Shockwave therapy', 'Pain management follow-up'].map(label => (
-          <CB key={label} checked={getInterventionsChecked(label, packetData)} label={label} blankMode={blankMode} />
+          <CB key={label} checked={getInterventionsChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`interv_${label}`} />
         ))}
       </div>
       <div className="flex items-center gap-2 mt-1.5 text-[11px] pl-2">
@@ -688,11 +762,11 @@ const Page4 = ({ blankMode, packetData }) => {
       <p className="font-bold mb-1.5">Restrictions:</p>
       <div className="flex flex-wrap gap-y-1.5 pl-2">
         {['No lifting >10 lbs', 'Limited bending/twisting', 'Gradual return to normal activity'].map(label => (
-          <CB key={label} checked={getRestrictionsChecked(label, packetData)} label={label} blankMode={blankMode} />
+          <CB key={label} checked={getRestrictionsChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`restr_${label}`} />
         ))}
       </div>
       <div className="flex items-center gap-2 mt-1.5 pl-2">
-        <CB checked={getRestrictionsChecked('Off work', packetData)} label="Off work/school until:" blankMode={blankMode} />
+        <CB checked={getRestrictionsChecked('Off work', packetData)} label="Off work/school until:" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="restr_OffWork" />
         <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="offWorkUntil" value={storage.offWorkUntil || packetData?.offWorkUntil || packetData?.restrictionsOffWorkUntil || packetData?.plan?.offWorkUntil || ''} readOnly={blankMode} inputType="input" className="w-28 border-b border-dashed border-slate-400" />
       </div>
     </div>
@@ -701,7 +775,7 @@ const Page4 = ({ blankMode, packetData }) => {
       <p className="font-bold mb-1.5">Follow-Up:</p>
       <div className="flex flex-wrap gap-y-1.5 pl-2">
         {['1 week', '2 weeks', 'PRN (as needed)'].map(label => (
-          <CB key={label} checked={getFollowUpChecked(label, packetData)} label={label} blankMode={blankMode} />
+          <CB key={label} checked={getFollowUpChecked(label, packetData)} label={label} blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey={`fu_${label}`} />
         ))}
       </div>
       <div className="flex items-center gap-2 mt-1.5 pl-2">
@@ -714,16 +788,48 @@ const Page4 = ({ blankMode, packetData }) => {
     <div className="border-t-2 border-slate-700 pt-5 mt-4">
       <div className="grid grid-cols-2 gap-8 text-[11px] font-mono">
         <div>
-          <div className="border-b border-slate-500 pb-1 mb-1 min-h-[28px] font-bold">{blankMode || !packetData ? '' : (packetData.referringProviderName || packetData.providerName || '')}&nbsp;</div>
+          <div className="border-b border-slate-500 pb-1 mb-1 min-h-[50px] flex flex-col justify-end">
+            <EditableClinicalField
+              packetData={packetData}
+              docKey="JOSMIC_PAIN_REPORT"
+              field="providerSignature"
+              value={blankMode ? '' : (storage.providerSignature || '')}
+              placeholder="Click to Sign"
+              readOnly={readOnly || blankMode}
+              inputType="signature"
+              className="h-8 max-w-[240px]"
+            />
+            <EditableClinicalField
+              packetData={packetData}
+              docKey="JOSMIC_PAIN_REPORT"
+              field="providerName"
+              value={blankMode ? '' : (storage.providerName !== undefined ? storage.providerName : (packetData?.referringProviderName || packetData?.providerName || packetData?.attendingProviderName || ''))}
+              placeholder="Type Provider Name"
+              readOnly={readOnly || blankMode}
+              inputType="input"
+              className="w-full font-bold text-xs text-slate-900 mt-0.5 print:text-xs"
+            />
+          </div>
           <p className="text-slate-600 text-[10px]">Provider Name / Signature</p>
         </div>
         <div>
-          <div className="border-b border-slate-500 pb-1 mb-1 min-h-[28px]">{blankMode || !packetData ? '' : (packetData.dischargeDate || packetData.signatureDate || '')}&nbsp;</div>
+          <div className="border-b border-slate-500 pb-1 mb-1 min-h-[50px] flex items-end">
+            <EditableClinicalField
+              packetData={packetData}
+              docKey="JOSMIC_PAIN_REPORT"
+              field="signatureDate"
+              value={blankMode ? '' : (storage.signatureDate !== undefined ? storage.signatureDate : (packetData?.dischargeDate || packetData?.signatureDate || ''))}
+              placeholder="YYYY-MM-DD"
+              readOnly={readOnly || blankMode}
+              inputType="input"
+              className="w-full text-xs text-slate-900"
+            />
+          </div>
           <p className="text-slate-600 text-[10px]">Date</p>
         </div>
       </div>
       <div className="mt-4">
-        <p className="text-[10px] text-slate-500">JOSMIC Wellness Center - 10101 Harwin Dr, Ste 774, Houston TX 77036 | Office: 713-485-5712 | Fax: 713-485-0208</p>
+        <p className="text-[10px] text-slate-500">FM Health and Wellness Center - 9900 Westpark Dr, Houston, TX 77063 | Office: 713-485-5712 | Fax: 713-485-0208</p>
       </div>
     </div>
   </div>
@@ -731,7 +837,7 @@ const Page4 = ({ blankMode, packetData }) => {
 };
 
 // --- MAIN COMPONENT -----------------------------------------------------------
-export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, packetData = null }) => {
+export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, packetData = null, readOnly = false }) => {
   const pageComponents = { 1: Page1, 2: Page2, 3: Page3, 4: Page4 };
   const PageContent = pageComponents[reportPage] || Page1;
 
@@ -739,11 +845,11 @@ export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, 
     <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '40px 56px', paddingBottom: '60px' }}>
       <PageHeader page={reportPage} blankMode={blankMode} packetData={packetData} />
       <PatientInfoBar blankMode={blankMode} packetData={packetData} />
-      <PageContent blankMode={blankMode} packetData={packetData} />
+      <PageContent blankMode={blankMode} packetData={packetData} readOnly={readOnly} />
 
       {/* Footer */}
       <div className="absolute bottom-4 left-0 right-0 px-14 flex justify-between text-[9px] text-slate-400 font-mono border-t border-slate-100 pt-2">
-        <span>JOSMIC Wellness Center - Pain Management Consultation &amp; Evaluation Report - Confidential</span>
+        <span>FM Health and Wellness Center - Pain Management Consultation &amp; Evaluation Report - Confidential</span>
         <span>Page {reportPage + 3} of 7</span>
       </div>
     </div>

@@ -1,6 +1,7 @@
 // src/components/packets/davs/DavCoverPage.jsx
 import React from 'react';
 import { formatCurrency } from '../../../utils/billingCalculations';
+import fmLogo from '../../../assets/fm-logo.jpeg';
 
 export const DavCoverPage = ({ 
   packetData = null, 
@@ -90,16 +91,26 @@ export const DavCoverPage = ({
   return (
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       
-      {/* Provider Branding Header */}
-      <div className="text-center border-b-2 border-[#722F37] pb-6">
-        <h1 className="text-2xl font-black uppercase text-[#722F37] tracking-tight">DAV'S ANATOMY</h1>
-        <p className="text-xs font-bold text-slate-600">10101 HARWIN DR. SUITE 274 HOUSTON TX 77036</p>
-        <p className="text-xs text-slate-600">CELL: 832-815-0959 | FAX: 832-416-1502</p>
+      {/* Top Header with FM Dav’s Anatomy Logo */}
+      <div className="text-center mb-3">
+        <div className="flex justify-center mb-2">
+          <img 
+            src={fmLogo} 
+            alt="FM Dav’s Anatomy Logo" 
+            className="h-28 w-auto object-contain mx-auto mix-blend-multiply" 
+          />
+        </div>
+        <h1 className="text-2xl font-black text-slate-950 tracking-tight">FM DAV’S ANATOMY</h1>
+        <p className="text-[11px] text-slate-600 mt-1">9900 WESTPARK DR, HOUSTON, TX 77063</p>
+        <p className="text-[11px] text-slate-600 mt-0.5 underline">CELL: 832-815-0959 &nbsp;•&nbsp; FAX: 832-416-1502</p>
       </div>
+
+      {/* Horizontal divider */}
+      <div className="border-t border-slate-400 my-4"></div>
 
       {/* Demographics Box */}
       <div className="bg-[#F9ECEC] p-6 rounded-xl border border-[#E8D3D3] space-y-4 font-mono text-xs">
-        <h2 className="text-sm font-bold text-[#722F37] uppercase border-b border-[#E8D3D3] pb-2">DAV'S ANATOMY - CLINICAL PACKET COVER SHEET (14 PAGES)</h2>
+        <h2 className="text-sm font-bold text-[#722F37] uppercase border-b border-[#E8D3D3] pb-2">FM DAV’S ANATOMY - CLINICAL PACKET COVER SHEET (14 PAGES)</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>PATIENT: <strong>{patientName}</strong></div>
           <div>SYSTEM ID: <strong>{patientSystemId}</strong></div>

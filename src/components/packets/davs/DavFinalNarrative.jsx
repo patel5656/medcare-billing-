@@ -74,7 +74,7 @@ export const DavFinalNarrative = ({ reportPage = 1, blankMode = false, packetDat
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       <div className="flex justify-between items-start border-b border-slate-300 pb-4">
         <div>
-          <h1 className="text-lg font-black text-[#722F37] uppercase italic">DAV'S ANATOMY</h1>
+          <h1 className="text-lg font-black text-[#722F37] uppercase italic">FM DAV’S ANATOMY</h1>
           <p className="text-[10px] text-slate-600">SHOCKWAVE THERAPY NARRATIVE DISCHARGE REPORT</p>
         </div>
         <div className="text-right font-mono text-[10px]">

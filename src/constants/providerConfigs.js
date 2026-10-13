@@ -75,8 +75,8 @@ export const INITIAL_PROVIDER_CONFIGS = {
   },
   davs: {
     id: 'prov-davs',
-    name: "FM Dav's Anatomy",
-    businessName: "FM Dav's Anatomy Shockwave Therapy LLC",
+    name: 'FM Dav’s Anatomy',
+    businessName: 'FM Dav’s Anatomy Shockwave Therapy LLC',
     serviceCategory: 'Shockwave Therapy (ESWT)',
     status: 'ACTIVE',
     isPlaceholder: false,
@@ -107,12 +107,12 @@ export const INITIAL_PROVIDER_CONFIGS = {
       npi: '1932847561'
     },
     serviceFacility: {
-      name: "FM Dav's Anatomy",
+      name: 'FM Dav’s Anatomy',
       address: '9900 Westpark Dr, Houston, TX 77063',
       npi: '1932847561'
     },
     billingProvider: {
-      name: "FM Dav's Anatomy",
+      name: 'FM Dav’s Anatomy',
       address: '9900 Westpark Dr, Houston, TX 77063',
       phone: '832-815-0959'
     },
@@ -141,7 +141,7 @@ export const INITIAL_PROVIDER_CONFIGS = {
         duration: '30 min',
         billingDescription: 'Shockwave / ESWT Therapy',
         placeOfService: '10',
-        clinicalTemplate: "FM Dav's ESWT Therapy Record",
+        clinicalTemplate: 'FM Dav’s ESWT Therapy Record',
         configurationStatus: 'COMPLETE'
       }
     ]
@@ -285,7 +285,7 @@ export const INITIAL_PROVIDER_CONFIGS = {
   },
   tpi: {
     id: 'prov-tpi',
-    name: 'Trigger Point Injection Clinic',
+    name: 'FM Trigger Point Injection Clinic',
     businessName: 'TPI Specialist LLC',
     serviceCategory: 'Pain Management & Injections',
     status: 'ACTIVE',
@@ -317,7 +317,7 @@ export const INITIAL_PROVIDER_CONFIGS = {
       npi: '1982347563'
     },
     serviceFacility: {
-      name: 'Trigger Point Injection Clinic',
+      name: 'FM Trigger Point Injection Clinic',
       address: '10101 Harwin Dr, Suite 200, Houston, TX 77036',
       npi: '1982347563'
     },
@@ -354,7 +354,7 @@ export const INITIAL_PROVIDER_CONFIGS = {
   },
   tecar: {
     id: 'prov-tecar',
-    name: 'TECAR Therapy Clinic',
+    name: 'FM TECAR Therapy Clinic',
     businessName: 'TECAR Advanced Physio LLC',
     serviceCategory: 'Deep Tissue Radiofrequency Therapy',
     status: 'ACTIVE',
@@ -386,7 +386,7 @@ export const INITIAL_PROVIDER_CONFIGS = {
       npi: '1789234560'
     },
     serviceFacility: {
-      name: 'TECAR Therapy Clinic',
+      name: 'FM TECAR Therapy Clinic',
       address: '10101 Harwin Dr, Suite 210, Houston, TX 77036',
       npi: '1789234560'
     },

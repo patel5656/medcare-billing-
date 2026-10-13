@@ -488,9 +488,9 @@ export const ReportsPage = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: 'Total Claims Generated', value: 7, color: 'teal' },
-              { label: 'ANIK Claims', value: 3, color: 'violet' },
-              { label: "DAV'S Claims", value: 3, color: 'blue' },
-              { label: 'JOSMIC Claims', value: 1, color: 'emerald' },
+              { label: 'FM Laser Claims', value: 3, color: 'violet' },
+              { label: 'FM Dav’s Claims', value: 3, color: 'blue' },
+              { label: 'FM Health Claims', value: 1, color: 'emerald' },
             ].map(c => (
               <div key={c.label} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center">
                 <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">{c.label}</p>

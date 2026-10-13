@@ -63,17 +63,17 @@ export const GeneralSettingsPage = () => {
     return {
       // Practice Identity
       appName: 'F&M Health & Wellness',
-      practiceName: 'F&M Health & Wellness Center LLC',
+      practiceName: 'FM Health and Wellness Center LLC',
       practiceType: 'MULTI_SPECIALTY',
       npi: '1234567890',
       taxId: '75-1234567',
       licenseNumber: 'TX-MED-98765',
       practicePhone: '713-485-5700',
       practiceEmail: 'admin@medpracticepro.com',
-      practiceAddress: '10101 Harwin Dr.',
+      practiceAddress: '9900 Westpark Dr',
       practiceCity: 'Houston',
       practiceState: 'TX',
-      practiceZip: '77036',
+      practiceZip: '77063',
       practiceWebsite: 'https://medpracticepro.com',
 
       // Localization

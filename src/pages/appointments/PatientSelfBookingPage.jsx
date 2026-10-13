@@ -213,7 +213,7 @@ export const PatientSelfBookingPage = () => {
         ...formData,
         serviceLines,
         cptCode: serviceLines.map(l => l.cptCode).join(', '),
-        providerName: selectedProvider?.name || 'JOSMIC Wellness Center'
+        providerName: selectedProvider?.name || 'FM Health and Wellness Center'
       });
       setConfirmedBooking(created);
       setStep(4);
@@ -350,7 +350,7 @@ export const PatientSelfBookingPage = () => {
                             )}
                           </div>
                           <p className="text-xs text-slate-500 mt-0.5">
-                            {apt.providerName || 'JOSMIC Wellness Center'} | Phone: {apt.patientPhone || 'N/A'}
+                            {apt.providerName || 'FM Health and Wellness Center'} | Phone: {apt.patientPhone || 'N/A'}
                           </p>
                         </div>
                         <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold ${apt.status === 'SCHEDULED' ? 'bg-emerald-100 text-emerald-800' :

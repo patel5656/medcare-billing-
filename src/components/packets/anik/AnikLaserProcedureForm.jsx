@@ -3,6 +3,7 @@ import bodyImage from '../../../assets/body_image.png';
 
 import { EditableClinicalField } from '../EditableClinicalField';
 import { apiProviderService } from '../../../services/api/apiProviderService';
+import { apiCaseService } from '../../../services/api/apiCaseService';
 import fmLogo from '../../../assets/fm-logo.jpeg';
 
 /**
@@ -134,7 +135,39 @@ export const AnikLaserProcedureForm = ({
 
   // Findings / Observational Checks
   const findings = blankMode || !procedureDos ? {} : (procedureData?.findings || procedureData?.observationalFindings || packetData?.findings || {});
-  const isFindingChecked = (key) => Boolean(findings[key]);
+  const [localFindings, setLocalFindings] = useState(storage.findings || {});
+
+  useEffect(() => {
+    if (storage.findings) {
+      setLocalFindings(storage.findings);
+    }
+  }, [storage.findings]);
+
+  const isFindingChecked = (key) => {
+    if (blankMode) return false;
+    if (localFindings[key] !== undefined) return Boolean(localFindings[key]);
+    return Boolean(findings[key]);
+  };
+
+  const toggleFinding = async (key) => {
+    if (readOnly || blankMode) return;
+    const currentVal = isFindingChecked(key);
+    const updated = { ...localFindings, [key]: !currentVal };
+    setLocalFindings(updated);
+
+    if (packetData && packetData.id) {
+      try {
+        const currentStorage = packetData.clinicalDocStorage || {};
+        const docNamespace = currentStorage[docKey] || {};
+        const updatedDoc = { ...docNamespace, findings: updated };
+        const updatedStorage = { ...currentStorage, [docKey]: updatedDoc };
+        await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+        packetData.clinicalDocStorage = updatedStorage;
+      } catch (err) {
+        console.error(`Failed to toggle finding ${key}`, err);
+      }
+    }
+  };
 
   // Procedure Tolerated & Duration Completed
   const procedureTolerated = blankMode || !procedureDos ? '' : (procedureData?.procedureTolerated || procedureData?.tolerated || packetData?.procedureTolerated || '');
@@ -391,31 +424,173 @@ export const AnikLaserProcedureForm = ({
             </span>
             <div className="space-y-1.5 text-xs font-mono">
               <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
-                <span>NAD</span>
-                {isFindingChecked('NAD') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                <EditableClinicalField
+                  packetData={packetData}
+                  docKey={docKey}
+                  field="finding_NAD_label"
+                  value={storage.finding_NAD_label !== undefined ? storage.finding_NAD_label : 'NAD'}
+                  placeholder="NAD"
+                  readOnly={readOnly || blankMode}
+                  inputType="input"
+                  className="flex-1 font-mono text-xs bg-transparent hover:bg-slate-100 focus:bg-amber-50 rounded px-1"
+                />
+                <button
+                  type="button"
+                  disabled={readOnly || blankMode}
+                  onClick={() => toggleFinding('NAD')}
+                  className="cursor-pointer hover:bg-slate-200 px-1 rounded transition select-none"
+                  title="Toggle checkmark"
+                >
+                  {isFindingChecked('NAD') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                </button>
               </div>
+
               <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
-                <span>AAO X3</span>
-                {isFindingChecked('AAO_X3') || isFindingChecked('AAO X3') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                <EditableClinicalField
+                  packetData={packetData}
+                  docKey={docKey}
+                  field="finding_AAO_label"
+                  value={storage.finding_AAO_label !== undefined ? storage.finding_AAO_label : 'AAO X3'}
+                  placeholder="AAO X3"
+                  readOnly={readOnly || blankMode}
+                  inputType="input"
+                  className="flex-1 font-mono text-xs bg-transparent hover:bg-slate-100 focus:bg-amber-50 rounded px-1"
+                />
+                <button
+                  type="button"
+                  disabled={readOnly || blankMode}
+                  onClick={() => toggleFinding('AAO_X3')}
+                  className="cursor-pointer hover:bg-slate-200 px-1 rounded transition select-none"
+                  title="Toggle checkmark"
+                >
+                  {isFindingChecked('AAO_X3') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                </button>
               </div>
-              
-              {selectedProvider && selectedProvider.availableServices ? selectedProvider.availableServices.map((svc, idx) => (
+
+              {selectedProvider && selectedProvider.availableServices && selectedProvider.availableServices.map((svc, idx) => (
                 <div key={idx} className="flex items-center justify-between border-b border-slate-200 pb-0.5 mt-1">
-                  <span className="text-[9px] leading-tight break-words">{svc.description || svc.code}</span>
-                  {isFindingChecked(svc.code) || hasCpt(serviceLines, svc.code) ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                  <span className="text-[9px] leading-tight break-words flex-1 pr-1">{svc.description || svc.code}</span>
+                  <button
+                    type="button"
+                    disabled={readOnly || blankMode}
+                    onClick={() => toggleFinding(svc.code)}
+                    className="cursor-pointer hover:bg-slate-200 px-1 rounded transition select-none"
+                    title="Toggle checkmark"
+                  >
+                    {isFindingChecked(svc.code) || hasCpt(serviceLines, svc.code) ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                  </button>
                 </div>
-              )) : (
-                <>
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
-                    <span className="text-[10px]">Treatment A1</span>
-                    <span className="text-slate-300">—</span>
-                  </div>
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
-                    <span className="text-[10px]">Treatment A2</span>
-                    <span className="text-slate-300">—</span>
-                  </div>
-                </>
-              )}
+              ))}
+
+              <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
+                <EditableClinicalField
+                  packetData={packetData}
+                  docKey={docKey}
+                  field="treatment1"
+                  value={storage.treatment1 || ''}
+                  placeholder="Treatment A1"
+                  readOnly={readOnly || blankMode}
+                  inputType="input"
+                  className="flex-1 font-mono text-[10px] bg-transparent hover:bg-slate-100 focus:bg-amber-50 rounded px-1 placeholder:text-slate-400 placeholder:italic"
+                />
+                <button
+                  type="button"
+                  disabled={readOnly || blankMode}
+                  onClick={() => toggleFinding('treatment1')}
+                  className="cursor-pointer hover:bg-slate-200 px-1 rounded transition select-none"
+                  title="Toggle checkmark"
+                >
+                  {isFindingChecked('treatment1') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
+                <EditableClinicalField
+                  packetData={packetData}
+                  docKey={docKey}
+                  field="treatment2"
+                  value={storage.treatment2 || ''}
+                  placeholder="Treatment A2"
+                  readOnly={readOnly || blankMode}
+                  inputType="input"
+                  className="flex-1 font-mono text-[10px] bg-transparent hover:bg-slate-100 focus:bg-amber-50 rounded px-1 placeholder:text-slate-400 placeholder:italic"
+                />
+                <button
+                  type="button"
+                  disabled={readOnly || blankMode}
+                  onClick={() => toggleFinding('treatment2')}
+                  className="cursor-pointer hover:bg-slate-200 px-1 rounded transition select-none"
+                  title="Toggle checkmark"
+                >
+                  {isFindingChecked('treatment2') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
+                <EditableClinicalField
+                  packetData={packetData}
+                  docKey={docKey}
+                  field="treatment3"
+                  value={storage.treatment3 || ''}
+                  placeholder="Treatment A3"
+                  readOnly={readOnly || blankMode}
+                  inputType="input"
+                  className="flex-1 font-mono text-[10px] bg-transparent hover:bg-slate-100 focus:bg-amber-50 rounded px-1 placeholder:text-slate-400 placeholder:italic"
+                />
+                <button
+                  type="button"
+                  disabled={readOnly || blankMode}
+                  onClick={() => toggleFinding('treatment3')}
+                  className="cursor-pointer hover:bg-slate-200 px-1 rounded transition select-none"
+                  title="Toggle checkmark"
+                >
+                  {isFindingChecked('treatment3') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
+                <EditableClinicalField
+                  packetData={packetData}
+                  docKey={docKey}
+                  field="treatment4"
+                  value={storage.treatment4 || ''}
+                  placeholder="Treatment A4"
+                  readOnly={readOnly || blankMode}
+                  inputType="input"
+                  className="flex-1 font-mono text-[10px] bg-transparent hover:bg-slate-100 focus:bg-amber-50 rounded px-1 placeholder:text-slate-400 placeholder:italic"
+                />
+                <button
+                  type="button"
+                  disabled={readOnly || blankMode}
+                  onClick={() => toggleFinding('treatment4')}
+                  className="cursor-pointer hover:bg-slate-200 px-1 rounded transition select-none"
+                  title="Toggle checkmark"
+                >
+                  {isFindingChecked('treatment4') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
+                <EditableClinicalField
+                  packetData={packetData}
+                  docKey={docKey}
+                  field="treatment5"
+                  value={storage.treatment5 || ''}
+                  placeholder="Treatment A5"
+                  readOnly={readOnly || blankMode}
+                  inputType="input"
+                  className="flex-1 font-mono text-[10px] bg-transparent hover:bg-slate-100 focus:bg-amber-50 rounded px-1 placeholder:text-slate-400 placeholder:italic"
+                />
+                <button
+                  type="button"
+                  disabled={readOnly || blankMode}
+                  onClick={() => toggleFinding('treatment5')}
+                  className="cursor-pointer hover:bg-slate-200 px-1 rounded transition select-none"
+                  title="Toggle checkmark"
+                >
+                  {isFindingChecked('treatment5') ? <span className="font-bold text-[#722F37] font-sans">✓</span> : <span className="text-slate-300">—</span>}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -443,13 +618,35 @@ export const AnikLaserProcedureForm = ({
 
         {/* Signature Box */}
         <div className="pt-6 flex justify-between items-end text-xs font-mono">
-          <div>
+          <div className="w-72">
             <span>Health Care Provider Signature:</span>
-            <p className="font-bold text-sm text-slate-900 mt-2 underline">{providerSignature || (selectedProvider && selectedProvider.renderingProvider ? selectedProvider.renderingProvider.name : '')}</p>
+            <div className="border-b border-slate-500 min-h-[36px] flex items-end mt-1 pb-0.5">
+              <EditableClinicalField
+                packetData={packetData}
+                docKey={docKey}
+                field="providerSignature"
+                value={blankMode ? '' : (storage.providerSignature !== undefined ? storage.providerSignature : (providerSignature || (selectedProvider && selectedProvider.renderingProvider ? selectedProvider.renderingProvider.name : '')))}
+                placeholder="Click to Sign"
+                readOnly={readOnly || blankMode}
+                inputType="signature"
+                className="w-full font-bold text-sm text-slate-900"
+              />
+            </div>
           </div>
-          <div>
+          <div className="w-40">
             <span>Date:</span>
-            <p className="font-bold text-sm text-slate-900 mt-2">{signatureDate}</p>
+            <div className="border-b border-slate-500 min-h-[36px] flex items-end mt-1 pb-0.5">
+              <EditableClinicalField
+                packetData={packetData}
+                docKey={docKey}
+                field="signatureDate"
+                value={blankMode ? '' : (storage.signatureDate !== undefined ? storage.signatureDate : signatureDate)}
+                placeholder="YYYY-MM-DD"
+                readOnly={readOnly || blankMode}
+                inputType="input"
+                className="w-full font-mono text-xs text-slate-900"
+              />
+            </div>
           </div>
         </div>
 

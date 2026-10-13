@@ -31,7 +31,7 @@ export const CORE_SERVICES = [
     cptConfirmationStatus: 'CONFIRMED',
     suggestedDuration: '45 min',
     durationConfirmationStatus: 'CONFIRMED',
-    clinicalTemplate: 'ANIK Laser Therapy Procedure Form',
+    clinicalTemplate: 'FM Laser Therapy Procedure Form',
     templateStatus: 'CONFIRMED',
     activeStatus: 'ACTIVE'
   },
@@ -48,7 +48,7 @@ export const CORE_SERVICES = [
     cptConfirmationStatus: 'CONFIRMED',
     suggestedDuration: '30 min',
     durationConfirmationStatus: 'CONFIRMED',
-    clinicalTemplate: "DAV'S ESWT Therapy Record",
+    clinicalTemplate: 'FM Dav’s ESWT Therapy Record',
     templateStatus: 'CONFIRMED',
     activeStatus: 'ACTIVE'
   },

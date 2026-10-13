@@ -96,13 +96,13 @@ export const DavsEswtFormPage = () => {
         patientName: formData.patientName || 'Demo Patient',
         caseId: caseIdToUse,
         providerId: 'prov-davs',
-        providerName: "DAV'S Anatomy",
+        providerName: 'FM Dav’s Anatomy',
         type: 'DAVS_ESWT',
-        title: "DAV'S Anatomy ESWT Radial Device Procedure Form",
+        title: 'FM Dav’s Anatomy ESWT Radial Device Procedure Form',
         author: 'Alex Rivera (Lead Therapist)',
         content: formData
       });
-      addToast("DAV'S ESWT Procedure Form saved!", 'success');
+      addToast('FM Dav’s Anatomy ESWT Procedure Form saved!', 'success');
       navigate(`/clinical-notes/${note.id}/edit`);
     } catch (err) {
       addToast('Failed to save procedure form', 'error');
@@ -118,7 +118,7 @@ export const DavsEswtFormPage = () => {
       </button>
 
       <div>
-        <h1 className="text-2xl font-bold text-on-surface">DAV'S Anatomy - Shockwave Therapy (ESWT) Radial Device Form</h1>
+        <h1 className="text-2xl font-bold text-on-surface">FM Dav’s Anatomy - Shockwave Therapy (ESWT) Radial Device Form</h1>
         <p className="text-xs text-on-surface-variant">Vitals verification, Bar setting (3.0), Hz (10 Hz), Wave Count (3000) & BLT cream application</p>
       </div>
 

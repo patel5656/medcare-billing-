@@ -118,7 +118,7 @@ export const AppointmentDetailsModal = ({ isOpen, onClose, appointment, onStatus
           <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
             <span className="text-[10px] font-bold uppercase text-slate-500 block">Practice Care Provider</span>
             <p className="font-bold text-teal-800 text-xs flex items-center gap-1.5">
-              <Stethoscope className="w-3.5 h-3.5 text-teal-600" /> {appointment.providerName || 'JOSMIC Wellness Center'}
+              <Stethoscope className="w-3.5 h-3.5 text-teal-600" /> {appointment.providerName || 'FM Health and Wellness Center'}
             </p>
             <p className="text-[10px] text-slate-500">
               Location: {appointment.location || 'Suite 774 Main Clinic'}

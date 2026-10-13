@@ -46,7 +46,7 @@ export const DavProgressNote = ({ notePage = 1, blankMode = false, packetData = 
       <div>
         <div className="flex justify-between items-start border-b border-slate-300 pb-4">
           <div>
-            <h1 className="text-lg font-black text-[#722F37] uppercase italic">DAV'S ANATOMY</h1>
+            <h1 className="text-lg font-black text-[#722F37] uppercase italic">FM DAV’S ANATOMY</h1>
             <p className="text-[10px] text-slate-600">CLINICAL PROGRESS EVALUATION NOTE</p>
           </div>
           <div className="text-right font-mono text-[10px]">

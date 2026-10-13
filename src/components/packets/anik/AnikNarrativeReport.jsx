@@ -151,7 +151,7 @@ export const AnikNarrativeReport = ({
       
       <div className="flex justify-between items-start border-b border-slate-300 pb-4">
         <div>
-          <h1 className="text-lg font-black text-[#722F37] uppercase italic">ANIK LASER THERAPY</h1>
+          <h1 className="text-lg font-black text-[#722F37] uppercase italic">FM LASER THERAPY</h1>
           <p className="text-[10px] text-slate-600">INITIAL CLINICAL NARRATIVE EVALUATION REPORT</p>
         </div>
         <div className="text-right font-mono text-[10px]">

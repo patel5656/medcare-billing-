@@ -54,9 +54,9 @@ export const JosmicPainFormPage = () => {
         patientName: patientNameToSave,
         caseId: 'case-001',
         providerId: currentUser?.providerId || currentUser?.id || 'prov-josmic',
-        providerName: currentUser?.name || 'JOSMIC Wellness Center',
+        providerName: currentUser?.name || 'FM Health and Wellness Center',
         type: 'JOSMIC_PAIN',
-        title: 'JOSMIC Pain Management Report',
+        title: 'FM Health Pain Management Report',
         author: 'Dr. Segun Adeoye',
         content: {
           chiefComplaint,
@@ -66,7 +66,7 @@ export const JosmicPainFormPage = () => {
           planText
         }
       });
-      addToast('JOSMIC Pain Management Report saved as draft!', 'success');
+      addToast('FM Health Pain Management Report saved as draft!', 'success');
       navigate(`/clinical-notes/${note.id}/edit`);
     } catch (err) {
       addToast('Failed to save report', 'error');
@@ -82,7 +82,7 @@ export const JosmicPainFormPage = () => {
       </button>
 
       <div>
-        <h1 className="text-2xl font-bold text-on-surface">JOSMIC Wellness Center - Pain Management Consultation Form</h1>
+        <h1 className="text-2xl font-bold text-on-surface">FM Health and Wellness Center - Pain Management Consultation Form</h1>
         <p className="text-xs text-on-surface-variant">Structured consultation, 24 anatomical pain location grid, HPI pain scale & diagnostic plan</p>
       </div>
 

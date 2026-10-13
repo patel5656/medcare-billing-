@@ -55,7 +55,7 @@ export const ClinicalNoteEditorPage = () => {
   // New Note Form State
   const [formData, setFormData] = useState({
     title: 'Comprehensive Pain Evaluation & Treatment Plan',
-    providerName: 'JOSMIC Wellness Center',
+    providerName: 'FM Health and Wellness Center',
     patientId: queryPatientId || 'pat-001',
     patientName: '',
     caseId: queryCaseId || 'CASE-2025-1227',
@@ -64,7 +64,7 @@ export const ClinicalNoteEditorPage = () => {
     subjective: 'Patient reports persistent 7/10 pain with radiculopathy into right upper extremity after rear-end collision.',
     objective: 'Cervical spine tenderness at C4-C6, restricted ROM. Positive Spurling test. Lumbar paraspinal spasms noted.',
     assessment: '1. Cervicalgia (M54.2)\n2. Lumbar Sprain (S39.012A)\n3. Post-Traumatic Myofascial Pain Syndrome',
-    plan: 'Initiate 4-week multi-modality protocol: JOSMIC pain management, DAVS Shockwave (ESWT) 2x/wk, ANIK Laser therapy 2x/wk, and counselor supportive session.',
+    plan: 'Initiate 4-week multi-modality protocol: FM Health pain management, FM Dav’s Shockwave (ESWT) 2x/wk, FM Laser therapy 2x/wk, and counselor supportive session.',
     cptCodes: '99204, 0101T, 97039'
   });
 
@@ -132,8 +132,8 @@ export const ClinicalNoteEditorPage = () => {
     setIsSaving(true);
     try {
       let type = 'JOSMIC_PAIN';
-      if (formData.providerName.includes("DAV'S")) { type = 'DAVS_ESWT'; }
-      if (formData.providerName.includes("ANIK")) { type = 'ANIK_LASER'; }
+      if (formData.providerName.includes("DAV") || formData.providerName.includes("Dav")) { type = 'DAVS_ESWT'; }
+      if (formData.providerName.includes("ANIK") || formData.providerName.includes("Laser")) { type = 'ANIK_LASER'; }
       if (formData.providerName.includes("Counselor")) { type = 'COUNSELOR_GENERIC'; }
       let providerId = currentUser?.providerId || currentUser?.id || 'prov-josmic';
 
@@ -310,9 +310,9 @@ export const ClinicalNoteEditorPage = () => {
                   onChange={e => setFormData(p => ({ ...p, providerName: e.target.value }))}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-teal-600 outline-none font-bold text-teal-800"
                 >
-                  <option value="JOSMIC Wellness Center">JOSMIC Wellness Center (Pain Management)</option>
-                  <option value="DAV'S Anatomy">DAV'S Anatomy (Shockwave ESWT)</option>
-                  <option value="ANIK Laser Therapy">ANIK Laser Therapy (Laser Session)</option>
+                  <option value="FM Health and Wellness Center">FM Health and Wellness Center (Pain Management)</option>
+                  <option value="FM Dav’s Anatomy">FM Dav’s Anatomy (Shockwave ESWT)</option>
+                  <option value="FM Laser Therapy">FM Laser Therapy (Laser Session)</option>
                   <option value="Counselor Practice (Hope Behavioral Health)">Counselor Practice (Behavioral Health)</option>
                 </select>
               </div>

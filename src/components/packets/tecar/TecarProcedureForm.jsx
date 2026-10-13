@@ -32,7 +32,7 @@ export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = fal
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       {/* Header */}
       <div className="border-b-2 border-[#722F37] pb-4 mb-6 text-center">
-        <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>TECAR THERAPY PROCEDURE LOG</h1>
+        <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>FM TECAR THERAPY PROCEDURE LOG</h1>
         <p className="text-xs font-bold text-slate-600 mt-1">CAPACITIVE AND RESISTIVE ENERGY TRANSFER</p>
       </div>
 
@@ -146,13 +146,35 @@ export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = fal
       </div>
 
       {/* Footer */}
-      <div className="absolute bottom-12 left-14 right-14 border-t border-slate-300 pt-4 text-xs font-mono flex justify-between">
+      <div className="absolute bottom-12 left-14 right-14 border-t border-slate-300 pt-4 text-xs font-mono flex justify-between items-end">
         <div>
-          <div className="border-b border-slate-400 pb-1 mb-1 w-48 font-bold">{providerNameVal}&nbsp;</div>
+          <div className="border-b border-slate-400 min-h-[36px] flex items-end pb-0.5 mb-1 w-64">
+            <EditableClinicalField
+              packetData={packetData}
+              docKey={docKey}
+              field="providerSignature"
+              value={blankMode ? '' : (storage.providerSignature !== undefined ? storage.providerSignature : (storage.providerName || providerNameVal))}
+              placeholder="Click to Sign"
+              readOnly={readOnly || blankMode}
+              inputType="signature"
+              className="w-full font-bold text-xs text-slate-900"
+            />
+          </div>
           <p className="text-slate-600">Operating Provider Signature</p>
         </div>
         <div>
-          <div className="border-b border-slate-400 pb-1 mb-1 w-32">{signatureDateVal}&nbsp;</div>
+          <div className="border-b border-slate-400 min-h-[36px] flex items-end pb-0.5 mb-1 w-40">
+            <EditableClinicalField
+              packetData={packetData}
+              docKey={docKey}
+              field="signatureDate"
+              value={blankMode ? '' : (storage.signatureDate !== undefined ? storage.signatureDate : signatureDateVal)}
+              placeholder="YYYY-MM-DD"
+              readOnly={readOnly || blankMode}
+              inputType="input"
+              className="w-full font-mono text-xs text-slate-900"
+            />
+          </div>
           <p className="text-slate-600">Date</p>
         </div>
       </div>

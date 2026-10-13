@@ -25,9 +25,9 @@ const STATUS_CONFIG = {
 
 // Clinicians and Authorized Healthcare Providers in Practice
 const CLINICIANS = [
-  { id: 'usr-doc', name: 'Dr. Segun Adeoye', role: 'Doctor', title: 'Attending Physician (MD/DC)', providerId: 'prov-josmic', providerName: 'JOSMIC Wellness Center (Pain Management)' },
+  { id: 'usr-doc', name: 'Dr. Segun Adeoye', role: 'Doctor', title: 'Attending Physician (MD/DC)', providerId: 'prov-josmic', providerName: 'FM Health and Wellness Center (Pain Management)' },
   { id: 'usr-cou', name: 'Jordan Miller', role: 'Counselor', title: 'Mental Health Counselor (LCSW, BCD)', providerId: 'prov-counselor', providerName: 'Counselor Practice (Hope Behavioral)' },
-  { id: 'usr-the', name: 'Alex Rivera', role: 'Therapist', title: 'Lead Physical & Laser Therapist (PT)', providerId: 'prov-davs', providerName: "DAV'S Anatomy & ANIK Laser" },
+  { id: 'usr-the', name: 'Alex Rivera', role: 'Therapist', title: 'Lead Physical & Laser Therapist (PT)', providerId: 'prov-davs', providerName: "FM Dav’s Anatomy & FM Laser Therapy" },
 ];
 
 export const AiAssistantPage = () => {
@@ -245,7 +245,7 @@ export const AiAssistantPage = () => {
 
     const targetDocName = targetDraft.assignedDoctorName || currentUser?.name || 'Dr. Segun Adeoye';
     const targetProviderId = targetDraft.providerId || 'prov-josmic';
-    const targetProviderName = targetDraft.assignedProviderName || 'JOSMIC Wellness Center (Pain Management)';
+    const targetProviderName = targetDraft.assignedProviderName || 'FM Health and Wellness Center (Pain Management)';
 
     try {
       // Update the existing draft in the database to be approved/signed

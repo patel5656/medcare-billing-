@@ -86,7 +86,7 @@ export const INITIAL_BILLS = [
     patientName: 'Demo Patient 001',
     caseId: 'case-001',
     providerId: 'prov-josmic',
-    providerName: 'JOSMIC Wellness Center',
+    providerName: 'FM Health and Wellness Center',
     serviceCategory: 'Pain Management Consultation',
     status: 'FINALISED_DEMO',
     items: [
@@ -119,7 +119,7 @@ export const INITIAL_BILLS = [
     patientName: 'Demo Patient 001',
     caseId: 'case-001',
     providerId: 'prov-davs',
-    providerName: "DAV'S Anatomy",
+    providerName: 'FM Dav’s Anatomy',
     serviceCategory: 'Shockwave Therapy (ESWT)',
     status: 'ISSUED_DEMO',
     items: [
@@ -157,7 +157,7 @@ export const INITIAL_BILLS = [
     patientName: 'Demo Patient 001',
     caseId: 'case-001',
     providerId: 'prov-anik',
-    providerName: 'ANIK Laser Therapy',
+    providerName: 'FM Laser Therapy',
     serviceCategory: 'Laser Therapy',
     status: 'ISSUED_DEMO',
     items: [
@@ -220,36 +220,36 @@ export const INITIAL_CLINICAL_NOTES = [];
 export const INITIAL_DOCUMENTS = [
   {
     id: 'doc-001',
-    name: 'JOSMIC_Cover_Page_Sample.pdf',
+    name: 'FM_Health_Cover_Page_Sample.pdf',
     type: 'Cover Page',
-    providerName: 'JOSMIC Wellness Center',
+    providerName: 'FM Health and Wellness Center',
     date: '12/30/2025',
     status: 'SIGNED',
     size: '1.07 MB'
   },
   {
     id: 'doc-002',
-    name: 'JOSMIC_Billing_Statement_120197.pdf',
+    name: 'FM_Health_Billing_Statement_120197.pdf',
     type: 'Billing Statement',
-    providerName: 'JOSMIC Wellness Center',
+    providerName: 'FM Health and Wellness Center',
     date: '02/11/2026',
     status: 'FINALISED_DEMO',
     size: '420 KB'
   },
   {
     id: 'doc-003',
-    name: 'DAVS_Shockwave_Narrative_Report.pdf',
+    name: 'FM_Davs_Shockwave_Narrative_Report.pdf',
     type: 'Narrative Report',
-    providerName: "DAV'S Anatomy",
+    providerName: 'FM Dav’s Anatomy',
     date: '01/08/2026',
     status: 'SIGNED',
     size: '3.37 MB'
   },
   {
     id: 'doc-004',
-    name: 'ANIK_Laser_Medical_Report.pdf',
+    name: 'FM_Laser_Medical_Report.pdf',
     type: 'Medical Report',
-    providerName: 'ANIK Laser Therapy',
+    providerName: 'FM Laser Therapy',
     date: '01/26/2026',
     status: 'SIGNED',
     size: '2.04 MB'

@@ -75,7 +75,7 @@ export const CreateBillPage = () => {
         caseId: form.caseId,
         patientId: form.patientId || '',
         providerId: providerId,
-        providerName: selectedProv?.name || 'JOSMIC Wellness Center',
+        providerName: selectedProv?.name || 'FM Health and Wellness Center',
         statementNumber,
         statementDate: form.statementDate,
         diagnosisCodes: form.diagnosisCodes,
@@ -122,9 +122,9 @@ export const CreateBillPage = () => {
                   setProviderId(pid);
                 }}
               >
-                <option value="prov-josmic">JOSMIC Wellness Center (Pain Management)</option>
-                <option value="prov-davs">DAV'S Anatomy (Shockwave ESWT)</option>
-                <option value="prov-anik">ANIK Laser Therapy (Laser Therapy)</option>
+                <option value="prov-josmic">FM Health and Wellness Center (Pain Management)</option>
+                <option value="prov-davs">FM Dav’s Anatomy (Shockwave ESWT)</option>
+                <option value="prov-anik">FM Laser Therapy (Laser Therapy)</option>
                 <option value="prov-counselor">Counselor Practice (Counseling - Pending Client Docs)</option>
               </select>
             </div>

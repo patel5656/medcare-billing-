@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import bodyImage from '../../../assets/body_image.png';
 import { EditableClinicalField } from '../EditableClinicalField';
+import { apiCaseService } from '../../../services/api/apiCaseService';
+import fmLogo from '../../../assets/fm-logo.jpeg';
 
 /**
  * DAV'S ESWT Procedure Form (Radial Device) - 3-Page Structure
@@ -87,11 +89,41 @@ export const DavEswtProcedureForm = ({
   const totalWaves = storage.totalWaves || (isShow ? (proc.totalWaves || proc.total || proc.totalWavesDelivered || noteContent.totalWaves || noteContent.total || noteContent.totalWavesDelivered || packetData.totalWaves || packetData.total || '') : '');
   const bltCream = storage.bltCream || (isShow ? (proc.bltCream || noteContent.bltCream || packetData.bltCream || '') : '');
 
+  const docKey = `DAV_ESWT_${pageIndex}`;
   const checklist = isShow ? (proc.checklist || proc.findingsChecklist || packetData.eswtChecklist || {}) : {};
+  const [localChecklist, setLocalChecklist] = useState(storage.checklist || {});
+
+  useEffect(() => {
+    if (storage.checklist) {
+      setLocalChecklist(storage.checklist);
+    }
+  }, [storage.checklist]);
+
   const isChecked = (key) => {
     if (!isShow) return false;
+    if (localChecklist[key] !== undefined) return Boolean(localChecklist[key]);
     if (Array.isArray(checklist)) return checklist.includes(key);
     return Boolean(checklist[key]);
+  };
+
+  const toggleCheck = async (key) => {
+    if (readOnly || blankMode) return;
+    const currentVal = isChecked(key);
+    const updated = { ...localChecklist, [key]: !currentVal };
+    setLocalChecklist(updated);
+
+    if (packetData && packetData.id) {
+      try {
+        const currentStorage = packetData.clinicalDocStorage || {};
+        const docNamespace = currentStorage[docKey] || {};
+        const updatedDoc = { ...docNamespace, checklist: updated };
+        const updatedStorage = { ...currentStorage, [docKey]: updatedDoc };
+        await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+        packetData.clinicalDocStorage = updatedStorage;
+      } catch (err) {
+        console.error(`Failed to toggle checklist item ${key}`, err);
+      }
+    }
   };
 
   const providerSignature = isShow ? (proc.providerSignature || proc.author || proc.providerName || davsNote?.author || davsNote?.signedBy || noteContent?.providerSignature || packetData?.renderingProviderName || packetData?.providerName || packetData?.attendingProviderName || '') : '';
@@ -199,10 +231,13 @@ export const DavEswtProcedureForm = ({
     >
       
       {/* Top Header & Internal Page Number */}
-      <div className="flex justify-between items-start">
-        <div className="flex-1 text-center pl-16">
-          <h1 className="text-2xl font-black uppercase text-[#722F37] tracking-tight">DAV'S ANATOMY</h1>
-          <h2 className="text-sm font-bold uppercase mt-1 text-[#722F37] tracking-wider">ESWT PROCEDURE FORM (RADIAL DEVICE)</h2>
+      <div className="flex justify-between items-center border-b-2 border-[#722F37] pb-3 mb-2">
+        <div className="flex items-center gap-3">
+          <img src={fmLogo} alt="FM Dav’s Anatomy" className="h-12 w-auto object-contain flex-shrink-0 mix-blend-multiply" />
+          <div>
+            <h1 className="text-xl font-black uppercase text-[#722F37] tracking-tight">FM DAV’S ANATOMY</h1>
+            <h2 className="text-xs font-bold uppercase text-[#722F37] tracking-wider">ESWT PROCEDURE FORM (RADIAL DEVICE)</h2>
+          </div>
         </div>
         <div className="text-right font-mono text-[10px] text-slate-500">
           <p>PAGE {currentInternalPage} OF 3</p>
@@ -290,23 +325,68 @@ export const DavEswtProcedureForm = ({
 
             <div className="space-y-1 text-xs font-mono">
               {[
-                { key: 'NAD', label: 'NAD' },
-                { key: 'AAO_X3', label: 'AAO X3' },
-                { key: 'TREATMENT_A1', label: 'Treatment A1' },
-                { key: 'TREATMENT_A2', label: 'Treatment A2' },
-                { key: 'TREATMENT_A3', label: 'Treatment A3' },
-                { key: 'TREATMENT_A4', label: 'Treatment A4' },
-                { key: 'NORMAL_REACTION', label: 'Normal reaction' }
+                { key: 'NAD', defaultLabel: 'NAD', field: 'item_nad_label', defaultFilled: true },
+                { key: 'AAO_X3', defaultLabel: 'AAO X3', field: 'item_aao_label', defaultFilled: true },
+                { key: 'TREATMENT_A1', defaultLabel: 'Treatment A1', field: 'item_treatment_a1' },
+                { key: 'TREATMENT_A2', defaultLabel: 'Treatment A2', field: 'item_treatment_a2' },
+                { key: 'TREATMENT_A3', defaultLabel: 'Treatment A3', field: 'item_treatment_a3' },
+                { key: 'TREATMENT_A4', defaultLabel: 'Treatment A4', field: 'item_treatment_a4' },
+                { key: 'TREATMENT_A5', defaultLabel: 'Treatment A5', field: 'item_treatment_a5' },
+                { key: 'NORMAL_REACTION', defaultLabel: 'Normal reaction', field: 'item_normal_reaction', defaultFilled: true }
               ].map(item => (
                 <div key={item.key} className="flex items-center justify-between border-b border-slate-200 pb-0.5">
-                  <span>{item.label}</span>
-                  {isChecked(item.key) ? (
-                    <span className="font-bold text-emerald-700 font-sans">✓</span>
-                  ) : (
-                    <span className="text-slate-300">-</span>
-                  )}
+                  <EditableClinicalField
+                    packetData={packetData}
+                    docKey={docKey}
+                    field={item.field}
+                    value={item.defaultFilled ? (storage[item.field] !== undefined ? storage[item.field] : item.defaultLabel) : (storage[item.field] || '')}
+                    placeholder={item.defaultLabel}
+                    readOnly={readOnly || blankMode}
+                    inputType="input"
+                    className="flex-1 font-mono text-[10px] bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 outline-none text-slate-800 cursor-text transition placeholder:text-slate-400 placeholder:italic"
+                  />
+                  <button
+                    type="button"
+                    disabled={readOnly || blankMode}
+                    onClick={() => toggleCheck(item.key)}
+                    className="cursor-pointer hover:bg-white/70 px-1 rounded transition select-none text-xs ml-1"
+                    title="Toggle checkmark"
+                  >
+                    {isChecked(item.key) ? (
+                      <span className="font-bold text-emerald-700 font-sans">✓</span>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
+                  </button>
                 </div>
               ))}
+
+              {/* Additional Manual Input Line */}
+              <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
+                <EditableClinicalField
+                  packetData={packetData}
+                  docKey={docKey}
+                  field="item_manual_treatment"
+                  value={storage.item_manual_treatment || ''}
+                  placeholder="+ Add manual treatment..."
+                  readOnly={readOnly || blankMode}
+                  inputType="input"
+                  className="flex-1 font-mono text-[10px] bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 outline-none text-slate-800 cursor-text transition placeholder:text-slate-400 placeholder:italic"
+                />
+                <button
+                  type="button"
+                  disabled={readOnly || blankMode}
+                  onClick={() => toggleCheck('MANUAL_TREATMENT')}
+                  className="cursor-pointer hover:bg-white/70 px-1 rounded transition select-none text-xs ml-1"
+                  title="Toggle checkmark"
+                >
+                  {isChecked('MANUAL_TREATMENT') ? (
+                    <span className="font-bold text-emerald-700 font-sans">✓</span>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -321,13 +401,35 @@ export const DavEswtProcedureForm = ({
 
         {/* Signature Box */}
         <div className="pt-4 flex justify-between items-end text-xs font-mono">
-          <div>
+          <div className="w-72">
             <span>Health Care Provider Signature:</span>
-            <p className="font-bold text-sm text-slate-900 mt-1 underline">{providerSignature}</p>
+            <div className="border-b border-slate-500 min-h-[36px] flex items-end mt-1 pb-0.5">
+              <EditableClinicalField
+                packetData={packetData}
+                docKey={docKey}
+                field="providerSignature"
+                value={blankMode ? '' : (storage.providerSignature !== undefined ? storage.providerSignature : providerSignature)}
+                placeholder="Click to Sign"
+                readOnly={readOnly || blankMode}
+                inputType="signature"
+                className="w-full font-bold text-sm text-slate-900"
+              />
+            </div>
           </div>
-          <div>
+          <div className="w-40">
             <span>Date:</span>
-            <p className="font-bold text-sm text-slate-900 mt-1">{sigDate}</p>
+            <div className="border-b border-slate-500 min-h-[36px] flex items-end mt-1 pb-0.5">
+              <EditableClinicalField
+                packetData={packetData}
+                docKey={docKey}
+                field="signatureDate"
+                value={blankMode ? '' : (storage.signatureDate !== undefined ? storage.signatureDate : sigDate)}
+                placeholder="YYYY-MM-DD"
+                readOnly={readOnly || blankMode}
+                inputType="input"
+                className="w-full font-mono text-xs text-slate-900"
+              />
+            </div>
           </div>
         </div>
 

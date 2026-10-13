@@ -73,7 +73,7 @@ export const AssessmentsAndFormsPage = () => {
             activeTab === 'JOSMIC' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100'
           }`}
         >
-          Pain Management (JOSMIC Pain Report)
+          Pain Management (FM Health Pain Report)
         </button>
         <button
           onClick={() => setActiveTab('ANIK')}
@@ -81,7 +81,7 @@ export const AssessmentsAndFormsPage = () => {
             activeTab === 'ANIK' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100'
           }`}
         >
-          Laser Therapy (ANIK Assessment & Procedure)
+          FM Laser Therapy (Assessment & Procedure)
         </button>
         <button
           onClick={() => setActiveTab('DAVS')}
@@ -89,7 +89,7 @@ export const AssessmentsAndFormsPage = () => {
             activeTab === 'DAVS' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100'
           }`}
         >
-          Shockwave Therapy (DAV'S ESWT Form)
+          FM Dav’s Anatomy (ESWT Shockwave Form)
         </button>
         <button
           onClick={() => setActiveTab('TPI')}
@@ -97,7 +97,7 @@ export const AssessmentsAndFormsPage = () => {
             activeTab === 'TPI' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Trigger Point Injection (TPI Form)
+          FM Trigger Point Injection (TPI Form)
         </button>
         <button
           onClick={() => setActiveTab('TECAR')}
@@ -105,7 +105,7 @@ export const AssessmentsAndFormsPage = () => {
             activeTab === 'TECAR' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          TECAR Therapy (TECAR Form)
+          FM TECAR Therapy (TECAR Form)
         </button>
         <button
           onClick={() => setActiveTab('COUNSELOR')}
@@ -113,7 +113,7 @@ export const AssessmentsAndFormsPage = () => {
             activeTab === 'COUNSELOR' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Counseling (4 Pages)
+          FM Counseling Center (Forms 1-10)
         </button>
       </div>
 

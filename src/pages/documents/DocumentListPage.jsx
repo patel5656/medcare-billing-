@@ -22,7 +22,7 @@ export const DocumentListPage = () => {
 
   // Import form states
   const [newDocCaseId, setNewDocCaseId] = useState('');
-  const [newDocProvider, setNewDocProvider] = useState('JOSMIC Wellness Center (Pain Consult)');
+  const [newDocProvider, setNewDocProvider] = useState('FM Health and Wellness Center (Pain Consult)');
   const [newDocType, setNewDocType] = useState('Cover Page');
   const [newDocStatus, setNewDocStatus] = useState('COMPLETED');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -51,9 +51,9 @@ export const DocumentListPage = () => {
   };
 
   const getProviderId = (providerName) => {
-    if (providerName?.includes('ANIK')) return 'prov-anik';
+    if (providerName?.includes('Laser') || providerName?.includes('ANIK')) return 'prov-anik';
     if (providerName?.includes('DAV')) return 'prov-davs';
-    if (providerName?.includes('JOSMIC')) return 'prov-josmic';
+    if (providerName?.includes('FM Health') || providerName?.includes('JOSMIC')) return 'prov-josmic';
     if (providerName?.includes('Counselor')) return 'prov-counselor';
     return 'prov-anik';
   };
@@ -329,9 +329,9 @@ export const DocumentListPage = () => {
                   onChange={(e) => setNewDocProvider(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
                 >
-                  <option value="JOSMIC Wellness Center">JOSMIC Wellness Center (Pain Consult)</option>
-                  <option value="DAV'S Anatomy">DAV'S Anatomy (ESWT Shockwave)</option>
-                  <option value="ANIK Laser Therapy">ANIK Laser Therapy (Laser Therapy)</option>
+                  <option value="FM Health and Wellness Center">FM Health and Wellness Center (Pain Consult)</option>
+                  <option value="FM Dav’s Anatomy">FM Dav’s Anatomy (ESWT Shockwave)</option>
+                  <option value="FM Laser Therapy">FM Laser Therapy (Laser Therapy)</option>
                   <option value="Counselor Practice">Counselor Practice (Hope Behavioral)</option>
                   <option value="General Clinic Records">General Clinic Records</option>
                 </select>

@@ -153,7 +153,7 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
         totalEstimatedCharge,
         cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(', '),
         modifiers: serviceLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
-        providerName: selectedProv?.name || appointment.providerName || 'JOSMIC Wellness Center'
+        providerName: selectedProv?.name || appointment.providerName || 'FM Health and Wellness Center'
       });
 
       addToast(`Appointment for ${updated.patientName} updated successfully!`, 'success');
@@ -329,9 +329,9 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
               onChange={e => set('providerId', e.target.value)}
               className={`${inputCls} font-bold text-teal-800`}
             >
-              <option value="prov-josmic">JOSMIC Wellness Center (Pain Management)</option>
-              <option value="prov-davs">DAV'S Anatomy (Shockwave ESWT)</option>
-              <option value="prov-anik">ANIK Laser Therapy (Laser Session)</option>
+              <option value="prov-josmic">FM Health and Wellness Center (Pain Management)</option>
+              <option value="prov-davs">FM Dav’s Anatomy (Shockwave ESWT)</option>
+              <option value="prov-anik">FM Laser Therapy (Laser Session)</option>
               <option value="prov-counselor">Counselor Practice (Behavioral Health &amp; PTSD)</option>
             </select>
           </div>

@@ -16,7 +16,7 @@ export const UploadDocumentModal = ({ isOpen, onClose, patientId, patientName, o
   const [formData, setFormData] = useState({
     name: 'Police_Accident_Report_HPD889201.pdf',
     type: 'Police Accident Report',
-    providerName: 'JOSMIC Wellness Center',
+    providerName: 'FM Health and Wellness Center',
     category: 'LEGAL',
     notes: 'Official police crash investigation report and witness statements for auto accident claim.',
   });
@@ -149,9 +149,9 @@ export const UploadDocumentModal = ({ isOpen, onClose, patientId, patientName, o
               value={formData.providerName}
               onChange={e => set('providerName', e.target.value)}
             >
-              <option value="JOSMIC Wellness Center">JOSMIC Wellness Center (Pain Mgmt)</option>
-              <option value="DAV'S Anatomy">DAV'S Anatomy (Shockwave ESWT)</option>
-              <option value="ANIK Laser Therapy">ANIK Laser Therapy (Class IV Laser)</option>
+              <option value="FM Health and Wellness Center">FM Health and Wellness Center (Pain Mgmt)</option>
+              <option value="FM Dav’s Anatomy">FM Dav’s Anatomy (Shockwave ESWT)</option>
+              <option value="FM Laser Therapy">FM Laser Therapy (Class IV Laser)</option>
               <option value="Counselor Practice">Counselor Practice (Hope Behavioral Health)</option>
               <option value="External / Attorney">External / Attorney / Legal LOP</option>
             </select>
