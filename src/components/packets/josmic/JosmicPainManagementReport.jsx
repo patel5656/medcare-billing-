@@ -62,7 +62,7 @@ const CB = ({
         isInteractive ? 'cursor-pointer hover:opacity-80' : ''
       }`}
     >
-      <span className="w-3.5 h-3.5 border border-slate-600 inline-flex items-center justify-center text-[10px] font-bold bg-white flex-shrink-0">
+      <span className="w-3.5 h-3.5 border border-slate-600 inline-flex items-center justify-center text-[10px] font-bold bg-white flex-shrink-0 leading-none">
         {!blankMode && localChecked ? '✓' : ''}
       </span>
       <span>{label}</span>

@@ -186,81 +186,106 @@ export const AnikLaserProcedureForm = ({
     const areas = Array.isArray(injuryAreas) ? injuryAreas : [];
     
     const marks = [];
-    const addMark = (key, top, left) => {
+    const addedMarks = new Set();
+
+    const addMark = (markId, top, left) => {
+      if (addedMarks.has(markId)) return;
+      addedMarks.add(markId);
       marks.push(
-        <div key={key} className="treatment-checkbox absolute" style={{ top: `${top}%`, left: `${left}%` }}>
-          <span className="checkbox-box">
-            <span className="checkbox-checkmark text-[#722F37] font-black text-sm md:text-base select-none pointer-events-none drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">✓</span>
-          </span>
+        <div
+          key={markId}
+          className="treatment-checkbox absolute flex items-center justify-center pointer-events-none"
+          style={{
+            top: `${top}%`,
+            left: `${left}%`,
+            width: '2.6%',
+            height: '2.4%',
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <svg
+            viewBox="0 0 16 16"
+            className="w-full h-full text-[#722F37] stroke-current fill-none select-none drop-shadow-[0_0.5px_0.5px_rgba(255,255,255,0.8)]"
+            style={{ strokeWidth: 2.8, strokeLinecap: 'round', strokeLinejoin: 'round' }}
+          >
+            <polyline points="2.8 8.2 6.4 12.2 13.5 3.8" />
+          </svg>
         </div>
       );
     };
 
-    if (areas.includes('Shoulder / Rotator Cuff')) {
-      addMark('l-shoulder', 22.8, 24.5);
-      addMark('r-shoulder', 21.5, 90);
+    const hasArea = (...keywords) => {
+      return areas.some(a => {
+        if (typeof a !== 'string') return false;
+        const lower = a.toLowerCase();
+        return keywords.some(k => lower.includes(k.toLowerCase()));
+      });
+    };
+
+    if (hasArea('Shoulder')) {
+      addMark('l-shoulder', 23.88, 21.75);
+      addMark('r-shoulder', 21.99, 93.53);
     }
-    if (areas.includes('Lower Back / Lumbar')) {
-      addMark('l-lower-back', 39.5, 23);
+    if (hasArea('Lower Back', 'Lumbar', 'Low Back')) {
+      addMark('l-lower-back', 41.29, 18.60);
     }
-    if (areas.includes('Neck / Cervical Spine')) {
-      addMark('l-neck', 15.5, 24.5);
+    if (hasArea('Neck', 'Cervical')) {
+      addMark('l-neck', 17.52, 21.75);
     }
-    if (areas.includes('Knee / Lower Extremity')) {
-      addMark('l-knee', 62.5, 24.5);
-      addMark('r-knee', 63.8, 90);
+    if (hasArea('Knee')) {
+      addMark('l-knee', 62.57, 18.81);
+      addMark('r-knee', 63.78, 94.12);
     }
-    if (areas.includes('Mid Back / Thoracic')) {
-      addMark('l-upper-back', 31.0, 24.5);
+    if (hasArea('Mid Back', 'Upper Back', 'Thoracic')) {
+      addMark('l-upper-back', 31.60, 21.75);
     }
-    if (areas.includes('Headaches / Concussion')) {
-      addMark('r-head', 13.5, 90);
+    if (hasArea('Headache', 'Concussion')) {
+      addMark('r-head', 13.29, 86.44);
     }
-    if (areas.includes('Whiplash / Myofascial Pain')) {
-      addMark('l-neck-whip', 15.5, 24.5);
-      addMark('l-upper-back-whip', 31.0, 24.5);
+    if (hasArea('Whiplash', 'Myofascial')) {
+      addMark('l-neck', 17.52, 21.75);
+      addMark('l-upper-back', 31.60, 21.75);
     }
-    if (areas.includes('Anxiety / PTSD Symptoms')) {
-      addMark('r-head-anx', 13.5, 90);
+    if (hasArea('Anxiety', 'PTSD')) {
+      addMark('r-head', 13.29, 86.44);
     }
-    if (areas.includes('Hip')) {
-      addMark('l-hip', 49.0, 24.5);
+    if (hasArea('Hip / Glute', 'Glute')) {
+      addMark('r-hip-glute', 51.82, 94.25);
+    } else if (hasArea('Hip')) {
+      addMark('l-hip', 48.94, 18.01);
     }
-    if (areas.includes('Ankle')) {
-      addMark('l-ankle', 78.5, 24.5);
-      addMark('r-ankle', 78.5, 90);
+    if (hasArea('Ankle')) {
+      addMark('l-ankle', 77.86, 18.77);
+      addMark('r-ankle', 78.69, 94.08);
     }
-    if (areas.includes('Foot')) {
-      addMark('l-foot', 86.0, 24.5);
-      addMark('r-foot', 86.0, 90);
+    if (hasArea('Foot')) {
+      addMark('l-foot', 83.76, 18.77);
+      addMark('r-foot', 84.44, 94.00);
     }
-    if (areas.includes('Elbow')) {
-      addMark('r-elbow', 28.5, 90);
+    if (hasArea('Elbow')) {
+      addMark('r-elbow', 32.55, 93.53);
     }
-    if (areas.includes('Wrist')) {
-      addMark('r-wrist', 35.6, 90);
+    if (hasArea('Wrist')) {
+      addMark('r-wrist', 39.74, 93.53);
     }
-    if (areas.includes('Hand')) {
-      addMark('r-hand', 42.6, 90);
+    if (hasArea('Hand')) {
+      addMark('r-hand', 45.72, 93.53);
     }
-    if (areas.includes('Hip / Glute')) {
-      addMark('r-hip-glute', 49.7, 90);
+    if (hasArea('Thigh')) {
+      addMark('r-thigh', 57.91, 94.12);
     }
-    if (areas.includes('Thigh')) {
-      addMark('r-thigh', 56.7, 90);
-    }
-    if (areas.includes('Calf')) {
-      addMark('r-calf', 71.0, 90);
+    if (hasArea('Calf')) {
+      addMark('r-calf', 70.97, 94.12);
     }
 
-    if (areas.includes('Other Treatment Areas (Specify)')) {
+    if (hasArea('Other')) {
       const specifyText = packetData?.otherInjuryAreaSpecify || packetData?.patient?.otherInjuryAreaSpecify || '';
       if (specifyText) {
         marks.push(
           <span 
             key="other-specify" 
             className="absolute text-[#722F37] font-bold text-[10px] md:text-xs z-10 whitespace-nowrap uppercase transform -translate-y-1/2" 
-            style={{ bottom: '6.5%', left: '45%' }}
+            style={{ top: '91.8%', left: '47%' }}
           >
             {specifyText}
           </span>
@@ -375,9 +400,11 @@ export const AnikLaserProcedureForm = ({
             </div>
             
             {/* New PNG Anatomical Human Body with Checkmarks */}
-            <div className="relative w-full mx-auto mt-2 px-1">
-              <img src={bodyImage} alt="Treatment Areas Diagram" className="w-full h-auto object-contain rounded-md" />
-              {anatomicalMarks}
+            <div className="w-full mx-auto mt-2 px-1">
+              <div className="relative w-full">
+                <img src={bodyImage} alt="Treatment Areas Diagram" className="w-full h-auto block object-contain rounded-md select-none" />
+                {anatomicalMarks}
+              </div>
             </div>
           </div>
 

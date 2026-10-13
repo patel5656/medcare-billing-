@@ -180,7 +180,7 @@ export const TecarAssessmentForm = ({ readOnly = false, blankMode = false, packe
                     onClick={() => toggleTissueStatus(item)}
                     className={`flex items-center gap-2 select-none ${readOnly || blankMode ? 'cursor-default' : 'cursor-pointer hover:opacity-80'}`}
                   >
-                    <div className="w-4 h-4 border border-slate-400 rounded bg-white flex items-center justify-center text-xs font-bold text-slate-900 flex-shrink-0">
+                    <div className="w-4 h-4 border border-slate-400 rounded bg-white flex items-center justify-center text-xs font-bold text-slate-900 flex-shrink-0 leading-none">
                       {checked ? '✓' : ''}
                     </div>
                     <span className="text-[11px] text-slate-800">{item}</span>

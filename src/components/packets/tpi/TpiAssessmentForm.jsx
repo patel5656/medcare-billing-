@@ -172,7 +172,7 @@ export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetD
                     onClick={() => toggleMuscle(label)}
                     className={`flex items-center gap-2 select-none ${!readOnly && !blankMode ? 'cursor-pointer hover:text-slate-900' : ''}`}
                   >
-                    <div className="w-3.5 h-3.5 border border-slate-600 inline-flex items-center justify-center text-[10px] font-bold bg-white flex-shrink-0">
+                    <div className="w-3.5 h-3.5 border border-slate-600 inline-flex items-center justify-center text-[10px] font-bold bg-white flex-shrink-0 leading-none">
                       {isChecked ? '✓' : ''}
                     </div>
                     <span>{label}</span>
