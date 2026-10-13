@@ -12,6 +12,11 @@ export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = fal
 
   const signatureDateVal = blankMode || !packetData ? '' : (packetData.signatureDate || packetData.signedAt || packetData.dischargeDate || '');
   const providerNameVal = blankMode || !packetData ? '' : (packetData.operatingProviderName || packetData.referringProviderName || packetData.providerName || packetData.attendingProviderName || '');
+  const savedName = (storage.providerName && !storage.providerName.startsWith('data:image')) ? storage.providerName : providerNameVal;
+  const providerName = blankMode ? '' : savedName;
+
+  const savedSig = storage.providerSignature || (storage.providerName && storage.providerName.startsWith('data:image') ? storage.providerName : '');
+  const providerSigValue = blankMode ? '' : savedSig;
   const patientNameVal = blankMode || !packetData ? '' : (packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '');
 
   const diagnosisText = blankMode || !packetData ? '' : (storage.diagnosisText || packetData.diagnosisText || (packetData.diagnosisCodes && packetData.diagnosisCodes.length > 0 ? packetData.diagnosisCodes.join(', ') : ''));
@@ -148,22 +153,32 @@ export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = fal
       {/* Footer */}
       <div className="absolute bottom-12 left-14 right-14 border-t border-slate-300 pt-4 text-xs font-mono flex justify-between items-end">
         <div>
-          <div className="border-b border-slate-400 min-h-[36px] flex items-end pb-0.5 mb-1 w-64">
+          <div className="border-b border-slate-400 pb-1 mb-1 min-h-[50px] flex flex-col justify-end w-64">
             <EditableClinicalField
               packetData={packetData}
               docKey={docKey}
               field="providerSignature"
-              value={blankMode ? '' : (storage.providerSignature !== undefined ? storage.providerSignature : (storage.providerName || providerNameVal))}
+              value={providerSigValue}
               placeholder="Click to Sign"
               readOnly={readOnly || blankMode}
               inputType="signature"
-              className="w-full font-bold text-xs text-slate-900"
+              className="h-8 max-w-[240px]"
+            />
+            <EditableClinicalField
+              packetData={packetData}
+              docKey={docKey}
+              field="providerName"
+              value={providerName}
+              placeholder="Operating Provider Name"
+              readOnly={readOnly || blankMode}
+              inputType="input"
+              className="w-full font-mono text-xs text-slate-900 font-bold bg-transparent hover:bg-slate-200/50 focus:bg-white rounded px-1 outline-none mt-0.5"
             />
           </div>
           <p className="text-slate-600">Operating Provider Signature</p>
         </div>
         <div>
-          <div className="border-b border-slate-400 min-h-[36px] flex items-end pb-0.5 mb-1 w-40">
+          <div className="border-b border-slate-400 pb-1 mb-1 min-h-[50px] flex flex-col justify-end w-40">
             <EditableClinicalField
               packetData={packetData}
               docKey={docKey}
@@ -172,7 +187,7 @@ export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = fal
               placeholder="YYYY-MM-DD"
               readOnly={readOnly || blankMode}
               inputType="input"
-              className="w-full font-mono text-xs text-slate-900"
+              className="w-full font-mono text-xs text-slate-900 bg-transparent hover:bg-slate-200/50 focus:bg-white rounded px-1 outline-none"
             />
           </div>
           <p className="text-slate-600">Date</p>
