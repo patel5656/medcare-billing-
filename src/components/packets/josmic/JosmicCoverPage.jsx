@@ -32,7 +32,14 @@ export const JosmicCoverPage = ({ readOnly = false, blankMode = false, packetDat
 
   const defaultStatement = "This clinical packet has been prepared by FM Health and Wellness Center and includes all relevant billing, claim, and clinical documentation pertaining to the above-referenced patient case. All records are maintained in compliance with applicable federal and state health information regulations.";
   const statementText = blankMode ? '' : (storage.statementText !== undefined ? storage.statementText : defaultStatement);
-  const providerName = blankMode ? '' : (storage.providerName !== undefined ? storage.providerName : (packetData?.referringProviderName || packetData?.providerName || packetData?.attendingProviderName || ''));
+  
+  const savedSig = storage.providerSignature || (storage.providerName && storage.providerName.startsWith('data:image') ? storage.providerName : '');
+  const providerSignature = blankMode ? '' : savedSig;
+
+  const defaultProvName = packetData?.referringProviderName || packetData?.providerName || packetData?.attendingProviderName || '';
+  const savedName = (storage.providerName && !storage.providerName.startsWith('data:image')) ? storage.providerName : defaultProvName;
+  const providerName = blankMode ? '' : savedName;
+
   const signatureDate = blankMode ? '' : (storage.signatureDate !== undefined ? storage.signatureDate : getSignatureDate());
 
   return (
@@ -165,22 +172,32 @@ export const JosmicCoverPage = ({ readOnly = false, blankMode = false, packetDat
         />
         <div className="mt-6 grid grid-cols-2 gap-8 text-xs font-mono">
           <div>
-            <div className="border-b border-slate-400 min-h-[30px] flex items-end">
+            <div className="border-b border-slate-400 pb-1 mb-1 min-h-[50px] flex flex-col justify-end">
+              <EditableClinicalField
+                packetData={packetData}
+                docKey="JOSMIC_COVER"
+                field="providerSignature"
+                value={providerSignature}
+                placeholder="Click to Sign"
+                readOnly={readOnly || blankMode}
+                inputType="signature"
+                className="h-8 max-w-[240px]"
+              />
               <EditableClinicalField
                 packetData={packetData}
                 docKey="JOSMIC_COVER"
                 field="providerName"
                 value={providerName}
-                placeholder="Click to Sign"
+                placeholder="Authorized Provider Name"
                 readOnly={readOnly || blankMode}
-                inputType="signature"
-                className="w-full font-mono text-xs text-slate-900 font-bold"
+                inputType="input"
+                className="w-full font-mono text-xs text-slate-900 font-bold bg-transparent hover:bg-slate-200/50 focus:bg-white rounded px-1 outline-none mt-0.5"
               />
             </div>
             <p className="text-slate-600 mt-1">Authorized Provider Signature</p>
           </div>
           <div>
-            <div className="border-b border-slate-400 min-h-[24px]">
+            <div className="border-b border-slate-400 pb-1 mb-1 min-h-[50px] flex flex-col justify-end">
               <EditableClinicalField
                 packetData={packetData}
                 docKey="JOSMIC_COVER"
