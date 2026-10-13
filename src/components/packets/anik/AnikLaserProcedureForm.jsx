@@ -188,8 +188,13 @@ export const AnikLaserProcedureForm = ({
   const procedureTolerated = blankMode || !procedureDos ? '' : (procedureData?.procedureTolerated || procedureData?.tolerated || packetData?.procedureTolerated || '');
   const durationCompletedVal = blankMode || !procedureDos ? '' : (procedureData?.durationCompleted || packetData?.durationCompleted || '');
 
-  // Provider Signature
-  const providerSignature = blankMode ? '' : (procedureData?.providerSignature || procedureData?.providerName || anikNote?.author || anikNote?.signedBy || noteContent?.providerSignature || packetData?.renderingProviderName || packetData?.providerName || '');
+  // Provider Signature & Name
+  const defaultProvName = procedureData?.providerName || anikNote?.author || anikNote?.signedBy || (selectedProvider && selectedProvider.renderingProvider ? selectedProvider.renderingProvider.name : '') || packetData?.renderingProviderName || packetData?.providerName || '';
+  const savedName = (storage.providerName && !storage.providerName.startsWith('data:image')) ? storage.providerName : defaultProvName;
+  const providerName = blankMode ? '' : savedName;
+
+  const savedSig = storage.providerSignature || (storage.providerName && storage.providerName.startsWith('data:image') ? storage.providerName : (procedureData?.providerSignature || ''));
+  const providerSigValue = blankMode ? '' : savedSig;
   const signatureDate = blankMode ? '' : (procedureData?.signatureDate || anikNote?.date || noteContent?.signatureDate || packetData?.signatureDate || '');
 
   // Helper to check if a specific CPT exists in a given date's lines
@@ -670,22 +675,32 @@ export const AnikLaserProcedureForm = ({
         <div className="pt-6 flex justify-between items-end text-xs font-mono">
           <div className="w-72">
             <span>Health Care Provider Signature:</span>
-            <div className="border-b border-slate-500 min-h-[36px] flex items-end mt-1 pb-0.5">
+            <div className="border-b border-slate-500 pb-1 mb-1 min-h-[50px] flex flex-col justify-end mt-1">
               <EditableClinicalField
                 packetData={packetData}
                 docKey={docKey}
                 field="providerSignature"
-                value={blankMode ? '' : (storage.providerSignature !== undefined ? storage.providerSignature : (providerSignature || (selectedProvider && selectedProvider.renderingProvider ? selectedProvider.renderingProvider.name : '')))}
+                value={providerSigValue}
                 placeholder="Click to Sign"
                 readOnly={readOnly || blankMode}
                 inputType="signature"
-                className="w-full font-bold text-sm text-slate-900"
+                className="h-8 max-w-[240px]"
+              />
+              <EditableClinicalField
+                packetData={packetData}
+                docKey={docKey}
+                field="providerName"
+                value={providerName}
+                placeholder="Doctor / Provider Name"
+                readOnly={readOnly || blankMode}
+                inputType="input"
+                className="w-full font-mono text-xs text-slate-900 font-bold bg-transparent hover:bg-slate-200/50 focus:bg-white rounded px-1 outline-none mt-0.5"
               />
             </div>
           </div>
           <div className="w-40">
             <span>Date:</span>
-            <div className="border-b border-slate-500 min-h-[36px] flex items-end mt-1 pb-0.5">
+            <div className="border-b border-slate-500 pb-1 mb-1 min-h-[50px] flex flex-col justify-end mt-1">
               <EditableClinicalField
                 packetData={packetData}
                 docKey={docKey}
@@ -694,7 +709,7 @@ export const AnikLaserProcedureForm = ({
                 placeholder="YYYY-MM-DD"
                 readOnly={readOnly || blankMode}
                 inputType="input"
-                className="w-full font-mono text-xs text-slate-900"
+                className="w-full font-mono text-xs text-slate-900 bg-transparent hover:bg-slate-200/50 focus:bg-white rounded px-1 outline-none"
               />
             </div>
           </div>

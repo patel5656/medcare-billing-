@@ -126,7 +126,12 @@ export const DavEswtProcedureForm = ({
     }
   };
 
-  const providerSignature = isShow ? (proc.providerSignature || proc.author || proc.providerName || davsNote?.author || davsNote?.signedBy || noteContent?.providerSignature || packetData?.renderingProviderName || packetData?.providerName || packetData?.attendingProviderName || '') : '';
+  const defaultProvName = proc.providerName || proc.author || davsNote?.author || davsNote?.signedBy || packetData?.renderingProviderName || packetData?.providerName || packetData?.attendingProviderName || '';
+  const savedName = (storage.providerName && !storage.providerName.startsWith('data:image')) ? storage.providerName : defaultProvName;
+  const providerName = !isShow ? '' : savedName;
+
+  const savedSig = storage.providerSignature || (storage.providerName && storage.providerName.startsWith('data:image') ? storage.providerName : (proc.providerSignature || ''));
+  const providerSigValue = !isShow ? '' : savedSig;
   const sigDate = isShow ? (proc.signatureDate || proc.signedAt || proc.dateSigned || davsNote?.date || davsNote?.signedAt || noteContent?.signatureDate || packetData?.signatureDate || packetData?.signedAt || packetData?.dateSigned || '') : '';
 
   const currentInternalPage = formPage || (pageIndex + 1);
@@ -430,22 +435,32 @@ export const DavEswtProcedureForm = ({
         <div className="pt-4 flex justify-between items-end text-xs font-mono">
           <div className="w-72">
             <span>Health Care Provider Signature:</span>
-            <div className="border-b border-slate-500 min-h-[36px] flex items-end mt-1 pb-0.5">
+            <div className="border-b border-slate-500 pb-1 mb-1 min-h-[50px] flex flex-col justify-end mt-1">
               <EditableClinicalField
                 packetData={packetData}
                 docKey={docKey}
                 field="providerSignature"
-                value={blankMode ? '' : (storage.providerSignature !== undefined ? storage.providerSignature : providerSignature)}
+                value={providerSigValue}
                 placeholder="Click to Sign"
                 readOnly={readOnly || blankMode}
                 inputType="signature"
-                className="w-full font-bold text-sm text-slate-900"
+                className="h-8 max-w-[240px]"
+              />
+              <EditableClinicalField
+                packetData={packetData}
+                docKey={docKey}
+                field="providerName"
+                value={providerName}
+                placeholder="Doctor / Provider Name"
+                readOnly={readOnly || blankMode}
+                inputType="input"
+                className="w-full font-mono text-xs text-slate-900 font-bold bg-transparent hover:bg-slate-200/50 focus:bg-white rounded px-1 outline-none mt-0.5"
               />
             </div>
           </div>
           <div className="w-40">
             <span>Date:</span>
-            <div className="border-b border-slate-500 min-h-[36px] flex items-end mt-1 pb-0.5">
+            <div className="border-b border-slate-500 pb-1 mb-1 min-h-[50px] flex flex-col justify-end mt-1">
               <EditableClinicalField
                 packetData={packetData}
                 docKey={docKey}
@@ -454,7 +469,7 @@ export const DavEswtProcedureForm = ({
                 placeholder="YYYY-MM-DD"
                 readOnly={readOnly || blankMode}
                 inputType="input"
-                className="w-full font-mono text-xs text-slate-900"
+                className="w-full font-mono text-xs text-slate-900 bg-transparent hover:bg-slate-200/50 focus:bg-white rounded px-1 outline-none"
               />
             </div>
           </div>
