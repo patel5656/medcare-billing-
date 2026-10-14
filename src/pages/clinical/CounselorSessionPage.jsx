@@ -39,7 +39,7 @@ export const CounselorSessionPage = () => {
     patientName: '',
     caseId: '',
     providerId: 'prov-counselor',
-    providerName: 'Counselor Practice (Hope Behavioral Health)',
+    providerName: 'FM Counselor Practice (Hope Behavioral Health)',
     counselorName: 'Jordan Miller, LCSW, BCD',
     counselorNpi: '1487965213',
     sessionDate: new Date().toISOString().split('T')[0],

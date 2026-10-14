@@ -35,7 +35,7 @@ export const DoctorDashboard = () => {
             <Sparkles className="w-4 h-4 text-emerald-300" /> Launch AI Assistant
           </button>
           <button onClick={() => navigate('/clinical-notes/josmic-pain')} className="px-3 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary-container flex items-center gap-1.5">
-            <PlusCircle className="w-4 h-4" /> JOSMIC Pain Report
+            <PlusCircle className="w-4 h-4" /> FM JOSMIC Pain Report
           </button>
         </div>
       </div>

@@ -677,7 +677,7 @@ export const TreatmentSessionsPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">Treatment Sessions</h1>
-          <p className="text-xs text-slate-500">All therapy &amp; counseling sessions across FM Health, FM Dav’s Anatomy, FM Laser Therapy &amp; Counselor Practice providers</p>
+          <p className="text-xs text-slate-500">All therapy &amp; counseling sessions across FM Health, FM Dav’s Anatomy, FM Laser Therapy &amp; FM Counselor Practice providers</p>
         </div>
         <button
           onClick={() => setShowScheduleModal(true)}

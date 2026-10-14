@@ -209,11 +209,15 @@ export const TopHeader = () => {
                 className="w-full bg-white text-slate-900 text-xs font-semibold rounded-xl px-3.5 py-2 border border-slate-200 shadow-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 appearance-none pr-8 cursor-pointer outline-none"
               >
                 <option value="ALL">All Practice Providers ({providersList.length} Modalities)</option>
-                {providersList.map((prov) => (
-                  <option key={prov.id} value={prov.id}>
-                    {prov.name} {prov.isPlaceholder ? '(Pending Docs)' : ''}
-                  </option>
-                ))}
+                {providersList.map((prov) => {
+                  const pName = prov.name?.trim() || '';
+                  const displayName = pName.startsWith('FM') ? pName : `FM ${pName}`;
+                  return (
+                    <option key={prov.id} value={prov.id}>
+                      {displayName} {prov.isPlaceholder ? '(Pending Docs)' : ''}
+                    </option>
+                  );
+                })}
               </select>
               <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>

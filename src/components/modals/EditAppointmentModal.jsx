@@ -332,7 +332,7 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
               <option value="prov-josmic">FM Health and Wellness Center (Pain Management)</option>
               <option value="prov-davs">FM Dav’s Anatomy (Shockwave ESWT)</option>
               <option value="prov-anik">FM Laser Therapy (Laser Session)</option>
-              <option value="prov-counselor">Counselor Practice (Behavioral Health &amp; PTSD)</option>
+              <option value="prov-counselor">FM Counselor Practice (Behavioral Health &amp; PTSD)</option>
             </select>
           </div>
 

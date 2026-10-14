@@ -17,9 +17,9 @@ export const DEFAULT_CLINIC_ROOMS = [
   { id: 'rm-anik-3', providerId: 'prov-anik', providerName: 'FM Laser Therapy', name: 'Rehabilitation & Modality Room', suite: 'Suite 274' },
 
   // Counselor Practice
-  { id: 'rm-coun-1', providerId: 'prov-counselor', providerName: 'Counselor Practice', name: 'Counseling Room 101 (Private)', suite: 'Suite 104' },
-  { id: 'rm-coun-2', providerId: 'prov-counselor', providerName: 'Counselor Practice', name: 'Psychotherapy Suite 102 (Trauma/PTSD)', suite: 'Suite 104' },
-  { id: 'rm-coun-3', providerId: 'prov-counselor', providerName: 'Counselor Practice', name: 'Telehealth Consultation Bay', suite: 'Suite 104' },
+  { id: 'rm-coun-1', providerId: 'prov-counselor', providerName: 'FM Counselor Practice', name: 'Counseling Room 101 (Private)', suite: 'Suite 104' },
+  { id: 'rm-coun-2', providerId: 'prov-counselor', providerName: 'FM Counselor Practice', name: 'Psychotherapy Suite 102 (Trauma/PTSD)', suite: 'Suite 104' },
+  { id: 'rm-coun-3', providerId: 'prov-counselor', providerName: 'FM Counselor Practice', name: 'Telehealth Consultation Bay', suite: 'Suite 104' },
 
   // General Clinic Triage
   { id: 'rm-gen-1', providerId: 'GENERAL', providerName: 'General Clinic', name: 'Triage & Vital Intake Bay', suite: 'Suite 774' },

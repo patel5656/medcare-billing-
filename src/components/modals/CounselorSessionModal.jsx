@@ -146,7 +146,7 @@ export const CounselorSessionModal = ({ isOpen, onClose, onNoteSaved }) => {
         patientName: selectedCase.patientName || 'Accident Patient',
         caseId: selectedCase.id || selectedCase.caseId,
         providerId: finalProviderId,
-        providerName: currentUser?.name || activeUser?.name || 'Counselor Practice (Hope Behavioral Health)',
+        providerName: currentUser?.name || activeUser?.name || 'FM Counselor Practice (Hope Behavioral Health)',
         type: 'COUNSELOR_GENERIC',
         noteType: 'COUNSELOR_GENERIC',
         title: `Counseling Progress Note (${formData.cptCode || '90791'}) — ${formData.sessionDate}`,

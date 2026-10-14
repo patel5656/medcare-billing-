@@ -194,7 +194,7 @@ export const INITIAL_BILLS = [
     patientName: 'SAMPLE TESTING',
     caseId: 'case-001',
     providerId: 'prov-counselor',
-    providerName: 'Counselor Practice (Hope Behavioral Health)',
+    providerName: 'FM Counselor Practice (Hope Behavioral Health)',
     serviceCategory: 'Counseling & Mental Health',
     status: 'ACTIVE_DEMO',
     diagnosisCodes: ['F43.10', 'F41.1', 'F32.9', 'M54.50'],

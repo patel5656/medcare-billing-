@@ -261,7 +261,7 @@ export const ScheduleAppointmentPage = () => {
                 <option value="prov-josmic">FM Health and Wellness Center (Pain Management)</option>
                 <option value="prov-davs">FM Dav’s Anatomy (Shockwave ESWT)</option>
                 <option value="prov-anik">FM Laser Therapy (Laser Therapy)</option>
-                <option value="prov-counselor">Counselor Practice (Counseling - Pending Config)</option>
+                <option value="prov-counselor">FM Counselor Practice (Counseling - Pending Config)</option>
                 {dbProviders
                   .filter(p => !['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor'].includes(p.id))
                   .map(p => (

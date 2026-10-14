@@ -73,7 +73,7 @@ export const AssessmentsAndFormsPage = () => {
             activeTab === 'JOSMIC' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100'
           }`}
         >
-          Pain Management (FM Health Pain Report)
+          FM Pain Management (Pain Report)
         </button>
         <button
           onClick={() => setActiveTab('ANIK')}

@@ -75,7 +75,7 @@ export const ClinicAdminDashboard = () => {
             <Receipt className="w-5 h-5 text-emerald-600" />
           </div>
           <p className="text-2xl font-bold text-on-surface font-tabular">4 Bills</p>
-          <p className="text-[11px] text-on-surface-variant">JOSMIC, DAVS, ANIK, Counselor</p>
+          <p className="text-[11px] text-on-surface-variant">FM JOSMIC, FM DAVS, FM ANIK, FM Counselor</p>
         </div>
       </div>
 

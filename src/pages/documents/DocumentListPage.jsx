@@ -332,7 +332,7 @@ export const DocumentListPage = () => {
                   <option value="FM Health and Wellness Center">FM Health and Wellness Center (Pain Consult)</option>
                   <option value="FM Dav’s Anatomy">FM Dav’s Anatomy (ESWT Shockwave)</option>
                   <option value="FM Laser Therapy">FM Laser Therapy (Laser Therapy)</option>
-                  <option value="Counselor Practice">Counselor Practice (Hope Behavioral)</option>
+                  <option value="FM Counselor Practice">FM Counselor Practice (Hope Behavioral)</option>
                   <option value="General Clinic Records">General Clinic Records</option>
                 </select>
               </div>

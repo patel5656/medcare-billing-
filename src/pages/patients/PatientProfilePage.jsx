@@ -554,7 +554,7 @@ export const PatientProfilePage = () => {
                   </div>
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed">
                     <p><strong>Document Category:</strong> {previewDoc.type || 'Clinical Report'}</p>
-                    <p><strong>Associated Practice:</strong> {previewDoc.providerName || 'FM Health / FM Dav’s Anatomy / FM Laser Therapy / Counselor Practice'}</p>
+                    <p><strong>Associated Practice:</strong> {previewDoc.providerName || 'FM Health / FM Dav’s Anatomy / FM Laser Therapy / FM Counselor Practice'}</p>
                     <p><strong>Upload Date:</strong> {previewDoc.createdAt || '2026-01-26'}</p>
                     <p className="text-slate-500 pt-2 border-t border-slate-200">
                       Standardized medical attachment verified under HIPAA guidelines. Retain in patient chart for legal billing submission.

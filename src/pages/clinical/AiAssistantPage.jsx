@@ -26,7 +26,7 @@ const STATUS_CONFIG = {
 // Clinicians and Authorized Healthcare Providers in Practice
 const CLINICIANS = [
   { id: 'usr-doc', name: 'Dr. Segun Adeoye', role: 'Doctor', title: 'Attending Physician (MD/DC)', providerId: 'prov-josmic', providerName: 'FM Health and Wellness Center (Pain Management)' },
-  { id: 'usr-cou', name: 'Jordan Miller', role: 'Counselor', title: 'Mental Health Counselor (LCSW, BCD)', providerId: 'prov-counselor', providerName: 'Counselor Practice (Hope Behavioral)' },
+  { id: 'usr-cou', name: 'Jordan Miller', role: 'Counselor', title: 'Mental Health Counselor (LCSW, BCD)', providerId: 'prov-counselor', providerName: 'FM Counselor Practice (Hope Behavioral)' },
   { id: 'usr-the', name: 'Alex Rivera', role: 'Therapist', title: 'Lead Physical & Laser Therapist (PT)', providerId: 'prov-davs', providerName: "FM Dav’s Anatomy & FM Laser Therapy" },
 ];
 

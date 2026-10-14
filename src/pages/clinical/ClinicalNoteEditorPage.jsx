@@ -313,7 +313,7 @@ export const ClinicalNoteEditorPage = () => {
                   <option value="FM Health and Wellness Center">FM Health and Wellness Center (Pain Management)</option>
                   <option value="FM Dav’s Anatomy">FM Dav’s Anatomy (Shockwave ESWT)</option>
                   <option value="FM Laser Therapy">FM Laser Therapy (Laser Session)</option>
-                  <option value="Counselor Practice (Hope Behavioral Health)">Counselor Practice (Behavioral Health)</option>
+                  <option value="FM Counselor Practice (Hope Behavioral Health)">FM Counselor Practice (Behavioral Health)</option>
                 </select>
               </div>
             </div>

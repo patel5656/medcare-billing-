@@ -216,7 +216,7 @@ export const INITIAL_PROVIDER_CONFIGS = {
   },
   counselor: {
     id: 'prov-counselor',
-    name: 'Counselor Practice (Hope Behavioral Health)',
+    name: 'FM Counselor Practice (Hope Behavioral Health)',
     businessName: 'Hope Behavioral Health & Counseling LLC',
     serviceCategory: 'Behavioral & Mental Health',
     status: 'ACTIVE',
@@ -248,12 +248,12 @@ export const INITIAL_PROVIDER_CONFIGS = {
       npi: '1487965213'
     },
     serviceFacility: {
-      name: 'Hope Behavioral Health',
+      name: 'FM Hope Behavioral Health',
       address: '10101 Harwin Dr, Suite 110, Houston, TX 77036',
       npi: '1487965213'
     },
     billingProvider: {
-      name: 'Hope Behavioral Health LLC',
+      name: 'FM Hope Behavioral Health LLC',
       address: '10101 Harwin Dr, Suite 110, Houston, TX 77036',
       phone: '713-485-9988'
     },

@@ -18,7 +18,7 @@ export const PacketBuilderPage = () => {
     { id: 'doc-001', name: 'FM Health Pain Evaluation - Initial', providerName: 'FM Health and Wellness Center', type: 'Clinical Note', size: '2.4 MB' },
     { id: 'doc-002', name: 'FM Laser Therapy Procedure Form', providerName: 'FM Laser Therapy', type: 'Procedure Record', size: '1.1 MB' },
     { id: 'doc-003', name: 'FM Dav’s Anatomy ESWT Therapy Record', providerName: 'FM Dav’s Anatomy', type: 'Treatment Note', size: '3.2 MB' },
-    { id: 'doc-004', name: 'Behavioral Health Progress Note', providerName: 'Counselor Practice (Hope Behavioral Health)', type: 'Therapy Note', size: '1.5 MB' },
+    { id: 'doc-004', name: 'Behavioral Health Progress Note', providerName: 'FM Counselor Practice (Hope Behavioral Health)', type: 'Therapy Note', size: '1.5 MB' },
   ];
 
   const [docs, setDocs] = useState([]);

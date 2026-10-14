@@ -125,7 +125,7 @@ export const CreateBillPage = () => {
                 <option value="prov-josmic">FM Health and Wellness Center (Pain Management)</option>
                 <option value="prov-davs">FM Dav’s Anatomy (Shockwave ESWT)</option>
                 <option value="prov-anik">FM Laser Therapy (Laser Therapy)</option>
-                <option value="prov-counselor">Counselor Practice (Counseling - Pending Client Docs)</option>
+                <option value="prov-counselor">FM Counselor Practice (Counseling - Pending Client Docs)</option>
               </select>
             </div>
             <div><label className={labelCls}>Statement Number *</label><input required className={`${inputCls} font-mono font-bold`} value={statementNumber} onChange={e => setStatementNumber(e.target.value)} /></div>
