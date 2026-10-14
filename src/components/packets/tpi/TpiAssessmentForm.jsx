@@ -1,7 +1,10 @@
 // src/components/packets/tpi/TpiAssessmentForm.jsx
 import React, { useState, useEffect } from 'react';
 import { EditableClinicalField } from '../EditableClinicalField';
+import { AiAutoDraftToolbar } from '../common/AiAutoDraftToolbar';
 import { apiCaseService } from '../../../services/api/apiCaseService';
+import { apiClinicalNoteService } from '../../../services/api/apiClinicalNoteService';
+import { useUIStore } from '../../../store/uiStore';
 
 const getPainScore = (packetData) => {
   if (!packetData) return null;
@@ -28,6 +31,8 @@ const getMuscleChecked = (label, packetData) => {
 const MUSCLE_ITEMS = ['Trapezius (Bilateral)', 'Levator Scapulae', 'Rhomboids', 'Quadratus Lumborum'];
 
 export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
+  const [localVersion, setLocalVersion] = useState(0);
+  const { addToast } = useUIStore ? useUIStore() : { addToast: () => {} };
   const storage = packetData?.clinicalDocStorage?.['TPI_ASSESSMENT'] || {};
   const patientNameVal = blankMode || !packetData ? '' : (packetData.patientName || '');
   const evalDateVal = blankMode || !packetData ? '' : (packetData.initialDate || packetData.evalDate || packetData.assessmentDate || '');
@@ -109,8 +114,84 @@ export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetD
   const palpationFindingsText = blankMode || !packetData ? '' : (storage.palpationFindings || packetData.palpationFindings || packetData.palpation || packetData.physicalExam?.palpation || '');
   const treatmentPlanText = blankMode || !packetData ? '' : (storage.treatmentPlan || packetData.treatmentPlan || packetData.plan || packetData.planRecommendations || '');
 
+  // 1-Click AI Auto-Draft for TPI Assessment
+  const handleAutoDraftAi = async () => {
+    if (!packetData || !packetData.id) return;
+    
+    try {
+      const inputData = {
+        patientName: patientNameVal,
+        accidentDate: packetData.accidentDate || '',
+        accidentType: packetData.accidentType || 'Motor Vehicle Collision',
+        complaints: packetData.chiefComplaint || packetData.painDescription || 'Cervical, thoracic, and lumbar myofascial pain and spasm',
+        painLocations: packetData.selectedInjuryAreas || packetData.injuryBodyParts || 'Cervical and Lumbar Spine',
+        diagnosisCodes: packetData.diagnosisCodes || ['M79.1', 'M54.2', 'S13.4']
+      };
+
+      const res = await apiClinicalNoteService.generateAiDraft('TPI_ASSESSMENT', inputData);
+      
+      let parsed = {};
+      try {
+        const text = res.draftText || '';
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) parsed = JSON.parse(match[0]);
+        else parsed = { chiefComplaint: text };
+      } catch (e) {
+        parsed = { chiefComplaint: res.draftText };
+      }
+
+      const newPainScore = typeof parsed.painScore === 'number' ? parsed.painScore : (defaultPainScore || 7);
+      const muscleOverrides = { ...(storage.muscleOverrides || {}) };
+      if (Array.isArray(parsed.affectedMuscles)) {
+        MUSCLE_ITEMS.forEach(item => {
+          muscleOverrides[item] = parsed.affectedMuscles.some(m => item.toLowerCase().includes(m.toLowerCase()) || m.toLowerCase().includes(item.toLowerCase().split(' ')[0]));
+        });
+      }
+
+      const newTpiDoc = {
+        ...(packetData.clinicalDocStorage?.TPI_ASSESSMENT || {}),
+        painScore: newPainScore,
+        chiefComplaint: parsed.chiefComplaint || chiefComplaintText,
+        muscleOverrides: muscleOverrides,
+        palpationFindings: parsed.palpationFindings || palpationFindingsText,
+        treatmentPlan: parsed.treatmentPlan || treatmentPlanText
+      };
+
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const updatedStorage = {
+        ...currentStorage,
+        TPI_ASSESSMENT: newTpiDoc
+      };
+
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+
+      setSelectedPainScore(newPainScore);
+      setMuscleState(muscleOverrides);
+
+      if (addToast) addToast("AI Trigger Point Assessment generated and applied successfully!", "success");
+      setLocalVersion(v => v + 1);
+    } catch (err) {
+      console.error('Failed to generate AI TPI assessment draft:', err);
+      if (addToast) addToast(err.message || "Failed to generate AI draft", "error");
+    }
+  };
+
   return (
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
+      
+      {/* Universal AI Auto-Draft Toolbar (Hidden on print) */}
+      {!readOnly && !blankMode && packetData && (
+        <AiAutoDraftToolbar
+          title="AI TPI Assessment Scribe"
+          badge="CPT 20552 / 20553"
+          subtitle="Auto-synthesize pain score, muscle groups, palpation findings & treatment plan from case context"
+          hasExistingContent={Boolean(storage.chiefComplaint || storage.palpationFindings || storage.treatmentPlan || storage.painScore)}
+          readOnly={readOnly || blankMode}
+          onDraft={handleAutoDraftAi}
+        />
+      )}
+
       {/* Header */}
       <div className="border-b-2 border-[#722F37] pb-4 mb-6 text-center">
         <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>FM TRIGGER POINT ASSESSMENT</h1>

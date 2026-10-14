@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import bodyImage from '../../../assets/body_image.png';
 import { EditableClinicalField } from '../EditableClinicalField';
+import { AiAutoDraftToolbar } from '../common/AiAutoDraftToolbar';
 import { apiCaseService } from '../../../services/api/apiCaseService';
+import { apiClinicalNoteService } from '../../../services/api/apiClinicalNoteService';
+import { useUIStore } from '../../../store/uiStore';
 import fmLogo from '../../../assets/fm-logo.jpeg';
 
 /**
@@ -17,6 +20,9 @@ export const DavEswtProcedureForm = ({
   procedureData = null,
   serviceLines = []
 }) => {
+  const [localVersion, setLocalVersion] = useState(0);
+  const { addToast } = useUIStore ? useUIStore() : { addToast: () => {} };
+
   const isShow = !blankMode && packetData;
   const proc = procedureData || packetData?.procedures?.[pageIndex] || {};
   const storage = packetData?.clinicalDocStorage?.[`DAV_ESWT_${pageIndex}`] || {};
@@ -254,12 +260,80 @@ export const DavEswtProcedureForm = ({
 
   const anatomicalMarks = getInjuryMarks();
 
+  // 1-Click AI Auto-Draft Generator for ESWT Shockwave Procedure Form
+  const handleAutoDraftAi = async () => {
+    if (!packetData || !packetData.id) return;
+
+    const areaText = treatmentAreas || (Array.isArray(packetData.selectedInjuryAreas) ? packetData.selectedInjuryAreas.join(', ') : (packetData.injuryBodyParts || 'Cervical & Lumbar Spine'));
+
+    const inputData = {
+      patientName,
+      dos: procDate || new Date().toLocaleDateString(),
+      accidentDate: packetData.accidentDate || '',
+      accidentType: packetData.accidentType || 'Motor Vehicle Collision',
+      complaints: packetData.chiefComplaint || packetData.painDescription || 'Soft tissue inflammation and myofascial trigger points',
+      painLocations: areaText,
+      diagnosisCodes: packetData.diagnosisCodes || ['M54.50', 'M54.2'],
+      compiledDocumentation: `PROCEDURE LOG: Extracorporeal Shockwave Therapy (ESWT Radial Device - CPT 0295T / 97039).
+DOS: ${procDate || 'Current'}.
+Treatment Area: ${areaText}.
+Allergies: ${allergies || 'NKDA'}.
+Accident Context: ${packetData.accidentType || 'MVC'}.`
+    };
+
+    const res = await apiClinicalNoteService.generateAiDraft('DOCTOR_NOTE', inputData);
+    let parsed = {};
+    try {
+      const text = res.draftText || '';
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else parsed = { chiefComplaint: text };
+    } catch (e) {
+      parsed = { chiefComplaint: res.draftText };
+    }
+
+    const newEswtDoc = {
+      ...(packetData.clinicalDocStorage?.[docKey] || {}),
+      ptHx: storage.ptHx || (packetData.accidentType ? `MVA - ${packetData.accidentType}` : 'Auto accident injury'),
+      treatmentAreas: areaText,
+      barSetting: storage.barSetting || '2.0 - 2.5 bar',
+      hzSetting: storage.hzSetting || '15 Hz',
+      dose: storage.dose || '0.16 mJ/mm²',
+      totalWaves: storage.totalWaves || '2,500 pulses',
+      bltCream: storage.bltCream || 'Topical acoustic coupling gel applied'
+    };
+
+    const currentStorage = packetData.clinicalDocStorage || {};
+    const updatedStorage = {
+      ...currentStorage,
+      [docKey]: newEswtDoc
+    };
+
+    await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+    packetData.clinicalDocStorage = updatedStorage;
+
+    if (addToast) addToast("AI Shockwave ESWT procedure log generated successfully!", "success");
+    setLocalVersion(v => v + 1);
+  };
+
   return (
     <div
       className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-4 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:shadow-none print:border-none"
       style={{ width: '100%', maxWidth: '850px', minHeight: '1100px' }}
     >
       
+      {/* Universal AI Auto-Draft Toolbar (Hidden on print) */}
+      {!readOnly && !blankMode && packetData && (
+        <AiAutoDraftToolbar
+          title="AI Shockwave (ESWT) Scribe"
+          badge="CPT 0295T / 97039"
+          subtitle="Auto-synthesize ESWT parameters, waves, treatment target & clinical response"
+          hasExistingContent={Boolean(storage.treatmentAreas || storage.totalWaves || storage.barSetting)}
+          readOnly={readOnly || blankMode}
+          onDraft={handleAutoDraftAi}
+        />
+      )}
+
       {/* Top Header & Internal Page Number */}
       <div className="flex justify-between items-center border-b-2 border-[#722F37] pb-3 mb-2">
         <div className="flex items-center gap-3">

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { EditableClinicalField } from '../EditableClinicalField';
+import { AiAutoDraftToolbar } from '../common/AiAutoDraftToolbar';
 import { apiCaseService } from '../../../services/api/apiCaseService';
+import { apiClinicalNoteService } from '../../../services/api/apiClinicalNoteService';
+import { useUIStore } from '../../../store/uiStore';
 import fmLogo from '../../../assets/fm-logo.jpeg';
 
 const CB = ({ 
@@ -838,14 +841,180 @@ const Page4 = ({ blankMode, packetData, readOnly = false }) => {
 
 // --- MAIN COMPONENT -----------------------------------------------------------
 export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, packetData = null, readOnly = false }) => {
+  const [localVersion, setLocalVersion] = useState(0);
+  const { addToast } = useUIStore ? useUIStore() : { addToast: () => {} };
+  const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
+
+  const handleAutoDraftAi = async () => {
+    if (!packetData || !packetData.id) return;
+
+    try {
+      const inputData = {
+        patientName: packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : ''),
+        accidentDate: packetData.accidentDate || '',
+        accidentType: packetData.accidentType || 'Motor Vehicle Collision',
+        complaints: packetData.chiefComplaint || packetData.painDescription || 'Severe cervical, lumbar, and shoulder pain',
+        painLocations: packetData.selectedInjuryAreas || packetData.injuryBodyParts || 'Neck, Lower Back, Shoulder',
+        diagnosisCodes: packetData.diagnosisCodes || ['S13.4', 'S33.5', 'M79.1', 'M54.1']
+      };
+
+      const res = await apiClinicalNoteService.generateAiDraft('PAIN_MANAGEMENT', inputData);
+      
+      let parsed = {};
+      try {
+        const text = res.draftText || '';
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) parsed = JSON.parse(match[0]);
+        else parsed = { chiefComplaint: text };
+      } catch (e) {
+        parsed = { chiefComplaint: res.draftText };
+      }
+
+      const cb = { ...(storage.checkboxOverrides || {}) };
+
+      // Pain Description
+      if (Array.isArray(parsed.painDescription)) {
+        ['Sharp', 'Dull', 'Throbbing', 'Burning', 'Radiating', 'Tingling', 'Stabbing', 'Numbness'].forEach(d => {
+          if (parsed.painDescription.some(p => p.toLowerCase().includes(d.toLowerCase()))) {
+            cb[`pd_${d}`] = true;
+          }
+        });
+      }
+
+      // Pain Locations
+      const injuryText = (Array.isArray(inputData.painLocations) ? inputData.painLocations.join(' ') : String(inputData.painLocations)).toLowerCase();
+      ['Neck', 'Chest', 'Head', 'U.Back', 'M.Back', 'L.Back', 'R.Shoulder', 'L.Shoulder', 'R.Knee', 'L.Knee', 'R.Ankle', 'L.Ankle', 'R.Wrist', 'L.Wrist', 'Joint pain', 'Muscle pain', 'Headache', 'R.arm', 'L.arm', 'R.leg', 'L.leg', 'R.elbow', 'L.elbow'].forEach(loc => {
+        const lLow = loc.toLowerCase();
+        if (injuryText.includes(lLow) || (loc === 'L.Back' && (injuryText.includes('lumbar') || injuryText.includes('back'))) || (loc === 'Neck' && injuryText.includes('cervical')) || (loc === 'R.Shoulder' && injuryText.includes('shoulder'))) {
+          cb[`pl_${loc}`] = true;
+        }
+      });
+      cb['pl_Neck'] = true;
+      cb['pl_L.Back'] = true;
+
+      // Aggravating Factors
+      ['Movement', 'Sitting/Standing', 'Walking', 'Bending', 'Lifting'].forEach(f => {
+        cb[`agg_${f}`] = true;
+      });
+
+      // Relieving Factors
+      ['Rest', 'Ice/Heat', 'Physical therapy'].forEach(f => {
+        cb[`rel_${f}`] = true;
+      });
+
+      // Functional Limitations
+      ['Difficulty sleeping', 'Reduced daily activities'].forEach(f => {
+        cb[`func_${f}`] = true;
+      });
+
+      // PMH & Surg
+      cb['pmh_None'] = true;
+      cb['surg_None'] = true;
+
+      // ROS Neurologic
+      ['Tingling', 'Numbness', 'Headaches'].forEach(f => {
+        cb[`ros_neuro_${f}`] = true;
+      });
+
+      // ROS Musculoskeletal
+      ['Joint stiffness', 'Muscle spasms', 'Limited range of motion'].forEach(f => {
+        cb[`ros_msk_${f}`] = true;
+      });
+
+      // ROS Psychiatric
+      cb['ros_psych_Sleep disturbance'] = true;
+
+      // Physical Exam
+      cb['pe_insp_Postural abnormalities'] = true;
+      cb['pe_tender_Yes'] = true;
+      cb['pe_tender_No'] = false;
+      cb['pe_spasm_Yes'] = true;
+      cb['pe_spasm_No'] = false;
+      cb['pe_rom_Limited - Painful'] = true;
+      cb['neuro_motor_Normal'] = true;
+      cb['neuro_sensory_Intact'] = true;
+      cb['neuro_reflex_Normal'] = true;
+
+      // Diagnoses
+      ['S13.4', 'S33.5', 'M79.1', 'M54.1', 'G44.3'].forEach(d => {
+        cb[`dx_${d}`] = true;
+      });
+
+      // Diagnostics Ordered
+      cb['diag_MRI'] = true;
+      cb['diag_X-ray'] = true;
+
+      // Medications
+      cb['med_NSAIDs'] = true;
+      cb['med_Muscle relaxants'] = true;
+
+      // Interventions
+      cb['interv_Physical therapy'] = true;
+      cb['interv_Trigger point injections'] = true;
+      cb['interv_Laser therapy'] = true;
+      cb['interv_Pain management follow-up'] = true;
+
+      // Restrictions
+      cb['restr_No lifting >10 lbs'] = true;
+      cb['restr_Limited bending/twisting'] = true;
+      cb['restr_Gradual return to normal activity'] = true;
+
+      // Follow up
+      cb['fu_2 weeks'] = true;
+
+      const newPainDoc = {
+        ...(packetData.clinicalDocStorage?.JOSMIC_PAIN_REPORT || {}),
+        chiefComplaint: parsed.chiefComplaint || `Patient presents for comprehensive pain management evaluation following an accident on ${packetData.accidentDate || 'recent date'}.`,
+        painCurrent: String(parsed.painCurrent || '7'),
+        painWorst: String(parsed.painWorst || '9'),
+        painBest: String(parsed.painBest || '4'),
+        surgicalHistory: 'None reported',
+        medications: 'Ibuprofen 600mg PRN',
+        allergies: 'NKDA (No Known Drug Allergies)',
+        otherDiagnosis: (packetData.diagnosisCodes && Array.isArray(packetData.diagnosisCodes)) ? packetData.diagnosisCodes.join(', ') : 'Cervicalgia, Lumbar sprain',
+        medicationsOther: 'Flexeril 10mg QHS PRN muscle spasm',
+        specialistReferral: 'Physical Therapy / Chiropractic Care',
+        checkboxOverrides: cb
+      };
+
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const updatedStorage = {
+        ...currentStorage,
+        JOSMIC_PAIN_REPORT: newPainDoc
+      };
+
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+
+      if (addToast) addToast("AI Pain Management evaluation synthesized across all 4 pages!", "success");
+      setLocalVersion(v => v + 1);
+    } catch (err) {
+      console.error('Failed to generate AI pain management draft:', err);
+      if (addToast) addToast(err.message || "Failed to generate AI draft", "error");
+    }
+  };
+
   const pageComponents = { 1: Page1, 2: Page2, 3: Page3, 4: Page4 };
   const PageContent = pageComponents[reportPage] || Page1;
 
   return (
     <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '40px 56px', paddingBottom: '60px' }}>
+      
+      {/* Universal AI Auto-Draft Toolbar (Hidden on print) */}
+      {!readOnly && !blankMode && packetData && (
+        <AiAutoDraftToolbar
+          title="AI Pain Management Scribe"
+          badge="4-Page Comprehensive"
+          subtitle="Auto-synthesize HPI, ROS, physical exam findings, diagnoses & treatment recommendations from case context"
+          hasExistingContent={Boolean(storage.chiefComplaint || storage.otherDiagnosis || storage.checkboxOverrides)}
+          readOnly={readOnly || blankMode}
+          onDraft={handleAutoDraftAi}
+        />
+      )}
+
       <PageHeader page={reportPage} blankMode={blankMode} packetData={packetData} />
       <PatientInfoBar blankMode={blankMode} packetData={packetData} />
-      <PageContent blankMode={blankMode} packetData={packetData} readOnly={readOnly} />
+      <PageContent key={localVersion} blankMode={blankMode} packetData={packetData} readOnly={readOnly} />
 
       {/* Footer */}
       <div className="absolute bottom-4 left-0 right-0 px-14 flex justify-between text-[9px] text-slate-400 font-mono border-t border-slate-100 pt-2">

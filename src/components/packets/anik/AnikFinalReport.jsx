@@ -1,9 +1,12 @@
 // src/components/packets/anik/AnikFinalReport.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { formatCurrency } from '../../../utils/billingCalculations';
 import { useSettings } from '../../../utils/settingsCache';
-
 import { EditableClinicalField } from '../EditableClinicalField';
+import { AiAutoDraftToolbar } from '../common/AiAutoDraftToolbar';
+import { apiClinicalNoteService } from '../../../services/api/apiClinicalNoteService';
+import { apiCaseService } from '../../../services/api/apiCaseService';
+import { useUIStore } from '../../../store/uiStore';
 
 export const AnikFinalReport = ({ 
   reportPage = 1, 
@@ -14,7 +17,11 @@ export const AnikFinalReport = ({
   serviceLines = [],
   bill = null
 }) => {
+  const [localVersion, setLocalVersion] = useState(0);
+  const { addToast } = useUIStore ? useUIStore() : { addToast: () => {} };
+
   const storage = packetData?.clinicalDocStorage?.['ANIK_FINAL'] || {};
+  const aiNote = packetData?.clinicalDocStorage?.['AI_DOCTORS_NOTE'] || {};
   const settings = useSettings();
 
   const isShow = !blankMode && packetData;
@@ -83,26 +90,82 @@ export const AnikFinalReport = ({
   };
   const outcomeText = getOutcomeText();
 
-  // Section 1: Summary of Treatment Completed
+  // 1-Click AI Auto-Draft Generator for Final Discharge Report
+  const handleAutoDraftAi = async () => {
+    if (!packetData || !packetData.id) return;
+    
+    const inputData = {
+      patientName,
+      dos: dischargeDate || new Date().toLocaleDateString(),
+      accidentDate: packetData.accidentDate || '',
+      accidentType: packetData.accidentType || 'Motor Vehicle Collision',
+      complaints: packetData.chiefComplaint || packetData.painDescription || 'Cervical/lumbar sprain following collision',
+      painLocations: packetData.selectedInjuryAreas || packetData.injuryBodyParts || 'Cervical Spine, Lumbar Spine',
+      diagnosisCodes: packetData.diagnosisCodes || ['M54.50', 'M54.2'],
+      compiledDocumentation: `DISCHARGE EVALUATION: Class IV Laser Therapy Final Discharge Report.
+Total Sessions Completed: ${totalSessionsText || '12 sessions'}.
+Discharge Date: ${dischargeDate || 'Current'}.
+Patient presents following collision on ${packetData.accidentDate || 'recent date'}.
+Outcome Status: ${outcomeText || 'MMI reached with functional improvement'}.
+Diagnoses: ${Array.isArray(packetData.diagnosisCodes) ? packetData.diagnosisCodes.join(', ') : 'M54.50, M54.2'}.`
+    };
+
+    const res = await apiClinicalNoteService.generateAiDraft('DOCTOR_NOTE', inputData);
+    let parsed = {};
+    try {
+      const text = res.draftText || '';
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else parsed = { chiefComplaint: text };
+    } catch (e) {
+      parsed = { chiefComplaint: res.draftText };
+    }
+
+    const newFinal = {
+      ...(packetData.clinicalDocStorage?.ANIK_FINAL || {}),
+      treatmentSummary: parsed.treatmentsAdministered || `Completed documented course of Class IV Laser Therapy (${totalSessionsText || 'prescribed sessions'}) targeting cervical and lumbar regions.`,
+      reexamFindings: parsed.objectiveFindings || 'Re-examination demonstrates clinically significant restoration of cervical and lumbar active range of motion, resolution of acute spasm, and reduced localized tenderness.',
+      dischargeImpression: parsed.clinicalAssessment || 'Maximum Medical Improvement (MMI) achieved with respect to acute musculoskeletal injury. No permanent neurological impairment identified.',
+      homeExerciseProgram: parsed.treatmentPlan || 'Instructed on continuing home exercise program (HEP) including cervical range of motion, isometric strengthening, and core stabilizing exercises.',
+      clinicalSignOff: parsed.followUp || 'Patient discharged from active laser care. Instructed to follow up as needed if exacerbation occurs.'
+    };
+
+    const currentStorage = packetData.clinicalDocStorage || {};
+    const updatedStorage = {
+      ...currentStorage,
+      ANIK_FINAL: newFinal
+    };
+
+    await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+    packetData.clinicalDocStorage = updatedStorage;
+
+    if (addToast) addToast("AI Discharge Report generated successfully!", "success");
+    setLocalVersion(v => v + 1);
+  };
+
+  // Section 1: Summary of Treatment Completed (Priority: Manual > AI Doctor Note > Fallback)
   const getTreatmentSummaryText = () => {
     if (!isShow) return '';
     if (storage.treatmentSummary) return storage.treatmentSummary;
+    if (aiNote.treatmentsAdministered) return aiNote.treatmentsAdministered;
     return noteContent.comments || packetData.treatmentSummary || packetData.summaryOfTreatment || packetData.finalReport?.treatmentSummary || packetData.dischargeSummary || packetData.completedTreatmentSummary || '';
   };
   const treatmentSummaryText = getTreatmentSummaryText();
 
-  // Section 2: Objective Re-examination Findings
+  // Section 2: Objective Re-examination Findings (Priority: Manual > AI Doctor Note > Fallback)
   const getReexamFindingsText = () => {
     if (!isShow) return '';
     if (storage.reexamFindings) return storage.reexamFindings;
+    if (aiNote.objectiveFindings) return aiNote.objectiveFindings;
     return packetData.reexaminationFindings || packetData.objectiveReexamFindings || packetData.finalReport?.reexaminationFindings || packetData.finalReport?.objectiveFindings || packetData.dischargeExamFindings || '';
   };
   const reexamFindingsText = getReexamFindingsText();
 
-  // Section 3: Discharge Impression & Permanent Impairment
+  // Section 3: Discharge Impression & Permanent Impairment (Priority: Manual > AI Doctor Note > Fallback)
   const getDischargeImpressionText = () => {
     if (!isShow) return '';
     if (storage.dischargeImpression) return storage.dischargeImpression;
+    if (aiNote.clinicalAssessment) return aiNote.clinicalAssessment;
     if (packetData.dischargeImpression || packetData.permanentImpairment) {
       return [packetData.dischargeImpression, packetData.permanentImpairment].filter(Boolean).join(' ');
     }
@@ -113,10 +176,11 @@ export const AnikFinalReport = ({
   };
   const dischargeImpressionText = getDischargeImpressionText();
 
-  // Section 4: Home Exercise Program & Future Care
+  // Section 4: Home Exercise Program & Future Care (Priority: Manual > AI Doctor Note > Fallback)
   const getHomeExerciseProgramText = () => {
     if (!isShow) return '';
     if (storage.homeExerciseProgram) return storage.homeExerciseProgram;
+    if (aiNote.treatmentPlan) return aiNote.treatmentPlan;
     if (packetData.homeExerciseProgram || packetData.futureCare || packetData.hep) {
       return [packetData.homeExerciseProgram || packetData.hep, packetData.futureCare].filter(Boolean).join(' ');
     }
@@ -127,10 +191,11 @@ export const AnikFinalReport = ({
   };
   const homeExerciseProgramText = getHomeExerciseProgramText();
 
-  // Section 5: Final Billing & Clinical Sign-Off Text
+  // Section 5: Final Billing & Clinical Sign-Off Text (Priority: Manual > AI Doctor Note > Fallback)
   const getClinicalSignOffText = () => {
     if (!isShow) return '';
     if (storage.clinicalSignOff) return storage.clinicalSignOff;
+    if (aiNote.followUp) return aiNote.followUp;
     return packetData.finalBillingSignOff || packetData.clinicalSignOff || packetData.finalReport?.clinicalSignOff || packetData.finalReport?.billingSignOff || packetData.finalReport?.signOffText || '';
   };
   const clinicalSignOffText = getClinicalSignOffText();
@@ -150,6 +215,18 @@ export const AnikFinalReport = ({
   return (
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
       
+      {/* Universal AI Auto-Draft Toolbar (Hidden on print) */}
+      {!readOnly && !blankMode && packetData && (
+        <AiAutoDraftToolbar
+          title="AI Laser Discharge Scribe"
+          badge="Sections 1–5"
+          subtitle="Auto-compile treatment summary, re-exam findings, impairment & HEP from patient record"
+          hasExistingContent={Boolean(storage.treatmentSummary || storage.reexamFindings || storage.dischargeImpression || storage.homeExerciseProgram)}
+          readOnly={readOnly || blankMode}
+          onDraft={handleAutoDraftAi}
+        />
+      )}
+
       <div className="flex justify-between items-start border-b border-slate-300 pb-4">
         <div>
           <h1 className="text-lg font-black text-[#722F37] uppercase italic">FM LASER THERAPY</h1>

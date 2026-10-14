@@ -13,6 +13,7 @@ import { CmsRedGridForm } from '../cms/CmsRedGridForm';
 
 // ANIK Components
 import { AnikCoverPage } from './anik/AnikCoverPage';
+import { AnikBillingStatement } from './anik/AnikBillingStatement';
 import { AnikTherapyAssessmentForm } from './anik/AnikTherapyAssessmentForm';
 import { AnikLaserProcedureForm } from './anik/AnikLaserProcedureForm';
 import { AnikNarrativeReport } from './anik/AnikNarrativeReport';
@@ -228,8 +229,9 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     
     // ANIK Components
     if (key === 'AnikCoverPage') return <AnikCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
+    if (key === 'AnikBillingStatement') return <AnikBillingStatement statementPage={pageDef.statementPage || 1} bill={blankPracticeMode ? null : bill} selectedCase={effectiveCase} readOnly={isLocked} blankMode={blankPracticeMode} />;
     if (key === 'AnikTherapyAssessmentForm') return <AnikTherapyAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'AnikLaserProcedureForm') return <AnikLaserProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} pageIndex={pageDef.pageIndex !== undefined ? pageDef.pageIndex : (pageDef.pageNumber ? pageDef.pageNumber - 7 : 0)} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} procedureData={effectiveCase?.procedures?.[pageDef.pageIndex !== undefined ? pageDef.pageIndex : 0]} />;
+    if (key === 'AnikLaserProcedureForm') return <AnikLaserProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} pageIndex={pageDef.pageIndex !== undefined ? pageDef.pageIndex : (pageDef.pageNumber ? pageDef.pageNumber - 8 : 0)} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} procedureData={effectiveCase?.procedures?.[pageDef.pageIndex !== undefined ? pageDef.pageIndex : 0]} />;
     if (key === 'AnikNarrativeReport') return <AnikNarrativeReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
     if (key === 'AnikFinalReport') return <AnikFinalReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
 

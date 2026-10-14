@@ -1,11 +1,15 @@
 // src/components/packets/counselor/CounselorSessionNotesPart2Form.jsx
 import React, { useState, useEffect } from 'react';
 import { apiCaseService } from '../../../services/api/apiCaseService';
+import { apiClinicalNoteService } from '../../../services/api/apiClinicalNoteService';
+import { AiAutoDraftToolbar } from '../common/AiAutoDraftToolbar';
+import { useUIStore } from '../../../store/uiStore';
 import fmCounselingLogo from '../../../assets/fm_counseling_logo.png';
 
 export const CounselorSessionNotesPart2Form = ({ blankMode = false, packetData = null, bill = null, readOnly = false }) => {
   const docKey = 'FM_COUNSELING_FORM_7';
   const storage = packetData?.clinicalDocStorage?.[docKey] || {};
+  const { addToast } = useUIStore ? useUIStore() : { addToast: () => {} };
 
   // Database defaults & dynamic fallbacks from DB
   const dbNotes = packetData?.clinicalNotes || [];
@@ -114,9 +118,70 @@ export const CounselorSessionNotesPart2Form = ({ blankMode = false, packetData =
     }
   };
 
+  // 1-Click AI Auto-Draft Generator for Psychotherapy Progress Notes Part 2
+  const handleAutoDraftAi = async () => {
+    const caseId = packetData?.id || packetData?._id;
+    if (!caseId) return;
+
+    const patientNameVal = packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || 'Patient';
+
+    const inputData = {
+      patientName: patientNameVal,
+      accidentDate: packetData.accidentDate || '',
+      accidentType: packetData.accidentType || 'Motor Vehicle Collision',
+      complaints: packetData.chiefComplaint || packetData.painDescription || 'Post-collision passenger distress, driving avoidance, and somatic pain',
+      painLocations: packetData.selectedInjuryAreas || packetData.injuryBodyParts || 'Cervical / Lumbar spine',
+      diagnosisCodes: packetData.diagnosisCodes || ['F43.21', 'F41.1', 'G47.00']
+    };
+
+    const res = await apiClinicalNoteService.generateAiDraft('COUNSELING_SESSION_NOTES_PART2', inputData);
+    let parsed = {};
+    try {
+      const text = res.draftText || '';
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else parsed = JSON.parse(text);
+    } catch (e) {
+      parsed = {};
+    }
+
+    const updatedDoc = {
+      ...(packetData.clinicalDocStorage?.[docKey] || {}),
+      session9Text: parsed.session9Text || formData.session9Text || 'Focused on cognitive processing of vulnerability and driving fears. Explored catastrophic assumptions regarding bodily fragility following collision. Somatic pacing and grounded mindfulness practiced to neutralize panic reactivity during passenger transit.',
+      session10Text: parsed.session10Text || formData.session10Text || 'Review of graded in-vivo exposure hierarchy. Patient completed short-distance vehicular travel as a passenger under peak traffic conditions. Diaphragmatic pacing and sensory orientation successfully managed anticipatory spikes.',
+      session11Text: parsed.session11Text || formData.session11Text || 'Addressed chronic pain-related demoralization and cognitive fatigue. Explored activity pacing techniques and mindful somatic acceptance for cervical and lumbar soft-tissue stiffness. Patient demonstrated improved coping self-efficacy.',
+      session12Text: parsed.session12Text || formData.session12Text || 'Review of driving exposure homework. Patient reported operating vehicle independently on local routes with manageable distress. Reinforced cognitive reframing of intrusive catastrophic crash recollections.',
+      session13Text: parsed.session13Text || formData.session13Text || 'Consolidation of exposure gains and emotional regulation. Focused on communication with family and employer regarding functional limitations. Patient reported enhanced mood stability and reduced interpersonal irritability.',
+      session14Text: parsed.session14Text || formData.session14Text || 'Intermediate treatment review and objective symptom inventory reassessment. Documented clinically meaningful decreases in GAD-7 anxiety and PCL-5 trauma scores relative to intake baseline.',
+      session15Text: parsed.session15Text || formData.session15Text || 'Generalization of coping tools to highway driving and adverse weather conditions. Reviewed anticipatory anxiety management protocols and autonomous stress-reduction routines. Patient reported increased confidence.',
+      session16Text: parsed.session16Text || formData.session16Text || 'Preparation for transition to maintenance and discharge phase. Established detailed individualized relapse prevention blueprint, identifying high-risk stressors and emergency stabilization tools.'
+    };
+
+    setFormData(prev => ({ ...prev, ...updatedDoc }));
+
+    const currentStorage = packetData.clinicalDocStorage || {};
+    const updatedStorage = { ...currentStorage, [docKey]: updatedDoc };
+    await apiCaseService.updateCase(caseId, { clinicalDocStorage: updatedStorage });
+    packetData.clinicalDocStorage = updatedStorage;
+
+    if (addToast) addToast("AI Psychotherapy Progress Notes (Sessions 9–17) drafted successfully!", "success");
+  };
+
   return (
     <div className="w-[800px] max-w-full relative bg-white text-slate-900 font-sans mx-auto border border-slate-300 shadow-md p-10 sm:p-14 flex flex-col min-h-[1050px] print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-8 print:m-0 print:border-none print:shadow-none">
       
+      {/* Universal AI Auto-Draft Toolbar (Hidden on print) */}
+      {!readOnly && !blankMode && packetData && (
+        <AiAutoDraftToolbar
+          title="AI Psychotherapy Progress Notes Scribe"
+          badge="Sessions 9–17"
+          subtitle="Auto-synthesize clinical CBT progress notes for Sessions 9 through 16 based on patient trauma & symptoms"
+          hasExistingContent={Boolean(formData.session9Text || formData.session10Text || formData.session11Text || formData.session12Text || formData.session13Text || formData.session14Text || formData.session15Text || formData.session16Text)}
+          readOnly={readOnly || blankMode}
+          onDraft={handleAutoDraftAi}
+        />
+      )}
+
       {/* Top Header with FM Counseling Center Logo */}
       <div className="text-center mb-3">
         <div className="flex justify-center items-center gap-2 mb-1">

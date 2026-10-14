@@ -1,16 +1,24 @@
 // src/components/packets/tpi/TpiProcedureForm.jsx
-import React from 'react';
+import React, { useState } from 'react';
+import { EditableClinicalField } from '../EditableClinicalField';
+import { AiAutoDraftToolbar } from '../common/AiAutoDraftToolbar';
+import { apiCaseService } from '../../../services/api/apiCaseService';
+import { apiClinicalNoteService } from '../../../services/api/apiClinicalNoteService';
+import { useUIStore } from '../../../store/uiStore';
 
-const getMusclesTableData = (packetData) => {
+const getMusclesTableData = (packetData, storage) => {
+  if (storage?.musclesList && Array.isArray(storage.musclesList) && storage.musclesList.length > 0) {
+    return storage.musclesList;
+  }
   if (!packetData) return [];
   const list = packetData.musclesInjectedList || packetData.injectedMuscles || packetData.musclesTable;
   if (Array.isArray(list)) return list;
   return [];
 };
 
-import { EditableClinicalField } from '../EditableClinicalField';
-
 export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false, packetData = null }) => {
+  const [localVersion, setLocalVersion] = useState(0);
+  const { addToast } = useUIStore ? useUIStore() : { addToast: () => {} };
   const serviceDates = packetData?.serviceDates || [];
   const activeDos = blankMode ? '' : (dos || (serviceDates.length > 0 ? serviceDates[0] : (packetData?.procedureDos || packetData?.serviceDate || '')));
   
@@ -31,10 +39,100 @@ export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false
   const totalVolumeText = blankMode || !packetData ? '' : (storage.totalVolume || packetData.totalVolume || packetData.needlesUsed || packetData.volumeAndNeedles || '');
   const procedureDescText = blankMode || !packetData ? '' : (storage.procedureDescription || packetData.procedureDescription || packetData.procedureNotes || packetData.technique || '');
 
-  const musclesList = blankMode ? [] : getMusclesTableData(packetData);
+  const musclesList = blankMode ? [] : getMusclesTableData(packetData, storage);
+
+  // 1-Click AI Auto-Draft for TPI Procedure
+  const handleAutoDraftAi = async () => {
+    if (!packetData || !packetData.id) return;
+    
+    try {
+      const inputData = {
+        patientName: patientNameVal,
+        dos: activeDos || new Date().toLocaleDateString(),
+        accidentDate: packetData.accidentDate || '',
+        accidentType: packetData.accidentType || 'Motor Vehicle Collision',
+        complaints: packetData.chiefComplaint || packetData.painDescription || 'Myofascial pain and localized muscle spasms',
+        painLocations: packetData.selectedInjuryAreas || packetData.injuryBodyParts || 'Cervical, thoracic, lumbar regions',
+        diagnosisCodes: packetData.diagnosisCodes || ['M79.1', 'S13.4', 'S33.5']
+      };
+
+      const res = await apiClinicalNoteService.generateAiDraft('TPI_PROCEDURE', inputData);
+      
+      let parsed = {};
+      try {
+        const text = res.draftText || '';
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) parsed = JSON.parse(match[0]);
+        else parsed = { procedureDescription: text };
+      } catch (e) {
+        parsed = { procedureDescription: res.draftText };
+      }
+
+      const defaultMuscles = [
+        { muscle: 'Trapezius', side: 'Bilateral', volume: '2.0 mL' },
+        { muscle: 'Levator Scapulae', side: 'Left / Right', volume: '1.0 mL' },
+        { muscle: 'Quadratus Lumborum', side: 'Bilateral', volume: '1.0 mL' }
+      ];
+
+      const newTpiProcDoc = {
+        ...(packetData.clinicalDocStorage?.[docKey] || {}),
+        preOpDiagnosis: parsed.preOpDiagnosis || preOpDiagText || 'Myofascial pain syndrome (M79.1), Cervical sprain/strain (S13.4), Lumbar muscle spasm (S33.5)',
+        medicationInjected: parsed.medicationInjected || '1% Lidocaine (preservative-free), 4 mL total',
+        totalVolume: parsed.totalVolume || '4 mL total volume, 25-gauge 1.5-inch needle',
+        musclesList: Array.isArray(parsed.musclesInjected) && parsed.musclesInjected.length > 0 ? parsed.musclesInjected : defaultMuscles,
+        procedureDescription: parsed.procedureDescription || procedureDescText
+      };
+
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const updatedStorage = {
+        ...currentStorage,
+        [docKey]: newTpiProcDoc
+      };
+
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+
+      if (addToast) addToast("AI TPI operative procedure report generated successfully!", "success");
+      setLocalVersion(v => v + 1);
+    } catch (err) {
+      console.error('Failed to generate AI TPI procedure draft:', err);
+      if (addToast) addToast(err.message || "Failed to generate AI draft", "error");
+    }
+  };
+
+  const handleMuscleCellChange = async (index, field, value) => {
+    if (readOnly || blankMode || !packetData?.id) return;
+    const currentList = [...musclesList];
+    while (currentList.length <= index) currentList.push({});
+    currentList[index] = { ...currentList[index], [field]: value };
+    
+    try {
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const docNamespace = currentStorage[docKey] || {};
+      const updatedDoc = { ...docNamespace, musclesList: currentList };
+      const updatedStorage = { ...currentStorage, [docKey]: updatedDoc };
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+    } catch (err) {
+      console.error('Failed to update muscle cell', err);
+    }
+  };
 
   return (
     <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
+      
+      {/* Universal AI Auto-Draft Toolbar (Hidden on print) */}
+      {!readOnly && !blankMode && packetData && (
+        <AiAutoDraftToolbar
+          title="AI TPI Procedure Scribe"
+          badge="Operative Report"
+          subtitle="Auto-synthesize operative technique, Lidocaine dosing & muscle injection sites from case record"
+          hasExistingContent={Boolean(storage.procedureDescription || storage.preOpDiagnosis || storage.medicationInjected)}
+          readOnly={readOnly || blankMode}
+          onDraft={handleAutoDraftAi}
+        />
+      )}
+
       {/* Header */}
       <div className="border-b-2 border-[#722F37] pb-4 mb-6 text-center">
         <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>FM TRIGGER POINT INJECTION PROCEDURE</h1>
@@ -114,13 +212,28 @@ export const TpiProcedureForm = ({ dos = '', readOnly = false, blankMode = false
                 const item = musclesList[idx] || {};
                 return (
                   <tr key={idx}>
-                    <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">
+                    <td 
+                      contentEditable={!readOnly} 
+                      suppressContentEditableWarning 
+                      onBlur={(e) => handleMuscleCellChange(idx, 'muscle', e.currentTarget.textContent.trim())}
+                      className="border border-slate-300 p-2 focus:bg-white cursor-text"
+                    >
                       {blankMode ? '' : (item.muscle || item.name || '')}&nbsp;
                     </td>
-                    <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">
+                    <td 
+                      contentEditable={!readOnly} 
+                      suppressContentEditableWarning 
+                      onBlur={(e) => handleMuscleCellChange(idx, 'side', e.currentTarget.textContent.trim())}
+                      className="border border-slate-300 p-2 focus:bg-white cursor-text"
+                    >
                       {blankMode ? '' : (item.side || '')}&nbsp;
                     </td>
-                    <td contentEditable={!readOnly} suppressContentEditableWarning className="border border-slate-300 p-2 focus:bg-white cursor-text">
+                    <td 
+                      contentEditable={!readOnly} 
+                      suppressContentEditableWarning 
+                      onBlur={(e) => handleMuscleCellChange(idx, 'volume', e.currentTarget.textContent.trim())}
+                      className="border border-slate-300 p-2 focus:bg-white cursor-text"
+                    >
                       {blankMode ? '' : (item.volume || '')}&nbsp;
                     </td>
                   </tr>

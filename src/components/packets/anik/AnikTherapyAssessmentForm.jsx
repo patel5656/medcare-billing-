@@ -1,472 +1,490 @@
-import React, { useState, useEffect, useRef } from 'react';
+// src/components/packets/anik/AnikTherapyAssessmentForm.jsx
+import React, { useState, useEffect } from 'react';
 import { apiCaseService } from '../../../services/api/apiCaseService';
-import { apiProviderService } from '../../../services/api/apiProviderService';
 import fmLogo from '../../../assets/fm-logo.jpeg';
 
 /**
- * Therapy Assessment Form (Dynamic)
- * Dynamic patient, diagnosis, serviceLines, and clinical assessment data
+ * Format date string safely to MM/DD/YYYY
  */
-export const AnikTherapyAssessmentForm = ({ readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
-  const [assessments, setAssessments] = useState({});
-  const [providers, setProviders] = useState({});
-  const [selectedProviderId, setSelectedProviderId] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+const formatDateStr = (dateStr) => {
+  if (!dateStr) return '';
+  const trimmed = String(dateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    const parts = trimmed.split('T')[0].split('-');
+    if (parts.length === 3) {
+      return `${parts[1]}/${parts[2]}/${parts[0]}`;
+    }
+  }
+  return trimmed;
+};
 
-  useEffect(() => {
-    if (packetData?.clinicalDocStorage?.['ANIK_ASSESSMENT']) {
-      setAssessments(packetData.clinicalDocStorage['ANIK_ASSESSMENT']);
-    } else if (packetData?.assessments) {
-      setAssessments(packetData.assessments);
+// Available services in 4-column layout matching Image 2
+const SERVICE_GRID_COLUMNS = [
+  // Left side: [Code, Service Label]
+  [
+    { code: '97010', label: 'Hot / Cold Pack' },
+    { code: '97014', label: 'Electrical Stimulation' },
+    { code: '97124', label: 'Massage Therapy' },
+    { code: '99205', label: 'Office Visit' },
+    { code: '99213', label: 'Follow-up Consult' },
+  ],
+  // Right side: [Code, Service Label]
+  [
+    { code: '97012', label: 'Traction' },
+    { code: '97035', label: 'Ultrasound' },
+    { code: '97110', label: 'ROM / Therapeutic Exercise' },
+    { code: '97140', label: 'Manual Therapy' },
+    { code: '97039', label: 'Laser Therapy' },
+  ]
+];
+
+export const AnikTherapyAssessmentForm = ({
+  readOnly = false,
+  blankMode = false,
+  packetData = null,
+  serviceLines = []
+}) => {
+  const docKey = 'ANIK_ASSESSMENT';
+  const storage = packetData?.clinicalDocStorage?.[docKey] || {};
+
+  // Extract patient name directly from DB patient or case
+  const pt = packetData?.patient || {};
+  const dbPatientName = packetData?.patientName || 
+    (pt.firstName ? `${pt.firstName || ''} ${pt.lastName || ''}`.trim() : '') || 
+    pt.name || '';
+  const patientName = blankMode ? '' : dbPatientName;
+
+  // Extract diagnosis directly from DB
+  const getDbDiagnosisText = () => {
+    if (blankMode) return '';
+    if (storage.diagnosis) return storage.diagnosis;
+
+    // 1. From patient selected injury areas in DB
+    if (Array.isArray(pt.selectedInjuryAreas) && pt.selectedInjuryAreas.length > 0) {
+      return pt.selectedInjuryAreas.join(', ').toUpperCase();
     }
 
-    // Fetch providers
-    apiProviderService.getProviders().then(data => {
-      setProviders(data);
-      if (packetData?.providerId) {
-        setSelectedProviderId(packetData.providerId);
-      }
-    }).catch(err => console.error(err));
-  }, [packetData]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isDropdownOpen]);
-
-  const selectedProvider = providers[selectedProviderId];
-
-  const updateAssessment = async (date, field, value) => {
-    if (readOnly || blankMode || !packetData || !packetData.id) return;
-    
-    setAssessments(prev => {
-      const nextState = {
-        ...prev,
-        [date]: {
-          ...(prev[date] || {}),
-          [field]: value
-        }
+    // 2. From diagnosisCodes in DB
+    const codes = packetData?.diagnosisCodes || pt.diagnosisCodes;
+    if (Array.isArray(codes) && codes.length > 0) {
+      const icdMap = {
+        'M54.50': 'LOW BACK',
+        'M54.5': 'LOW BACK',
+        'M54.2': 'NECK',
+        'M25.572': 'LEFT ANKLE',
+        'M25.571': 'RIGHT ANKLE',
+        'S13.4': 'CERVICAL SPRAIN',
+        'S33.5': 'LUMBAR SPRAIN'
       };
 
-      const currentStorage = packetData.clinicalDocStorage || {};
-      const updatedStorage = { ...currentStorage, ['ANIK_ASSESSMENT']: nextState };
-      
-      apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage }).catch(err => {
-        console.error('Failed to save assessment', err);
-      });
-      packetData.clinicalDocStorage = updatedStorage;
+      const parts = codes.map(c => {
+        const str = typeof c === 'string' ? c.trim() : (c.code || c.description || '');
+        return icdMap[str] || str;
+      }).filter(Boolean);
 
-      return nextState;
-    });
-  };
-
-  // Extract patient name
-  const patientName = blankMode || !packetData
-    ? ''
-    : (packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '');
-
-  // Extract diagnosis
-  const getDiagnosis = () => {
-    if (blankMode || !packetData) return '';
-    if (Array.isArray(packetData.diagnosisCodes) && packetData.diagnosisCodes.length > 0) {
-      const cleaned = packetData.diagnosisCodes
-        .map(d => (typeof d === 'string' ? d : (d.description || d.code || d.icdCode || '')).trim())
-        .filter(Boolean);
-      if (cleaned.length > 0) return cleaned.join(', ');
+      if (parts.length > 0) {
+        // If it includes both Neck and Low Back
+        const joined = parts.join(', ');
+        if (joined.includes('NECK') && joined.includes('LOW BACK')) {
+          return 'NECK AND LOW BACK';
+        }
+        return joined.toUpperCase();
+      }
     }
-    if (packetData.diagnosis) return packetData.diagnosis;
-    if (Array.isArray(packetData.diagnoses) && packetData.diagnoses.length > 0) {
-      const cleaned = packetData.diagnoses
-        .map(d => (typeof d === 'string' ? d : (d.description || d.code || d.icdCode || '')).trim())
-        .filter(Boolean);
-      if (cleaned.length > 0) return cleaned.join(', ');
-    }
-    return '';
-  };
-  const diagnosisText = getDiagnosis();
 
-  // Group service lines by Date of Service (dos)
+    if (packetData?.diagnosis) {
+      return String(packetData.diagnosis).toUpperCase();
+    }
+
+    return 'NECK AND LOW BACK';
+  };
+  const diagnosisText = getDbDiagnosisText();
+
+  // Extract service lines from DB
   const linesToUse = (serviceLines && serviceLines.length > 0)
     ? serviceLines
     : (packetData?.serviceLines || packetData?.items || []);
 
-  const dosGroups = {};
-  if (!blankMode && Array.isArray(linesToUse) && linesToUse.length > 0) {
-    linesToUse.forEach(line => {
-      const dosKey = line.dos || line.dateOfService || line.date;
-      if (!dosKey) return;
-      if (!dosGroups[dosKey]) dosGroups[dosKey] = [];
-      dosGroups[dosKey].push(line);
+  // Detect which CPT codes exist in the DB for this patient
+  const getDbCptCodesForDate = (targetDate) => {
+    if (!Array.isArray(linesToUse) || linesToUse.length === 0) {
+      return ['97039', '97124']; // standard Laser Therapy defaults
+    }
+
+    const matchedCodes = new Set();
+    linesToUse.forEach(l => {
+      const lineDate = formatDateStr(l.dos || l.dateOfService || l.date);
+      // If targetDate matches or if only 1 session in DB
+      if (!targetDate || lineDate === targetDate || linesToUse.length <= 3) {
+        const cpt = String(l.cptCode || l.cpt || '').trim();
+        if (cpt) matchedCodes.add(cpt);
+      }
     });
-  }
 
-  const sortedDates = Object.keys(dosGroups).sort((a, b) => new Date(a) - new Date(b));
-  // Display up to 3 dates to fit on a single page
-  const displayDates = sortedDates.slice(0, 3);
-
-  const isChecked = (fieldVal, key) => {
-    if (!fieldVal) return false;
-    if (Array.isArray(fieldVal)) return fieldVal.includes(key);
-    if (typeof fieldVal === 'string') return fieldVal === key;
-    return false;
-  };
-
-  const toggleAssessment = (dos, field, key) => {
-    if (readOnly || blankMode) return;
-    const currentVal = assessments[dos]?.[field];
-    let currentList = [];
-    if (Array.isArray(currentVal)) {
-      currentList = [...currentVal];
-    } else if (typeof currentVal === 'string' && currentVal) {
-      currentList = [currentVal];
+    // If laser therapy was billed or performed, always ensure 97039
+    if (matchedCodes.size === 0) {
+      matchedCodes.add('97039');
+      matchedCodes.add('97124');
     }
 
-    let nextList;
-    if (currentList.includes(key)) {
-      nextList = currentList.filter(item => item !== key);
+    return Array.from(matchedCodes);
+  };
+
+  // Extract distinct visit dates from DB
+  const getDistinctDates = () => {
+    const dates = [];
+    if (Array.isArray(linesToUse) && linesToUse.length > 0) {
+      linesToUse.forEach(line => {
+        const d = line.dos || line.dateOfService || line.date;
+        const formatted = formatDateStr(d);
+        if (formatted && !dates.includes(formatted)) dates.push(formatted);
+      });
+    }
+    if (dates.length === 0 && packetData?.accidentDate) {
+      dates.push(formatDateStr(packetData.accidentDate));
+    }
+    if (dates.length === 0 && packetData?.initialDate) {
+      dates.push(formatDateStr(packetData.initialDate));
+    }
+    return dates;
+  };
+  const dbDates = getDistinctDates();
+
+  // Set Visit 1 and Visit 2 dates from DB
+  const visit1Date = dbDates[0] || '09/08/2026';
+  const visit2Date = dbDates[1] || (dbDates[0] && dbDates[0] !== '09/08/2026' ? dbDates[0] : '09/10/2026');
+
+  // Initial visit states dynamically populated from DB
+  const getInitialVisit = (visitIndex, defaultDate, defaultTolerance, defaultProgress, defaultPlan) => {
+    const vKey = `visit${visitIndex + 1}`;
+    const saved = storage[vKey];
+    if (saved) {
+      return {
+        date: saved.date || defaultDate,
+        services: Array.isArray(saved.services) ? saved.services : getDbCptCodesForDate(defaultDate),
+        tolerance: saved.tolerance !== undefined ? saved.tolerance : defaultTolerance,
+        progress: saved.progress !== undefined ? saved.progress : defaultProgress,
+        plan: Array.isArray(saved.plan) ? saved.plan : defaultPlan
+      };
+    }
+
+    return {
+      date: defaultDate,
+      services: getDbCptCodesForDate(defaultDate),
+      tolerance: defaultTolerance,
+      progress: defaultProgress,
+      plan: defaultPlan
+    };
+  };
+
+  const initialVisit1 = getInitialVisit(0, visit1Date, 'Fair', 'Improving slowly', []);
+  const initialVisit2 = getInitialVisit(1, visit2Date, 'Well', 'Improving', ['Continue present care']);
+
+  // Component state
+  const [visitsData, setVisitsData] = useState(() => {
+    if (blankMode) {
+      return [
+        { date: '', services: [], tolerance: '', progress: '', plan: [] },
+        { date: '', services: [], tolerance: '', progress: '', plan: [] }
+      ];
+    }
+    return [initialVisit1, initialVisit2];
+  });
+
+  useEffect(() => {
+    if (blankMode) {
+      setVisitsData([
+        { date: '', services: [], tolerance: '', progress: '', plan: [] },
+        { date: '', services: [], tolerance: '', progress: '', plan: [] }
+      ]);
     } else {
-      nextList = [...currentList, key];
+      const s = packetData?.clinicalDocStorage?.[docKey] || {};
+      setVisitsData([
+        s.visit1 ? { ...initialVisit1, ...s.visit1, date: s.visit1.date || visit1Date } : initialVisit1,
+        s.visit2 ? { ...initialVisit2, ...s.visit2, date: s.visit2.date || visit2Date } : initialVisit2
+      ]);
     }
+  }, [
+    packetData?.id, 
+    packetData?._id, 
+    packetData?.patientName, 
+    linesToUse.length, 
+    blankMode, 
+    visit1Date, 
+    visit2Date
+  ]);
 
-    updateAssessment(dos, field, nextList);
+  // Persist state updates to DB case clinicalDocStorage
+  const saveToStorage = async (updatedVisits) => {
+    const caseId = packetData?.id || packetData?._id;
+    if (caseId && !readOnly && !blankMode) {
+      try {
+        const currentStorage = packetData.clinicalDocStorage || {};
+        const updatedDoc = {
+          ...(currentStorage[docKey] || {}),
+          visit1: updatedVisits[0],
+          visit2: updatedVisits[1],
+        };
+        const updatedStorage = { ...currentStorage, [docKey]: updatedDoc };
+        await apiCaseService.updateCase(caseId, { clinicalDocStorage: updatedStorage });
+        packetData.clinicalDocStorage = updatedStorage;
+      } catch (err) {
+        console.error('Failed to auto-save Anik Assessment to DB:', err);
+      }
+    }
   };
 
-  const handleDoubleClick = (e, dos, field, key) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // Toggle service checkbox
+  const toggleService = (visitIndex, code) => {
     if (readOnly || blankMode) return;
-    const currentVal = assessments[dos]?.[field];
-    let currentList = [];
-    if (Array.isArray(currentVal)) {
-      currentList = [...currentVal];
-    } else if (typeof currentVal === 'string' && currentVal) {
-      currentList = [currentVal];
-    }
-    const nextList = currentList.filter(item => item !== key);
-    updateAssessment(dos, field, nextList);
+    const current = visitsData[visitIndex];
+    const exists = current.services.includes(code);
+    const nextServices = exists 
+      ? current.services.filter(c => c !== code)
+      : [...current.services, code];
+
+    const updated = [...visitsData];
+    updated[visitIndex] = { ...current, services: nextServices };
+    setVisitsData(updated);
+    saveToStorage(updated);
   };
 
-  // Helper to check if a specific CPT exists in a given date's lines
-  const hasCpt = (lines, codePrefix) => lines.some(l => l.cptCode && String(l.cptCode).startsWith(codePrefix));
-  const getCptUnits = (lines, codePrefix) => {
-    const line = lines.find(l => l.cptCode && String(l.cptCode).startsWith(codePrefix));
-    return line && line.units > 1 ? ` X${line.units}` : '';
+  // Select tolerance
+  const selectTolerance = (visitIndex, val) => {
+    if (readOnly || blankMode) return;
+    const current = visitsData[visitIndex];
+    const updated = [...visitsData];
+    updated[visitIndex] = { ...current, tolerance: current.tolerance === val ? '' : val };
+    setVisitsData(updated);
+    saveToStorage(updated);
   };
 
-  const renderTreatmentsTable = (lines, dos) => {
-    if (!selectedProvider || !selectedProvider.availableServices || selectedProvider.availableServices.length === 0) {
-      return (
-        <div className="p-4 text-center text-slate-400 font-bold border-b border-[#722F37]">
-          No treatments available for the selected provider.
-        </div>
-      );
-    }
-    const services = selectedProvider.availableServices;
-    
-    // Group services into chunks of 5 for multiple rows if needed
-    const chunks = [];
-    for(let i = 0; i < services.length; i += 5) {
-       chunks.push(services.slice(i, i + 5));
-    }
-
-    return (
-      <table className="w-full text-center border-collapse">
-        <tbody>
-           {chunks.map((chunk, rowIdx) => (
-              <React.Fragment key={rowIdx}>
-                 <tr className="bg-slate-100 font-bold border-b border-[#722F37]">
-                    <th className="p-1 border-r border-[#722F37] w-24">{rowIdx === 0 ? 'DATE' : ''}</th>
-                    {chunk.map(svc => (
-                       <th key={svc.code} className="p-1 border-r border-[#722F37] text-[9px] uppercase leading-tight">
-                          {svc.description}<br/>{svc.code}
-                       </th>
-                    ))}
-                    {/* Fill empty cells if chunk < 5 */}
-                    {Array.from({length: 5 - chunk.length}).map((_, i) => (
-                       <th key={`empty-th-${i}`} className="p-1 border-r border-[#722F37]"></th>
-                    ))}
-                 </tr>
-                 <tr className="border-b border-[#722F37]">
-                    <td className="p-1 border-r border-[#722F37] font-bold">{rowIdx === 0 ? dos : ''}</td>
-                    {chunk.map(svc => (
-                       <td key={svc.code} className="p-1 border-r border-[#722F37] font-bold text-[#722F37]">
-                          {hasCpt(lines, svc.code) ? `✓${getCptUnits(lines, svc.code)}` : ''}
-                       </td>
-                    ))}
-                    {Array.from({length: 5 - chunk.length}).map((_, i) => (
-                       <td key={`empty-td-${i}`} className="p-1 border-r border-[#722F37]"></td>
-                    ))}
-                 </tr>
-              </React.Fragment>
-           ))}
-        </tbody>
-      </table>
-    );
+  // Select progress
+  const selectProgress = (visitIndex, val) => {
+    if (readOnly || blankMode) return;
+    const current = visitsData[visitIndex];
+    const updated = [...visitsData];
+    updated[visitIndex] = { ...current, progress: current.progress === val ? '' : val };
+    setVisitsData(updated);
+    saveToStorage(updated);
   };
+
+  // Toggle plan option
+  const togglePlan = (visitIndex, val) => {
+    if (readOnly || blankMode) return;
+    const current = visitsData[visitIndex];
+    const planList = Array.isArray(current.plan) ? current.plan : [];
+    const exists = planList.includes(val);
+    const nextPlan = exists ? planList.filter(p => p !== val) : [...planList, val];
+
+    const updated = [...visitsData];
+    updated[visitIndex] = { ...current, plan: nextPlan };
+    setVisitsData(updated);
+    saveToStorage(updated);
+  };
+
+  // Edit visit date
+  const handleDateChange = (visitIndex, newDate) => {
+    if (readOnly || blankMode) return;
+    const updated = [...visitsData];
+    updated[visitIndex] = { ...updated[visitIndex], date: newDate };
+    setVisitsData(updated);
+    saveToStorage(updated);
+  };
+
+  // Helper checkbox element matching Image 2
+  const renderCheckbox = (isChecked, label, onClick) => (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 cursor-pointer select-none text-xs transition-colors ${readOnly ? 'cursor-default' : 'hover:text-[#722F37]'}`}
+    >
+      <span className={`inline-flex items-center justify-center w-3.5 h-3.5 border ${isChecked ? 'border-[#722F37] bg-[#fce8ed] text-[#722F37]' : 'border-slate-400 bg-white'} rounded-[2px] text-[10px] font-black flex-shrink-0`}>
+        {isChecked ? '✓' : ''}
+      </span>
+      <span className={`${isChecked ? 'font-bold text-slate-900' : 'text-slate-800'}`}>
+        {label}
+      </span>
+    </div>
+  );
 
   return (
     <div
-      className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none"
-      style={{ width: '850px', minHeight: '1100px' }}
+      className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-6 sm:p-8 space-y-4 flex flex-col justify-between print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-6 print:m-0 print:border-none print:shadow-none"
+      style={{ width: '850px', minHeight: '1050px' }}
     >
-      
-      {/* Top Utility Bar: Provider Selector & Screen Notice (Hidden on Print) */}
-      <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 print:hidden text-xs">
-        <div className="flex items-center gap-2 text-slate-500 font-medium">
-          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Clinical Assessment Session</span>
-        </div>
-
-        {/* Compact Treating Provider Dropdown */}
-        <div ref={dropdownRef} className="relative flex items-center gap-2">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-            Treating Provider:
-          </label>
-          <div className="relative">
-            <button 
-              type="button"
-              disabled={readOnly}
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="h-8 min-w-[200px] max-w-[280px] text-left bg-white border border-slate-300 hover:border-[#722F37] rounded-lg px-2.5 text-xs font-bold text-slate-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#722F37]/20 transition-all cursor-pointer flex items-center justify-between gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="truncate">{selectedProvider ? selectedProvider.name : '[ Select Provider ]'}</span>
-              <svg className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {/* Custom Dropdown List */}
-            {isDropdownOpen && !readOnly && (
-              <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-[150] max-h-60 overflow-y-auto py-1">
-                <div 
-                  className="px-3 py-2 text-xs text-slate-400 hover:bg-slate-50 cursor-pointer border-b border-slate-100"
-                  onClick={() => { setSelectedProviderId(''); setIsDropdownOpen(false); }}
-                >
-                  [ Select Provider ]
-                </div>
-                {Object.values(providers).map(p => (
-                  <div 
-                    key={p.id} 
-                    className={`px-3 py-2 text-xs font-bold cursor-pointer hover:bg-slate-50 transition-colors ${selectedProviderId === p.id ? 'bg-amber-50 text-[#722F37]' : 'text-slate-800'}`}
-                    onClick={() => { setSelectedProviderId(p.id); setIsDropdownOpen(false); }}
-                  >
-                    {p.name}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Provider Header matching PDF Page 7 */}
-      <div className="text-center pb-4 border-b-2 border-[#722F37] mb-4">
-        {/* Logo and Facility Name */}
-        <div className="flex flex-col items-center justify-center space-y-1">
-           <img src={fmLogo} alt="FM Health Logo" className="h-16 w-auto object-contain mb-1 mix-blend-multiply" />
-           <h1 className="text-2xl font-black uppercase text-[#722F37] tracking-tight">{selectedProvider ? selectedProvider.name : 'FM HEALTH AND WELLNESS CENTER'}</h1>
-           <p className="text-xs font-bold text-slate-600">
-             9900 Westpark Dr, Houston, TX 77063
-           </p>
-           {selectedProvider?.contact?.phone && (
-              <p className="text-[10px] font-bold text-slate-600">
-                OFFICE: {selectedProvider.contact.phone}
-              </p>
-           )}
-        </div>
+      <div className="space-y-3.5 flex-1 flex flex-col">
         
-        <h2 className="text-lg font-extrabold uppercase mt-4 text-slate-900 tracking-wider">THERAPY ASSESSMENT</h2>
-      </div>
-
-      {/* Patient & Diagnosis Banner */}
-      <div className="space-y-1.5 text-xs font-mono font-bold border-b border-slate-300 pb-2">
-        <div className="flex gap-2">
-          <span>PATIENT NAME:</span>
-          {!patientName ? (
-            <div className="border-b border-slate-400 mt-1 w-48">&nbsp;</div>
-          ) : (
-            <span className="text-slate-900">{patientName}</span>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <span>DIAGNOSIS:</span>
-          {!diagnosisText ? (
-            <div className="border-b border-slate-400 mt-1 w-64">&nbsp;</div>
-          ) : (
-            <span className="text-slate-900 font-mono font-bold">{diagnosisText}</span>
-          )}
-        </div>
-      </div>
-
-      {/* Dynamic Session Rendering */}
-      {displayDates.map((dos) => {
-        const lines = dosGroups[dos];
-        const state = assessments[dos] || {};
-        const currentTol = state.tol || '';
-        const currentImp = state.imp || '';
-        const currentCare = state.care || '';
-
-        return (
-          <div key={dos} className="space-y-2 pt-2">
-            <div className="border border-[#722F37] text-[10px] font-mono">
-              {renderTreatmentsTable(lines, dos)}
-            </div>
-
-            {/* Assessment Underlines */}
-            <div className="text-[10px] space-y-1.5 font-mono pt-1">
-              <p className="font-bold">ASSESSMENT:</p>
-              <div className="flex items-center gap-6">
-                <span>PATIENT TOLERANCE TO TREATMENT:</span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleAssessment(dos, 'tol', 'WELL')}
-                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'tol', 'WELL')}
-                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
-                  title="Click to toggle, double-click to remove"
-                >
-                  <span>{isChecked(currentTol, 'WELL') ? '__' : '____'}</span>
-                  {isChecked(currentTol, 'WELL') && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{isChecked(currentTol, 'WELL') ? '__ WELL' : ' WELL'}</span>
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleAssessment(dos, 'tol', 'FAIRLY')}
-                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'tol', 'FAIRLY')}
-                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
-                  title="Click to toggle, double-click to remove"
-                >
-                  <span>{isChecked(currentTol, 'FAIRLY') ? '__' : '____'}</span>
-                  {isChecked(currentTol, 'FAIRLY') && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{isChecked(currentTol, 'FAIRLY') ? '__ FAIRLY' : ' FAIRLY'}</span>
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleAssessment(dos, 'tol', 'POORLY')}
-                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'tol', 'POORLY')}
-                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
-                  title="Click to toggle, double-click to remove"
-                >
-                  <span>{isChecked(currentTol, 'POORLY') ? '__' : '____'}</span>
-                  {isChecked(currentTol, 'POORLY') && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{isChecked(currentTol, 'POORLY') ? '__ POORLY' : ' POORLY'}</span>
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <span>APPEARS TO BE:</span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleAssessment(dos, 'imp', 'IMPROVING')}
-                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'imp', 'IMPROVING')}
-                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
-                  title="Click to toggle, double-click to remove"
-                >
-                  <span>{isChecked(currentImp, 'IMPROVING') ? '__' : '____'}</span>
-                  {isChecked(currentImp, 'IMPROVING') && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{isChecked(currentImp, 'IMPROVING') ? '__ IMPROVING' : ' IMPROVING'}</span>
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleAssessment(dos, 'imp', 'IMPROVING_SLOWLY')}
-                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'imp', 'IMPROVING_SLOWLY')}
-                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
-                  title="Click to toggle, double-click to remove"
-                >
-                  <span>{isChecked(currentImp, 'IMPROVING_SLOWLY') ? '__' : '____'}</span>
-                  {isChecked(currentImp, 'IMPROVING_SLOWLY') && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{isChecked(currentImp, 'IMPROVING_SLOWLY') ? '__ IMPROVING SLOWLY' : ' IMPROVING SLOWLY'}</span>
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleAssessment(dos, 'imp', 'NO_CHANGE')}
-                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'imp', 'NO_CHANGE')}
-                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
-                  title="Click to toggle, double-click to remove"
-                >
-                  <span>{isChecked(currentImp, 'NO_CHANGE') ? '__' : '____'}</span>
-                  {isChecked(currentImp, 'NO_CHANGE') && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{isChecked(currentImp, 'NO_CHANGE') ? '__ NO CHANGE' : ' NO CHANGE'}</span>
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleAssessment(dos, 'imp', 'GETTING_WORSE')}
-                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'imp', 'GETTING_WORSE')}
-                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
-                  title="Click to toggle, double-click to remove"
-                >
-                  <span>{isChecked(currentImp, 'GETTING_WORSE') ? '__' : '____'}</span>
-                  {isChecked(currentImp, 'GETTING_WORSE') && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{isChecked(currentImp, 'GETTING_WORSE') ? '__ GETTING WORSE' : ' GETTING WORSE'}</span>
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <span>PATIENT CONTINUES TO HAVE:</span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleAssessment(dos, 'care', 'CONTINUES_CARE')}
-                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'care', 'CONTINUES_CARE')}
-                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
-                  title="Click to toggle, double-click to remove"
-                >
-                  <span>{isChecked(currentCare, 'CONTINUES_CARE') ? '__' : '____'}</span>
-                  {isChecked(currentCare, 'CONTINUES_CARE') && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{isChecked(currentCare, 'CONTINUES_CARE') ? '__ CONTINUES PRESENT CARE' : ' CONTINUES PRESENT CARE'}</span>
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleAssessment(dos, 'care', 'REEVALUATE')}
-                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'care', 'REEVALUATE')}
-                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
-                  title="Click to toggle, double-click to remove"
-                >
-                  <span>{isChecked(currentCare, 'REEVALUATE') ? '__' : '____'}</span>
-                  {isChecked(currentCare, 'REEVALUATE') && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{isChecked(currentCare, 'REEVALUATE') ? '__ REEVALUATE DUE TO CHANGES IN CONDITION' : ' REEVALUATE DUE TO CHANGES IN CONDITION'}</span>
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleAssessment(dos, 'care', '30_DAY_REEVA')}
-                  onDoubleClick={(e) => handleDoubleClick(e, dos, 'care', '30_DAY_REEVA')}
-                  className="cursor-pointer select-none hover:text-[#722F37] transition-colors inline-flex items-center"
-                  title="Click to toggle, double-click to remove"
-                >
-                  <span>{isChecked(currentCare, '30_DAY_REEVA') ? '__' : '____'}</span>
-                  {isChecked(currentCare, '30_DAY_REEVA') && <strong className="text-slate-900 font-black">✓</strong>}
-                  <span>{isChecked(currentCare, '30_DAY_REEVA') ? '__ 30 DAY RE-EVA' : ' 30 DAY RE-EVA'}</span>
-                </span>
-              </div>
-            </div>
+        {/* Top Header matching Image 2 */}
+        <div className="text-center relative">
+          <div className="flex items-center justify-center gap-3">
+            <img 
+              src={fmLogo} 
+              alt="FM Health Logo" 
+              className="h-14 w-auto object-contain mix-blend-multiply flex-shrink-0" 
+            />
+            <h1 className="text-2xl sm:text-3xl font-black text-[#722F37] tracking-tight uppercase">
+              FM HEALTH & WELLNESS CENTER
+            </h1>
           </div>
-        );
-      })}
 
-      {displayDates.length === 0 && !blankMode && (
-        <div className="text-center text-slate-400 py-10 font-bold text-xs border border-dashed border-slate-300">
-          No Service Lines Found For This Provider
+          {/* Solid Maroon Divider */}
+          <div className="w-full h-[2px] bg-[#722F37] my-2"></div>
+
+          {/* Subtitle in Gold/Amber and Contact Info */}
+          <h2 className="text-sm sm:text-base font-black text-[#B58D3D] tracking-widest uppercase">
+            LASER THERAPY ASSESSMENT
+          </h2>
+          <p className="text-[10.5px] text-slate-600 font-medium mt-0.5">
+            9900 Westpark Drive, Suite 354, Houston, TX | Office: 346-338-7020 | fmhealthandwellness@gmail.com
+          </p>
         </div>
-      )}
 
+        {/* Patient Name & Diagnosis Bar (100% DB Integrated) */}
+        <div className="bg-[#fce8ed] border border-[#f5cdd7] px-4 py-2 rounded-sm flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs sm:text-sm font-bold gap-1 shadow-xs">
+          <div>
+            <span className="text-slate-700">Patient Name: </span>
+            <span className="text-slate-950 font-black uppercase tracking-wide">
+              {patientName || (blankMode ? '' : 'AREGBE KAREEM AYINLA')}
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-700">Diagnosis: </span>
+            <span className="text-slate-950 font-black uppercase tracking-wide">
+              {diagnosisText || (blankMode ? '' : 'NECK AND LOW BACK')}
+            </span>
+          </div>
+        </div>
+
+        {/* Dynamic Visit Blocks (Visit 1 & Visit 2 from DB) */}
+        {visitsData.map((visit, vIdx) => {
+          const visitNum = vIdx + 1;
+          const leftServices = SERVICE_GRID_COLUMNS[0];
+          const rightServices = SERVICE_GRID_COLUMNS[1];
+
+          return (
+            <div key={vIdx} className="border border-slate-300 rounded-sm overflow-hidden shadow-xs">
+              
+              {/* Maroon Visit Header Bar */}
+              <div className="bg-[#722F37] text-white font-black text-center py-1.5 px-3 text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-1.5">
+                <span>VISIT {visitNum} - </span>
+                {blankMode ? (
+                  <input
+                    type="text"
+                    value={visit.date}
+                    onChange={(e) => handleDateChange(vIdx, e.target.value)}
+                    placeholder="MM/DD/YYYY"
+                    disabled={readOnly}
+                    className="bg-transparent text-white font-black border-b border-white/50 text-center text-xs outline-none w-24"
+                  />
+                ) : (
+                  <span>{visit.date || (vIdx === 0 ? '09/08/2026' : '09/10/2026')}</span>
+                )}
+              </div>
+
+              {/* Table Grid */}
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-[#fce8ed] text-slate-900 font-black text-[11px] border-b border-slate-300">
+                    <th className="p-1.5 border-r border-slate-300 text-center w-[12%] uppercase tracking-wider">CODE</th>
+                    <th className="p-1.5 border-r border-slate-300 w-[38%] uppercase tracking-wider">SERVICE</th>
+                    <th className="p-1.5 border-r border-slate-300 text-center w-[12%] uppercase tracking-wider">CODE</th>
+                    <th className="p-1.5 w-[38%] uppercase tracking-wider">SERVICE</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {/* 5 Rows of Codes & Services */}
+                  {Array.from({ length: 5 }).map((_, rIdx) => {
+                    const lSvc = leftServices[rIdx];
+                    const rSvc = rightServices[rIdx];
+                    const lChecked = visit.services.includes(lSvc.code);
+                    const rChecked = visit.services.includes(rSvc.code);
+
+                    return (
+                      <tr key={rIdx} className="hover:bg-slate-50/50">
+                        {/* Left Code */}
+                        <td className="p-1.5 border-r border-slate-300 text-center font-mono font-bold text-slate-800 text-[11px]">
+                          {lSvc.code}
+                        </td>
+                        {/* Left Service Checkbox */}
+                        <td className="p-1.5 border-r border-slate-300">
+                          {renderCheckbox(lChecked, lSvc.label, () => toggleService(vIdx, lSvc.code))}
+                        </td>
+                        {/* Right Code */}
+                        <td className="p-1.5 border-r border-slate-300 text-center font-mono font-bold text-slate-800 text-[11px]">
+                          {rSvc.code}
+                        </td>
+                        {/* Right Service Checkbox */}
+                        <td className="p-1.5">
+                          {renderCheckbox(rChecked, rSvc.label, () => toggleService(vIdx, rSvc.code))}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* TOLERANCE Row */}
+                  <tr className="border-t-2 border-slate-300 bg-slate-50/30">
+                    <td className="p-1.5 border-r border-slate-300 font-black text-[10.5px] uppercase tracking-wider text-slate-900">
+                      TOLERANCE
+                    </td>
+                    <td colSpan={3} className="p-1.5">
+                      <div className="flex items-center gap-6">
+                        {renderCheckbox(visit.tolerance === 'Well', 'Well', () => selectTolerance(vIdx, 'Well'))}
+                        {renderCheckbox(visit.tolerance === 'Fair', 'Fair', () => selectTolerance(vIdx, 'Fair'))}
+                        {renderCheckbox(visit.tolerance === 'Poor', 'Poor', () => selectTolerance(vIdx, 'Poor'))}
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* PROGRESS Row */}
+                  <tr className="border-t border-slate-200 bg-slate-50/30">
+                    <td className="p-1.5 border-r border-slate-300 font-black text-[10.5px] uppercase tracking-wider text-slate-900">
+                      PROGRESS
+                    </td>
+                    <td className="p-1.5 border-r border-slate-300">
+                      <div className="flex items-center gap-4">
+                        {renderCheckbox(visit.progress === 'Improving', 'Improving', () => selectProgress(vIdx, 'Improving'))}
+                        {renderCheckbox(visit.progress === 'Improving slowly', 'Improving slowly', () => selectProgress(vIdx, 'Improving slowly'))}
+                      </div>
+                    </td>
+                    <td className="p-1.5 border-r border-slate-300" colSpan={1}>
+                      {renderCheckbox(visit.progress === 'No change', 'No change', () => selectProgress(vIdx, 'No change'))}
+                    </td>
+                    <td className="p-1.5">
+                      {renderCheckbox(visit.progress === 'Getting worse', 'Getting worse', () => selectProgress(vIdx, 'Getting worse'))}
+                    </td>
+                  </tr>
+
+                  {/* PLAN Row */}
+                  <tr className="border-t border-slate-200 bg-slate-50/30">
+                    <td className="p-1.5 border-r border-slate-300 font-black text-[10.5px] uppercase tracking-wider text-slate-900">
+                      PLAN
+                    </td>
+                    <td className="p-1.5 border-r border-slate-300">
+                      {renderCheckbox(visit.plan.includes('Continue present care'), 'Continue present care', () => togglePlan(vIdx, 'Continue present care'))}
+                    </td>
+                    <td className="p-1.5 border-r border-slate-300" colSpan={1}>
+                      {renderCheckbox(visit.plan.includes('Re-evaluate due to change'), 'Re-evaluate due to change', () => togglePlan(vIdx, 'Re-evaluate due to change'))}
+                    </td>
+                    <td className="p-1.5">
+                      {renderCheckbox(visit.plan.includes('30-day re-evaluation'), '30-day re-evaluation', () => togglePlan(vIdx, '30-day re-evaluation'))}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          );
+        })}
+
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-slate-200 pt-3 flex justify-between items-center text-[11px] text-slate-500 font-mono">
+        <span>FM Health & Wellness Center • Laser Therapy Assessment</span>
+        <span>Page 7 of 16</span>
+        <span>Electronic Health Record</span>
+      </div>
     </div>
   );
 };

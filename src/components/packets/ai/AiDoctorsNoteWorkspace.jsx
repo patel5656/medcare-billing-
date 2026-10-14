@@ -88,8 +88,49 @@ export const AiDoctorsNoteWorkspace = ({ packetData, cases = [], selectedCaseId,
 
       if (Object.keys(contextData).length === 0) throw new Error("No documents selected for context.");
 
+      // Build real clinical context from case object
+      const patientName = localPacketData?.patientName || 
+        (localPacketData?.patient ? `${localPacketData.patient.firstName || ''} ${localPacketData.patient.lastName || ''}`.trim() : '') || 'Patient';
+
+      const complaints = localPacketData?.chiefComplaint || 
+        localPacketData?.painDescription || 
+        localPacketData?.mechanismOfInjury || 
+        (localPacketData?.accidentType ? `Injuries resulting from ${localPacketData.accidentType}` : '');
+
+      const injuryLocations = Array.isArray(localPacketData?.selectedInjuryAreas)
+        ? localPacketData.selectedInjuryAreas.join(', ')
+        : (localPacketData?.injuryBodyParts || localPacketData?.treatmentArea || '');
+
+      const diagnosisList = Array.isArray(localPacketData?.diagnosisCodes)
+        ? localPacketData.diagnosisCodes.map(d => (typeof d === 'string' ? d : (d.code || d.description || ''))).filter(Boolean)
+        : (localPacketData?.diagnosis ? [localPacketData.diagnosis] : []);
+
+      // Build serialized text of selected documents for the AI
+      let compiledDocsText = '';
+      for (const [docTitle, docContent] of Object.entries(contextData)) {
+        compiledDocsText += `\n=== RECORD: ${docTitle.toUpperCase()} ===\n`;
+        if (typeof docContent === 'object' && docContent !== null) {
+          for (const [k, v] of Object.entries(docContent)) {
+            if (v && typeof v === 'string' && !v.startsWith('data:image')) {
+              compiledDocsText += `• ${k}: ${v}\n`;
+            } else if (v && typeof v === 'number') {
+              compiledDocsText += `• ${k}: ${v}\n`;
+            }
+          }
+        } else if (typeof docContent === 'string') {
+          compiledDocsText += `${docContent}\n`;
+        }
+      }
+
       const inputData = {
-        patientName: localPacketData?.patientName || 'Unknown Patient',
+        patientName,
+        dos: localPacketData?.initialDate || localPacketData?.accidentDate || new Date().toLocaleDateString(),
+        accidentDate: localPacketData?.accidentDate || '',
+        accidentType: localPacketData?.accidentType || '',
+        complaints: complaints || 'General musculoskeletal discomfort following accident',
+        painLocations: injuryLocations,
+        diagnosisCodes: diagnosisList,
+        compiledDocumentation: compiledDocsText,
         instructions: "You are an AI medical scribe. Generate a comprehensive Doctor's Note based ONLY on the provided clinical document context. Do not invent facts. Return a JSON object with these exact keys: chiefComplaint, subjectiveHistory, objectiveFindings, clinicalAssessment, treatmentsAdministered, courseOfCare, treatmentPlan, followUp. If information is missing for a key, return 'Information not documented in selected records.'.",
         context: contextData
       };
