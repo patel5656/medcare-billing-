@@ -1,0 +1,54 @@
+import { API_BASE_URL } from '../../config/api';
+
+const API_BASE = API_BASE_URL;
+
+
+export const apiDocumentService = {
+  async getDocuments(caseId = null) {
+    const params = new URLSearchParams();
+    if (caseId) params.set('caseId', caseId);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE}/documents${query}`);
+    if (!res.ok) {
+      throw new Error('Failed to retrieve documents.');
+    }
+    return res.json();
+  },
+
+  async uploadDocument(payload) {
+    const res = await fetch(`${API_BASE}/documents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to upload document.');
+    }
+    return res.json();
+  },
+
+  async deleteDocument(id) {
+    const res = await fetch(`${API_BASE}/documents/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete document.');
+    }
+    return res.json();
+  },
+
+  async buildPatientPacket(selectedDocIds, caseId) {
+    const res = await fetch(`${API_BASE}/documents/packet`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selectedDocIds, caseId })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to build patient packet.');
+    }
+    return res.blob();
+  }
+};

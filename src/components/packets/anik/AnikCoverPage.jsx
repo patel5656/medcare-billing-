@@ -1,0 +1,181 @@
+// src/components/packets/anik/AnikCoverPage.jsx
+import React from 'react';
+import { PaperTextField } from '../common/PaperTextField';
+import { EditableClinicalField } from '../EditableClinicalField';
+import fmLogo from '../../../assets/fm-logo.jpeg';
+
+export const AnikCoverPage = ({ 
+  packetData = null, 
+  bill = null, 
+  serviceLines = [], 
+  cmsClaims = [], 
+  onFieldChange, 
+  readOnly, 
+  blankMode = false 
+}) => {
+  const getPatientName = () => {
+    if (blankMode || !packetData) return '';
+    return packetData.patientName || (packetData.patient ? `${packetData.patient.firstName || ''} ${packetData.patient.lastName || ''}`.trim() : '') || packetData.patient?.name || '';
+  };
+
+  const getPatientSystemId = () => {
+    if (blankMode || !packetData) return '';
+    return packetData.patient?.patientId || packetData.patientId || packetData.patientSystemId || packetData.patient?.id || '';
+  };
+
+  const storage = packetData?.clinicalDocStorage?.ANIK_COVER || {};
+
+  const getAccidentDate = () => {
+    if (blankMode || !packetData) return '';
+    if (storage.accidentDate !== undefined) return storage.accidentDate;
+    return packetData.accidentDate || packetData.dateOfAccident || packetData.patient?.accidentDate || '';
+  };
+
+  const getAttorneyInfo = () => {
+    if (blankMode || !packetData) return '';
+    const name = packetData.attorneyName || packetData.attorney || '';
+    const firm = packetData.lawFirm || packetData.lawFirmName || '';
+    if (name && firm) return `${name} (${firm})`;
+    if (name) return name;
+    if (firm) return firm;
+    return '';
+  };
+
+  const getTreatingClinic = () => {
+    if (blankMode) return '';
+    return packetData?.treatingClinic || packetData?.clinicName || packetData?.facilityName || packetData?.providerName || bill?.providerName || bill?.provider?.name || '';
+  };
+
+  const getCaseStatus = () => {
+    if (blankMode || !packetData) return '';
+    return packetData.status || packetData.caseStatus || '';
+  };
+
+  const getServiceDates = () => {
+    if (blankMode) return [];
+    
+    const dates = new Set();
+    
+    const lines = (serviceLines && serviceLines.length > 0) 
+      ? serviceLines 
+      : (bill?.items || bill?.lineItems || bill?.serviceLines || packetData?.serviceLines || packetData?.items || []);
+    
+    if (Array.isArray(lines) && lines.length > 0) {
+      lines.forEach(item => {
+        const d = item.dos || item.dateOfService || item.date;
+        if (d) dates.add(d);
+      });
+    }
+    
+    if (dates.size === 0 && Array.isArray(cmsClaims) && cmsClaims.length > 0) {
+      cmsClaims.forEach(claim => {
+        if (claim.dos) dates.add(claim.dos);
+      });
+    }
+    
+    if (dates.size === 0 && bill?.statementDate) {
+      dates.add(bill.statementDate);
+    }
+
+    return Array.from(dates);
+  };
+
+  const patientName = getPatientName();
+  const patientSystemId = getPatientSystemId();
+  const accidentDate = getAccidentDate();
+  const attorneyInfo = getAttorneyInfo();
+  const treatingClinic = getTreatingClinic();
+  const caseStatus = getCaseStatus();
+  const dosList = getServiceDates();
+  const dosText = dosList.length > 0 ? ` (DOS: ${dosList.join(', ')})` : '';
+
+  return (
+    <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
+      
+      {/* Top Header with FM Laser Therapy Logo */}
+      <div className="text-center mb-3">
+        <div className="flex justify-center mb-2">
+          <img 
+            src={fmLogo} 
+            alt="FM Laser Therapy Logo" 
+            className="h-28 w-auto object-contain mx-auto mix-blend-multiply" 
+          />
+        </div>
+        <h1 className="text-2xl font-black text-slate-950 tracking-tight">FM LASER THERAPY</h1>
+        <p className="text-[11px] text-slate-600 mt-1">9900 WESTPARK DR, HOUSTON, TX 77063</p>
+        <p className="text-[11px] text-slate-600 mt-0.5 underline">OFFICE: 346-338-7020</p>
+      </div>
+
+      {/* Horizontal divider */}
+      <div className="border-t border-slate-400 my-4"></div>
+
+      <div className="bg-slate-100 p-6 rounded-xl border border-slate-300 space-y-4">
+        <h2 className="text-lg font-bold text-slate-900 uppercase border-b border-slate-300 pb-2">PATIENT & ACCIDENT CLAIM COVER SHEET</h2>
+        
+        <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+          <div>
+            <span className="text-slate-500 block font-bold">PATIENT NAME:</span>
+            {!patientName
+              ? <div className="border-b border-slate-400 mt-1 w-40">&nbsp;</div>
+              : <strong className="text-slate-900 text-sm">{patientName}</strong>}
+          </div>
+          <div>
+            <span className="text-slate-500 block font-bold">PATIENT SYSTEM ID:</span>
+            {!patientSystemId
+              ? <div className="border-b border-slate-400 mt-1 w-32">&nbsp;</div>
+              : <strong className="text-slate-900 text-sm">{patientSystemId}</strong>}
+          </div>
+          <div>
+            <span className="text-slate-500 block font-bold mb-0.5">DATE OF ACCIDENT:</span>
+            <div className="border-b border-slate-400 text-slate-900 min-w-[120px]">
+              <EditableClinicalField
+                packetData={packetData}
+                docKey="ANIK_COVER"
+                field="accidentDate"
+                value={accidentDate}
+                placeholder="YYYY-MM-DD"
+                readOnly={readOnly || blankMode}
+                inputType="input"
+                className="w-full font-mono text-xs bg-transparent hover:bg-slate-200/50 focus:bg-white rounded px-1 outline-none text-slate-900"
+              />
+            </div>
+          </div>
+          <div>
+            <span className="text-slate-500 block font-bold">ATTORNEY / LAW FIRM:</span>
+            {!attorneyInfo
+              ? <div className="border-b border-slate-400 mt-1 w-40">&nbsp;</div>
+              : <strong className="text-slate-900">{attorneyInfo}</strong>}
+          </div>
+          <div>
+            <span className="text-slate-500 block font-bold">TREATING CLINIC:</span>
+            {!treatingClinic
+              ? <div className="border-b border-slate-400 mt-1 w-36">&nbsp;</div>
+              : <strong className="text-slate-900">{treatingClinic}</strong>}
+          </div>
+          <div>
+            <span className="text-slate-500 block font-bold">CASE STATUS:</span>
+            {!caseStatus
+              ? <div className="border-b border-slate-400 mt-1 w-28">&nbsp;</div>
+              : <strong className="text-[#722F37] text-base font-black">{caseStatus}</strong>}
+          </div>
+        </div>
+      </div>
+
+      <div className="border border-slate-300 rounded-xl p-6 space-y-3">
+        <h3 className="text-sm font-bold text-slate-900 border-b border-slate-200 pb-2 uppercase">INDEX OF CLINICAL & BILLING PACKET DOCUMENTS (16 PAGES)</h3>
+        <ul className="text-xs font-mono space-y-1.5 text-slate-700">
+          <li>1. Patient & Case Cover Page</li>
+          <li>2. Provider Billing Statement (Page 1 - Summary)</li>
+          <li>3. Provider Billing Statement (Page 2 - Service Line Ledger)</li>
+          <li>4–6. CMS-1500 Health Insurance Claim Forms{dosText}</li>
+          <li>7. ANIK Therapy Assessment Form</li>
+          <li>8–10. High-Intensity Laser Therapy Procedure Log Forms</li>
+          <li>11–13. Initial Clinical Narrative Evaluation Report</li>
+          <li>14–16. Final Medical & Therapy Discharge Report</li>
+        </ul>
+      </div>
+
+    </div>
+  );
+};
+

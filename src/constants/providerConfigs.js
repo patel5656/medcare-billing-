@@ -1,0 +1,424 @@
+// src/constants/providerConfigs.js
+
+export const INITIAL_PROVIDER_CONFIGS = {
+  josmic: {
+    id: 'prov-josmic',
+    name: 'FM Health and Wellness Center',
+    businessName: 'FM Health and Wellness Center LLC',
+    serviceCategory: 'Pain Management Consultation',
+    status: 'ACTIVE',
+    isPlaceholder: false,
+    cptCode: '99204',
+    fee: '$1,214.00',
+    address: {
+      street: '9900 Westpark Dr.',
+      suite: '',
+      city: 'Houston',
+      state: 'TX',
+      zipCode: '77063'
+    },
+    contact: {
+      phone: '346-338-7020',
+      cell: '',
+      fax: '',
+      email: 'contact@josmicwellness.com'
+    },
+    identifiers: {
+      taxId: '993723387',
+      npi: '1932847560',
+      ssnOrEin: 'EIN'
+    },
+    renderingProvider: {
+      name: 'Adeoye, Segun',
+      credentials: 'DC / MD',
+      providerId: 'R7637',
+      npi: '1932847560'
+    },
+    serviceFacility: {
+      name: 'FM Health and Wellness Center',
+      address: '9900 Westpark Dr, Houston, TX 77063',
+      npi: '1932847560'
+    },
+    billingProvider: {
+      name: 'FM Health and Wellness Center',
+      address: '9900 Westpark Dr, Houston, TX 77063',
+      phone: '346-338-7020'
+    },
+    defaultPlaceOfService: '11',
+    availableServices: [
+      { code: '99204', description: 'Pain Consult', defaultCharge: 1214.00, category: 'Consultation' }
+    ],
+    availableDiagnoses: [
+      { code: 'S13.4', description: 'Cervical sprain/strain' },
+      { code: 'S23.3', description: 'Thoracic sprain/strain' },
+      { code: 'S33.5', description: 'Lumbar strain' },
+      { code: 'M79.1', description: 'Myofascial pain syndrome' },
+      { code: 'M54.6', description: 'Pain in thoracic spine' },
+      { code: 'M54.50', description: 'Low back pain, unspecified' }
+    ],
+    providerServices: [
+      {
+        providerId: 'prov-josmic',
+        serviceId: 'srv-pain-mgmt',
+        enabled: true,
+        cptCode: '99204',
+        cptStatus: 'CONFIRMED',
+        price: 1214.00,
+        priceStatus: 'CONFIRMED',
+        duration: '60 min',
+        billingDescription: 'Pain Consult & Evaluation',
+        placeOfService: '11',
+        clinicalTemplate: 'FM Health Pain Evaluation Report',
+        configurationStatus: 'COMPLETE'
+      }
+    ]
+  },
+  davs: {
+    id: 'prov-davs',
+    name: 'FM Dav’s Anatomy',
+    businessName: 'FM Dav’s Anatomy Shockwave Therapy LLC',
+    serviceCategory: 'Shockwave Therapy (ESWT)',
+    status: 'ACTIVE',
+    isPlaceholder: false,
+    cptCode: '0101T',
+    fee: '$1,000.00',
+    address: {
+      street: '9900 Westpark Dr.',
+      suite: '',
+      city: 'Houston',
+      state: 'TX',
+      zipCode: '77063'
+    },
+    contact: {
+      phone: '346-338-7020',
+      cell: '',
+      fax: '',
+      email: 'Davsanatomy@gmail.com'
+    },
+    identifiers: {
+      taxId: '883049745',
+      npi: '1932847561',
+      ssnOrEin: 'EIN'
+    },
+    renderingProvider: {
+      name: 'Adeoye, Segun',
+      credentials: 'DC',
+      providerId: 'R7638',
+      npi: '1932847561'
+    },
+    serviceFacility: {
+      name: 'FM Dav’s Anatomy',
+      address: '9900 Westpark Dr, Houston, TX 77063',
+      npi: '1932847561'
+    },
+    billingProvider: {
+      name: 'FM Dav’s Anatomy',
+      address: '9900 Westpark Dr, Houston, TX 77063',
+      phone: '346-338-7020'
+    },
+    defaultPlaceOfService: '10',
+    availableServices: [
+      { code: '99204', description: 'Initial Visit II', defaultCharge: 250.00, category: 'Evaluation' },
+      { code: '0101T', description: 'Shockwave / ESWT', defaultCharge: 1000.00, category: 'Therapy' },
+      { code: '10001', description: 'Eye protective glasses', defaultCharge: 50.00, category: 'Supplies' },
+      { code: '97124', description: 'Massage Therapy I', defaultCharge: 90.00, category: 'Therapy' },
+      { code: '99214', description: 'Final Visit II', defaultCharge: 200.00, category: 'Evaluation' }
+    ],
+    availableDiagnoses: [
+      { code: 'M54.50', description: 'Low back pain' },
+      { code: 'M54.2', description: 'Cervicalgia (Neck pain)' },
+      { code: 'M25.572', description: 'Pain in left ankle and joints' }
+    ],
+    providerServices: [
+      {
+        providerId: 'prov-davs',
+        serviceId: 'srv-shockwave-therapy',
+        enabled: true,
+        cptCode: '0101T',
+        cptStatus: 'CONFIRMED',
+        price: 1000.00,
+        priceStatus: 'CONFIRMED',
+        duration: '30 min',
+        billingDescription: 'Shockwave / ESWT Therapy',
+        placeOfService: '10',
+        clinicalTemplate: 'FM Dav’s ESWT Therapy Record',
+        configurationStatus: 'COMPLETE'
+      }
+    ]
+  },
+  anik: {
+    id: 'prov-anik',
+    name: 'FM Laser Therapy',
+    businessName: 'FM Laser Therapy LLC',
+    serviceCategory: 'Laser Therapy (HILT)',
+    status: 'ACTIVE',
+    isPlaceholder: false,
+    cptCode: '97039',
+    fee: '$2,000.00',
+    address: {
+      street: '9900 Westpark Dr.',
+      suite: '',
+      city: 'Houston',
+      state: 'TX',
+      zipCode: '77063'
+    },
+    contact: {
+      phone: '346-338-7020',
+      cell: '',
+      fax: '',
+      email: 'contact@aniklaser.com'
+    },
+    identifiers: {
+      taxId: '993723387',
+      npi: '1932847562',
+      ssnOrEin: 'EIN'
+    },
+    renderingProvider: {
+      name: 'Adeoye, Segun',
+      credentials: 'DC / MD',
+      providerId: 'R7639',
+      npi: '1932847562'
+    },
+    serviceFacility: {
+      name: 'FM Laser Therapy',
+      address: '9900 Westpark Dr, Houston, TX 77063',
+      npi: '1932847562'
+    },
+    billingProvider: {
+      name: 'FM Laser Therapy',
+      address: '9900 Westpark Dr, Houston, TX 77063',
+      phone: '346-338-7020'
+    },
+    defaultPlaceOfService: '11',
+    availableServices: [
+      { code: '97039', description: 'High Intensity Laser Therapy', defaultCharge: 2000.00, category: 'Therapy' }
+    ],
+    availableDiagnoses: [
+      { code: 'S13.4', description: 'Cervical sprain/strain' },
+      { code: 'S33.5', description: 'Lumbar strain' }
+    ],
+    providerServices: [
+      {
+        providerId: 'prov-anik',
+        serviceId: 'srv-laser-therapy',
+        enabled: true,
+        cptCode: '97039',
+        cptStatus: 'CONFIRMED',
+        price: 2000.00,
+        priceStatus: 'CONFIRMED',
+        duration: '45 min',
+        billingDescription: 'Laser Procedure Form',
+        placeOfService: '11',
+        clinicalTemplate: 'FM Laser Procedure Form',
+        configurationStatus: 'COMPLETE'
+      }
+    ]
+  },
+  counselor: {
+    id: 'prov-counselor',
+    name: 'FM Counselor Practice (Hope Behavioral Health)',
+    businessName: 'Hope Behavioral Health & Counseling LLC',
+    serviceCategory: 'Behavioral & Mental Health',
+    status: 'ACTIVE',
+    isPlaceholder: false,
+    cptCode: '90834 / 90791',
+    fee: '$180.00 - $350.00',
+    address: {
+      street: '10101 Harwin Dr.',
+      suite: 'Suite 110',
+      city: 'Houston',
+      state: 'TX',
+      zipCode: '77036'
+    },
+    contact: {
+      phone: '346-338-7020',
+      cell: '',
+      fax: '',
+      email: 'intake@hopebehavioral.com'
+    },
+    identifiers: {
+      taxId: '748291039',
+      npi: '1487965213',
+      ssnOrEin: 'EIN'
+    },
+    renderingProvider: {
+      name: 'Miller, Jordan',
+      credentials: 'LPC / LMFT',
+      providerId: 'R7640',
+      npi: '1487965213'
+    },
+    serviceFacility: {
+      name: 'FM Hope Behavioral Health',
+      address: '10101 Harwin Dr, Suite 110, Houston, TX 77036',
+      npi: '1487965213'
+    },
+    billingProvider: {
+      name: 'FM Hope Behavioral Health LLC',
+      address: '10101 Harwin Dr, Suite 110, Houston, TX 77036',
+      phone: '346-338-7020'
+    },
+    defaultPlaceOfService: '11',
+    availableServices: [
+      { code: '90834', description: 'Psychotherapy (45 min)', defaultCharge: 250.00, category: 'Mental Health' },
+      { code: '90791', description: 'Psych Diagnostic Evaluation', defaultCharge: 350.00, category: 'Mental Health' }
+    ],
+    availableDiagnoses: [
+      { code: 'F43.10', description: 'Post-traumatic stress disorder, unspecified' },
+      { code: 'F41.1', description: 'Generalized anxiety disorder' }
+    ],
+    providerServices: [
+      {
+        providerId: 'prov-counselor',
+        serviceId: 'srv-counseling',
+        enabled: true,
+        cptCode: '90834',
+        cptStatus: 'CONFIRMED',
+        price: 250.00,
+        priceStatus: 'CONFIRMED',
+        duration: '45 min',
+        billingDescription: 'Behavioral Health Progress Note',
+        placeOfService: '11',
+        clinicalTemplate: 'Behavioral Health Progress Note',
+        configurationStatus: 'COMPLETE'
+      }
+    ]
+  },
+  tpi: {
+    id: 'prov-tpi',
+    name: 'FM Trigger Point Injection Clinic',
+    businessName: 'TPI Specialist LLC',
+    serviceCategory: 'Pain Management & Injections',
+    status: 'ACTIVE',
+    isPlaceholder: false,
+    cptCode: '20552',
+    fee: '$350.00',
+    address: {
+      street: '9900 Westpark Dr',
+      suite: 'Suite 354',
+      city: 'Houston',
+      state: 'TX',
+      zipCode: '77063'
+    },
+    contact: {
+      phone: '346-338-7020',
+      cell: '',
+      fax: '',
+      email: 'tpi@example.com'
+    },
+    identifiers: {
+      taxId: '123456789',
+      npi: '1982347563',
+      ssnOrEin: 'EIN'
+    },
+    renderingProvider: {
+      name: 'Smith, John',
+      credentials: 'MD',
+      providerId: 'R7641',
+      npi: '1982347563'
+    },
+    serviceFacility: {
+      name: 'FM Trigger Point Injection Clinic',
+      address: '9900 Westpark Dr, Suite 354, Houston, TX 77063',
+      npi: '1982347563'
+    },
+    billingProvider: {
+      name: 'TPI Specialist LLC',
+      address: '9900 Westpark Dr, Suite 354, Houston, TX 77063',
+      phone: '346-338-7020'
+    },
+    defaultPlaceOfService: '11',
+    availableServices: [
+      { code: '20552', description: 'Trigger Point Injection (1-2 muscles)', defaultCharge: 350.00, category: 'Procedure' },
+      { code: '20553', description: 'Trigger Point Injection (3+ muscles)', defaultCharge: 450.00, category: 'Procedure' }
+    ],
+    availableDiagnoses: [
+      { code: 'M79.1', description: 'Myalgia' },
+      { code: 'M54.50', description: 'Low back pain' }
+    ],
+    providerServices: [
+      {
+        providerId: 'prov-tpi',
+        serviceId: 'srv-tpi',
+        enabled: true,
+        cptCode: '20552',
+        cptStatus: 'CONFIRMED',
+        price: 350.00,
+        priceStatus: 'CONFIRMED',
+        duration: '30 min',
+        billingDescription: 'Trigger Point Injection',
+        placeOfService: '11',
+        clinicalTemplate: 'Trigger Point Procedure',
+        configurationStatus: 'COMPLETE'
+      }
+    ]
+  },
+  tecar: {
+    id: 'prov-tecar',
+    name: 'FM TECAR Therapy Clinic',
+    businessName: 'TECAR Advanced Physio LLC',
+    serviceCategory: 'Deep Tissue Radiofrequency Therapy',
+    status: 'ACTIVE',
+    isPlaceholder: false,
+    cptCode: '97024',
+    fee: '$250.00',
+    address: {
+      street: '10101 Harwin Dr.',
+      suite: 'Suite 210',
+      city: 'Houston',
+      state: 'TX',
+      zipCode: '77036'
+    },
+    contact: {
+      phone: '346-338-7020',
+      cell: '',
+      fax: '',
+      email: 'info@tecarphysio.com'
+    },
+    identifiers: {
+      taxId: '987654321',
+      npi: '1789234560',
+      ssnOrEin: 'EIN'
+    },
+    renderingProvider: {
+      name: 'Davis, Emily',
+      credentials: 'PT, DPT',
+      providerId: 'R7642',
+      npi: '1789234560'
+    },
+    serviceFacility: {
+      name: 'FM TECAR Therapy Clinic',
+      address: '10101 Harwin Dr, Suite 210, Houston, TX 77036',
+      npi: '1789234560'
+    },
+    billingProvider: {
+      name: 'TECAR Advanced Physio LLC',
+      address: '10101 Harwin Dr, Suite 210, Houston, TX 77036',
+      phone: '346-338-7020'
+    },
+    defaultPlaceOfService: '11',
+    availableServices: [
+      { code: '97024', description: 'Diathermy (e.g., microwave)', defaultCharge: 250.00, category: 'Therapy' },
+      { code: '97039', description: 'Unlisted modality (TECAR)', defaultCharge: 300.00, category: 'Therapy' }
+    ],
+    availableDiagnoses: [
+      { code: 'M54.50', description: 'Low back pain' },
+      { code: 'M25.511', description: 'Pain in right shoulder' }
+    ],
+    providerServices: [
+      {
+        providerId: 'prov-tecar',
+        serviceId: 'srv-tecar',
+        enabled: true,
+        cptCode: '97024',
+        cptStatus: 'CONFIRMED',
+        price: 250.00,
+        priceStatus: 'CONFIRMED',
+        duration: '45 min',
+        billingDescription: 'TECAR Diathermy Therapy',
+        placeOfService: '11',
+        clinicalTemplate: 'TECAR Therapy Record',
+        configurationStatus: 'COMPLETE'
+      }
+    ]
+  }
+};

@@ -1,0 +1,418 @@
+// src/components/modals/CaseDetailsModal.jsx
+import React, { useState, useEffect } from 'react';
+import { Modal } from './Modal';
+import { 
+  FileSpreadsheet, Shield, Scale, ExternalLink, Calendar, MapPin, 
+  Stethoscope, Receipt, User, Clock, AlertTriangle, FileText, CheckCircle2, ChevronRight, Edit3, Save, X 
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { apiCaseService as mockCaseService } from '../../services/api/apiCaseService';
+import { apiProviderService } from '../../services/api/apiProviderService';
+import { apiBillingService } from '../../services/api/apiBillingService';
+import { useUIStore } from '../../store/uiStore';
+import { formatCurrency } from '../../utils/billingCalculations';
+
+const KNOWN_LAW_FIRMS = [
+  { name: 'OJ Lawal, Esq.', firm: 'OJ Law Firm & Associates LLC', phone: '713-555-0188', email: 'attorney@ojlawfirm.com', address: '11711 Bedford St. Suite 01, Houston TX 77031' },
+  { name: 'Sope Lawson, Esq.', firm: 'Law Office of Sope Lawson', phone: '713-555-0725', email: 'info@sopelawsonlaw.com', address: '8303 Southwest Fwy #725, Houston, TX 77074' },
+  { name: 'Marcus Vance, Esq.', firm: 'Law Offices of Marcus Vance', phone: '713-555-0219', email: 'mvance@vancelaw.com', address: '2400 Richmond Ave Suite 300, Houston TX 77098' },
+  { name: 'Robert Cole, Attorney', firm: 'Cole & Partners Injury Law', phone: '713-555-0442', email: 'rcole@colelaw.com', address: '5000 Westheimer Rd Suite 450, Houston TX 77056' },
+  { name: 'Sarah Jenkins, Esq.', firm: 'Davis & Associates Injury Law Group', phone: '713-555-0300', email: 'sjenkins@davisinjury.com', address: '1001 Fannin St Suite 1200, Houston TX 77002' },
+];
+
+export const CaseDetailsModal = ({ isOpen, onClose, caseItem, onCaseUpdated }) => {
+  const navigate = useNavigate();
+  const { addToast } = useUIStore();
+  const [activeTab, setActiveTab] = useState('ACCIDENT');
+  const [isEditingLegal, setIsEditingLegal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [providers, setProviders] = useState([]);
+  const [bills, setBills] = useState([]);
+
+  useEffect(() => {
+    if (isOpen && caseItem) {
+      apiProviderService.getProviders().then(data => {
+        const list = Array.isArray(data) ? data : Object.values(data);
+        setProviders(list);
+      }).catch(() => {});
+
+      apiBillingService.getFourBillsByCase(caseItem.id || caseItem.caseId)
+        .then(res => setBills(res?.allBills || []))
+        .catch(() => {});
+    }
+  }, [isOpen, caseItem]);
+
+  const [legalData, setLegalData] = useState({
+    attorneyName: caseItem?.attorneyName || '',
+    lawFirm: caseItem?.lawFirm || '',
+    attorneyPhone: caseItem?.attorneyPhone || '',
+    attorneyEmail: caseItem?.attorneyEmail || '',
+    lawFirmAddress: caseItem?.lawFirmAddress || ''
+  });
+
+  if (!caseItem) return null;
+
+  const handleSaveLegal = async () => {
+    setSaving(true);
+    try {
+      await mockCaseService.updateCase(caseItem.id || caseItem.caseId, {
+        attorneyName: legalData.attorneyName,
+        lawFirm: legalData.lawFirm,
+        attorneyPhone: legalData.attorneyPhone,
+        attorneyEmail: legalData.attorneyEmail,
+        lawFirmAddress: legalData.lawFirmAddress
+      });
+      caseItem.attorneyName = legalData.attorneyName;
+      caseItem.lawFirm = legalData.lawFirm;
+      caseItem.attorneyPhone = legalData.attorneyPhone;
+      caseItem.attorneyEmail = legalData.attorneyEmail;
+      caseItem.lawFirmAddress = legalData.lawFirmAddress;
+      addToast('Attorney & Law Firm assigned successfully!', 'success');
+      setIsEditingLegal(false);
+      if (onCaseUpdated) onCaseUpdated();
+    } catch {
+      addToast('Failed to update attorney details', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSelectPreset = (preset) => {
+    setLegalData({
+      attorneyName: preset.name,
+      lawFirm: preset.firm,
+      attorneyPhone: preset.phone,
+      attorneyEmail: preset.email,
+      lawFirmAddress: preset.address || '8303 Southwest Fwy #725, Houston, TX 77074'
+    });
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Accident Case #${caseItem.caseId || 'N/A'}`}
+      subtitle={`Patient: ${caseItem.patientName || 'N/A'} | DOA: ${caseItem.accidentDate || 'N/A'}`}
+      icon={FileSpreadsheet}
+      size="2xl"
+      iconColor="text-teal-700"
+      iconBg="bg-teal-50"
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              navigate(`/billing/provider-bills?caseId=${caseItem.id || caseItem.caseId}`);
+            }}
+            className="w-full sm:w-auto px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Receipt className="w-3.5 h-3.5" /> View Connected Bills Ledger
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {/* Context Strip */}
+        <div className="bg-slate-900 text-white p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-base sm:text-lg font-bold text-white">Case #{caseItem.caseId}</h3>
+              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full font-bold text-[10px]">
+                {caseItem.status || 'ACTIVE'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Patient: <strong className="text-slate-200">{caseItem.patientName}</strong> | DOA: <strong className="text-slate-200">{caseItem.accidentDate}</strong>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 sm:text-right border-t sm:border-t-0 border-slate-800 pt-3 sm:pt-0">
+            <div>
+              <span className="text-slate-400 text-[10px] uppercase font-bold block">Case Total Billing</span>
+              <strong className="text-white text-base sm:text-lg font-mono">{formatCurrency(caseItem.caseTotalBilling || 0)}</strong>
+              <p className="text-[10px] text-teal-300">{caseItem.connectedProviderLedgersCount || 0} Connected Provider Ledgers</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Selector */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200 touch-scroll">
+          {[
+            { id: 'ACCIDENT', label: '1. Accident & Injury Profile', icon: FileText },
+            { id: 'LEGAL', label: '2. Attorney & Auto Insurance', icon: Scale },
+            { id: 'BILLS', label: '3. Connected 4-Provider Bills', icon: Receipt },
+          ].map(tab => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
+                  active ? 'bg-teal-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" /> {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab 1: Accident & Injury Profile */}
+        {activeTab === 'ACCIDENT' && (
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block">Accident Date (DOA)</span>
+                <strong className="text-slate-900 text-sm font-tabular">{caseItem.accidentDate || 'N/A'}</strong>
+              </div>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block">Accident Type</span>
+                <strong className="text-slate-900">{caseItem.accidentType || 'N/A'}</strong>
+              </div>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block">Location</span>
+                <strong className="text-slate-900">{caseItem.accidentLocation || 'N/A'}</strong>
+              </div>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block">Police Report #</span>
+                <strong className="text-slate-900 font-mono">{caseItem.policeReportNumber || 'N/A'}</strong>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                <h4 className="font-bold text-slate-900 border-b border-slate-200 pb-1.5 flex items-center gap-1.5">
+                  <Stethoscope className="w-4 h-4 text-teal-600" /> Mechanism of Injury &amp; Symptoms
+                </h4>
+                <div className="space-y-1 text-slate-700">
+                  <p><strong>Mechanism:</strong> {caseItem.mechanismOfInjury || 'N/A'}</p>
+                  <p><strong>Chief Complaint:</strong> {caseItem.chiefComplaint || 'N/A'}</p>
+                  <p><strong>Injury Body Parts:</strong> {caseItem.injuryBodyParts || 'N/A'}</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                <h4 className="font-bold text-slate-900 border-b border-slate-200 pb-1.5 flex items-center gap-1.5">
+                  <Stethoscope className="w-4 h-4 text-teal-600" /> Box 21 Linked ICD-10 Diagnoses
+                </h4>
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  {(caseItem.diagnosisCodes?.length ? caseItem.diagnosisCodes : ['N/A']).map(code => (
+                    <span key={code} className="px-2.5 py-1 bg-white text-slate-900 border border-slate-200 rounded-lg font-bold font-mono text-xs shadow-xs">
+                      {code}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-500 pt-2">Diagnoses automatically map to HCFA CMS-1500 Box 21 on all provider claims.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Attorney & Auto Insurance */}
+        {activeTab === 'LEGAL' && (
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Attorney & Law Firm Box */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <Scale className="w-4 h-4 text-teal-600" /> Attorney &amp; Law Firm (Legal Lien)
+                  </h4>
+                  {!isEditingLegal ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingLegal(true)}
+                      className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg font-bold text-[11px] flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <Edit3 className="w-3 h-3" /> {caseItem.attorneyName ? 'Edit Attorney' : '+ Assign Attorney'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingLegal(false)}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {!isEditingLegal ? (
+                  <div className="space-y-1.5 text-slate-700">
+                    <div className="flex justify-between">
+                      <span>Attorney Name:</span>
+                      <strong className="text-slate-900">{caseItem.attorneyName || 'N/A'}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Law Firm:</span>
+                      <strong className="text-slate-900">{caseItem.lawFirm || 'N/A'}</strong>
+                    </div>
+                    {caseItem.lawFirmAddress && (
+                      <div className="flex justify-between"><span>Firm Address:</span><strong className="text-slate-900">{caseItem.lawFirmAddress}</strong></div>
+                    )}
+                    {caseItem.attorneyPhone && (
+                      <div className="flex justify-between"><span>Attorney Phone:</span><strong className="text-slate-900">{caseItem.attorneyPhone}</strong></div>
+                    )}
+                    {caseItem.attorneyEmail && (
+                      <div className="flex justify-between"><span>Attorney Email:</span><strong className="text-slate-900">{caseItem.attorneyEmail}</strong></div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>Lien Agreement:</span>
+                      <span className={`font-bold ${caseItem.attorneyName ? 'text-teal-700' : 'text-slate-500'}`}>
+                        {caseItem.attorneyName ? 'Letter of Protection (LOP) on File' : 'Direct Patient Agreement'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 pt-1">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 block mb-1">Quick Select Law Firm Preset:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {KNOWN_LAW_FIRMS.map(preset => (
+                          <button
+                            key={preset.name}
+                            type="button"
+                            onClick={() => handleSelectPreset(preset)}
+                            className="px-2 py-0.5 bg-white hover:bg-teal-50 hover:border-teal-300 text-slate-800 border border-slate-200 rounded text-[10px] font-semibold transition cursor-pointer"
+                          >
+                            + {preset.firm}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-800 mb-0.5">Attorney Full Name</label>
+                      <input
+                        type="text"
+                        value={legalData.attorneyName}
+                        onChange={e => setLegalData({ ...legalData, attorneyName: e.target.value })}
+                        placeholder="e.g. OJ Lawal, Esq."
+                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:border-teal-600 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-800 mb-0.5">Law Firm Name</label>
+                      <input
+                        type="text"
+                        value={legalData.lawFirm}
+                        onChange={e => setLegalData({ ...legalData, lawFirm: e.target.value })}
+                        placeholder=""
+                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:border-teal-600 outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-800 mb-0.5">Attorney Phone</label>
+                        <input
+                          type="tel"
+                          value={legalData.attorneyPhone}
+                          onChange={e => setLegalData({ ...legalData, attorneyPhone: e.target.value })}
+                          placeholder=""
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:border-teal-600 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-800 mb-0.5">Attorney Email</label>
+                        <input
+                          type="email"
+                          value={legalData.attorneyEmail}
+                          onChange={e => setLegalData({ ...legalData, attorneyEmail: e.target.value })}
+                          placeholder=""
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:border-teal-600 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingLegal(false)}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveLegal}
+                        disabled={saving}
+                        className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold shadow-xs transition flex items-center gap-1 cursor-pointer"
+                      >
+                        <Save className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Save & Link Attorney'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Auto Insurance Claim Box */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
+                <h4 className="font-bold text-slate-900 border-b border-slate-200 pb-1.5 flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 text-teal-600" /> Auto Insurance Claim &amp; Policy
+                </h4>
+                <div className="space-y-1.5 text-slate-700">
+                  <div className="flex justify-between"><span>Insurance Carrier:</span><strong className="text-slate-900">{caseItem.insuranceCompany || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Policy #:</span><strong className="text-slate-900 font-mono">{caseItem.insurancePolicyNumber || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Claim #:</span><strong className="text-slate-900 font-mono">{caseItem.insuranceClaimNumber || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Insurance Adjuster:</span><strong className="text-slate-900">{caseItem.insuranceAdjuster || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Adjuster Phone:</span><strong className="text-slate-900">{caseItem.insuranceAdjusterPhone || 'N/A'}</strong></div>
+                  <div className="flex justify-between"><span>Liability Determination:</span><span className="text-slate-900 font-bold">{caseItem.liabilityStatus || 'N/A'}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Connected 4-Provider Bills */}
+        {activeTab === 'BILLS' && (
+          <div className="space-y-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(caseItem.assignedProviderIds || []).map((pid, idx) => {
+                const prov = providers.find(p => p.id === pid) || { name: 'Unknown Provider', serviceCategory: 'Practice Provider' };
+                // Find real bill from the database
+                const realBill = bills.find(b => b.providerId === pid);
+                
+                const amount = realBill ? realBill.totalAmount : 0.00;
+                const role = realBill ? realBill.description || prov.serviceCategory : prov.serviceCategory;
+                const cpt = realBill && realBill.serviceLines?.length ? realBill.serviceLines.map(sl => sl.cptCode).join(', ') : 'Pending';
+                const st = realBill ? (realBill.statementId || `Statement #${realBill.id.slice(-4).toUpperCase()}`) : 'No Statement Yet';
+
+                return (
+                  <div key={pid} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <strong className="text-slate-900 font-bold">{idx + 1}. {prov.name}</strong>
+                      <span className="font-mono font-bold text-teal-800 text-sm">{formatCurrency(amount)}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">{role}</p>
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/80 text-[10px]">
+                      <span className="font-mono text-slate-600">CPT: {cpt}</span>
+                      <span className="font-bold text-slate-700">{st}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-3.5 bg-slate-900 text-white rounded-2xl flex items-center justify-between font-bold">
+              <span>Grand Total {caseItem.connectedProviderLedgersCount || 0}-Provider Practice Ledger:</span>
+              <span className="text-base font-mono text-teal-300">
+                {formatCurrency(caseItem.caseTotalBilling || bills.reduce((acc, b) => acc + (b.totalAmount || 0), 0))}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+};

@@ -1,0 +1,346 @@
+// src/components/packets/tpi/TpiAssessmentForm.jsx
+import React, { useState, useEffect } from 'react';
+import { EditableClinicalField } from '../EditableClinicalField';
+import { AiAutoDraftToolbar } from '../common/AiAutoDraftToolbar';
+import { apiCaseService } from '../../../services/api/apiCaseService';
+import { apiClinicalNoteService } from '../../../services/api/apiClinicalNoteService';
+import { useUIStore } from '../../../store/uiStore';
+
+const getPainScore = (packetData) => {
+  if (!packetData) return null;
+  const score = packetData.painScore ?? packetData.painScale ?? packetData.painCurrent ?? packetData.painLevel;
+  if (score !== undefined && score !== null && score !== '') {
+    const num = Number(score);
+    return isNaN(num) ? null : num;
+  }
+  return null;
+};
+
+const getMuscleChecked = (label, packetData) => {
+  if (!packetData) return false;
+  const muscles = packetData.affectedMuscles || packetData.musclesInjected || packetData.muscleGroups || packetData.tpiMuscles;
+  if (Array.isArray(muscles)) {
+    return muscles.some(m => String(m).toLowerCase().includes(label.toLowerCase().split(' ')[0]));
+  }
+  if (typeof muscles === 'string') {
+    return muscles.toLowerCase().includes(label.toLowerCase().split(' ')[0]);
+  }
+  return false;
+};
+
+const MUSCLE_ITEMS = ['Trapezius (Bilateral)', 'Levator Scapulae', 'Rhomboids', 'Quadratus Lumborum'];
+
+export const TpiAssessmentForm = ({ readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
+  const [localVersion, setLocalVersion] = useState(0);
+  const { addToast } = useUIStore ? useUIStore() : { addToast: () => {} };
+  const storage = packetData?.clinicalDocStorage?.['TPI_ASSESSMENT'] || {};
+  const patientNameVal = blankMode || !packetData ? '' : (packetData.patientName || '');
+  const evalDateVal = blankMode || !packetData ? '' : (packetData.initialDate || packetData.evalDate || packetData.assessmentDate || '');
+  const signatureDateVal = blankMode || !packetData ? '' : (packetData.signatureDate || packetData.signedAt || packetData.dischargeDate || '');
+  const providerNameVal = blankMode || !packetData ? '' : (packetData.referringProviderName || packetData.providerName || packetData.attendingProviderName || '');
+  const savedName = (storage.providerName && !storage.providerName.startsWith('data:image')) ? storage.providerName : providerNameVal;
+  const providerName = blankMode ? '' : savedName;
+
+  const savedSig = storage.providerSignature || (storage.providerName && storage.providerName.startsWith('data:image') ? storage.providerName : '');
+  const providerSigValue = blankMode ? '' : savedSig;
+
+  const defaultPainScore = blankMode ? null : getPainScore(packetData);
+  const [selectedPainScore, setSelectedPainScore] = useState(storage.painScore !== undefined ? storage.painScore : defaultPainScore);
+
+  const [muscleState, setMuscleState] = useState(() => {
+    const overrides = storage.muscleOverrides || {};
+    const init = {};
+    MUSCLE_ITEMS.forEach(label => {
+      init[label] = overrides[label] !== undefined ? overrides[label] : getMuscleChecked(label, packetData);
+    });
+    return init;
+  });
+
+  useEffect(() => {
+    const overrides = storage.muscleOverrides || {};
+    const updated = {};
+    MUSCLE_ITEMS.forEach(label => {
+      updated[label] = overrides[label] !== undefined ? overrides[label] : getMuscleChecked(label, packetData);
+    });
+    setMuscleState(updated);
+    if (storage.painScore !== undefined) {
+      setSelectedPainScore(storage.painScore);
+    } else {
+      setSelectedPainScore(defaultPainScore);
+    }
+  }, [packetData?.id, JSON.stringify(storage.muscleOverrides), storage.painScore]);
+
+  const toggleMuscle = async (label) => {
+    if (readOnly || blankMode) return;
+    const nextVal = !muscleState[label];
+    const updated = { ...muscleState, [label]: nextVal };
+    setMuscleState(updated);
+
+    if (!packetData?.id) return;
+    try {
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const docNamespace = currentStorage['TPI_ASSESSMENT'] || {};
+      const currentOverrides = docNamespace.muscleOverrides || {};
+      const updatedOverrides = { ...currentOverrides, [label]: nextVal };
+      const updatedDoc = { ...docNamespace, muscleOverrides: updatedOverrides };
+      const updatedStorage = { ...currentStorage, ['TPI_ASSESSMENT']: updatedDoc };
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+    } catch (err) {
+      console.error('Failed to update muscle status', err);
+    }
+  };
+
+  const handleSelectPainScore = async (n) => {
+    if (readOnly || blankMode) return;
+    const nextScore = selectedPainScore === n ? null : n;
+    setSelectedPainScore(nextScore);
+
+    if (!packetData?.id) return;
+    try {
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const docNamespace = currentStorage['TPI_ASSESSMENT'] || {};
+      const updatedDoc = { ...docNamespace, painScore: nextScore };
+      const updatedStorage = { ...currentStorage, ['TPI_ASSESSMENT']: updatedDoc };
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+    } catch (err) {
+      console.error('Failed to update pain score', err);
+    }
+  };
+
+  const painScore = blankMode ? null : selectedPainScore;
+  const chiefComplaintText = blankMode || !packetData ? '' : (storage.chiefComplaint || packetData.chiefComplaint || packetData.painDescription || packetData.mechanismOfInjury || '');
+  const palpationFindingsText = blankMode || !packetData ? '' : (storage.palpationFindings || packetData.palpationFindings || packetData.palpation || packetData.physicalExam?.palpation || '');
+  const treatmentPlanText = blankMode || !packetData ? '' : (storage.treatmentPlan || packetData.treatmentPlan || packetData.plan || packetData.planRecommendations || '');
+
+  // 1-Click AI Auto-Draft for TPI Assessment
+  const handleAutoDraftAi = async () => {
+    if (!packetData || !packetData.id) return;
+    
+    try {
+      const inputData = {
+        patientName: patientNameVal,
+        accidentDate: packetData.accidentDate || '',
+        accidentType: packetData.accidentType || 'Motor Vehicle Collision',
+        complaints: packetData.chiefComplaint || packetData.painDescription || 'Cervical, thoracic, and lumbar myofascial pain and spasm',
+        painLocations: packetData.selectedInjuryAreas || packetData.injuryBodyParts || 'Cervical and Lumbar Spine',
+        diagnosisCodes: packetData.diagnosisCodes || ['M79.1', 'M54.2', 'S13.4']
+      };
+
+      const res = await apiClinicalNoteService.generateAiDraft('TPI_ASSESSMENT', inputData);
+      
+      let parsed = {};
+      try {
+        const text = res.draftText || '';
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) parsed = JSON.parse(match[0]);
+        else parsed = { chiefComplaint: text };
+      } catch (e) {
+        parsed = { chiefComplaint: res.draftText };
+      }
+
+      const newPainScore = typeof parsed.painScore === 'number' ? parsed.painScore : (defaultPainScore || 7);
+      const muscleOverrides = { ...(storage.muscleOverrides || {}) };
+      if (Array.isArray(parsed.affectedMuscles)) {
+        MUSCLE_ITEMS.forEach(item => {
+          muscleOverrides[item] = parsed.affectedMuscles.some(m => item.toLowerCase().includes(m.toLowerCase()) || m.toLowerCase().includes(item.toLowerCase().split(' ')[0]));
+        });
+      }
+
+      const newTpiDoc = {
+        ...(packetData.clinicalDocStorage?.TPI_ASSESSMENT || {}),
+        painScore: newPainScore,
+        chiefComplaint: parsed.chiefComplaint || chiefComplaintText,
+        muscleOverrides: muscleOverrides,
+        palpationFindings: parsed.palpationFindings || palpationFindingsText,
+        treatmentPlan: parsed.treatmentPlan || treatmentPlanText
+      };
+
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const updatedStorage = {
+        ...currentStorage,
+        TPI_ASSESSMENT: newTpiDoc
+      };
+
+      await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
+      packetData.clinicalDocStorage = updatedStorage;
+
+      setSelectedPainScore(newPainScore);
+      setMuscleState(muscleOverrides);
+
+      if (addToast) addToast("AI Trigger Point Assessment generated and applied successfully!", "success");
+      setLocalVersion(v => v + 1);
+    } catch (err) {
+      console.error('Failed to generate AI TPI assessment draft:', err);
+      if (addToast) addToast(err.message || "Failed to generate AI draft", "error");
+    }
+  };
+
+  return (
+    <div className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 space-y-6 flex flex-col print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '850px', minHeight: '1100px' }}>
+      
+      {/* Universal AI Auto-Draft Toolbar (Hidden on print) */}
+      {!readOnly && !blankMode && packetData && (
+        <AiAutoDraftToolbar
+          title="AI TPI Assessment Scribe"
+          badge="CPT 20552 / 20553"
+          subtitle="Auto-synthesize pain score, muscle groups, palpation findings & treatment plan from case context"
+          hasExistingContent={Boolean(storage.chiefComplaint || storage.palpationFindings || storage.treatmentPlan || storage.painScore)}
+          readOnly={readOnly || blankMode}
+          onDraft={handleAutoDraftAi}
+        />
+      )}
+
+      {/* Header */}
+      <div className="border-b-2 border-[#722F37] pb-4 mb-6 text-center">
+        <h1 className="text-2xl font-black uppercase text-slate-900 tracking-tight" style={{ fontFamily: 'serif' }}>FM TRIGGER POINT ASSESSMENT</h1>
+        <p className="text-xs font-bold text-slate-600 mt-1">CLINICAL EVALUATION &amp; FINDINGS</p>
+      </div>
+
+      {/* Patient Info */}
+      <div className="grid grid-cols-2 gap-4 text-xs font-mono mb-6">
+        <div className="flex border-b border-slate-300 pb-1">
+          <span className="font-bold w-24">Patient Name:</span>
+          <span className="flex-1 text-slate-700">{patientNameVal}&nbsp;</span>
+        </div>
+        <div className="flex border-b border-slate-300 pb-1">
+          <span className="font-bold w-24">Date of Eval:</span>
+          <span className="flex-1 text-slate-700">{evalDateVal}&nbsp;</span>
+        </div>
+      </div>
+
+      {/* Pain Assessment */}
+      <div className="mb-6">
+        <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">1. Pain Assessment</h2>
+        <div className="space-y-4 text-xs font-mono px-2">
+          <div className="flex items-center gap-4">
+            <span className="font-bold">Pain Scale (0-10):</span>
+            <div className="flex gap-2">
+              {[0,1,2,3,4,5,6,7,8,9,10].map(n => (
+                <div 
+                  key={n} 
+                  onClick={() => handleSelectPainScore(n)}
+                  className={`w-6 h-6 border flex items-center justify-center transition select-none ${!readOnly && !blankMode ? 'cursor-pointer hover:border-amber-400' : ''} ${painScore === n ? 'bg-amber-100 border-amber-500 font-bold text-slate-900' : 'border-slate-300 text-slate-400'}`}
+                >
+                  {n}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="font-bold block mb-1">Chief Complaint / Pain Description:</span>
+            <EditableClinicalField 
+              packetData={packetData}
+              docKey="TPI_ASSESSMENT"
+              field="chiefComplaint"
+              value={chiefComplaintText} 
+              readOnly={readOnly || blankMode || !packetData}
+              minHeightClass="min-h-[60px]"
+              className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-amber-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Clinical Findings */}
+      <div className="mb-6">
+        <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">2. Clinical Findings &amp; Trigger Points</h2>
+        <div className="grid grid-cols-2 gap-4 text-xs font-mono px-2">
+          <div>
+            <span className="font-bold block mb-2">Affected Muscle Groups:</span>
+            <ul className="space-y-1 text-slate-700">
+              {MUSCLE_ITEMS.map(label => {
+                const isChecked = !blankMode && Boolean(muscleState[label]);
+                return (
+                  <li 
+                    key={label} 
+                    onClick={() => toggleMuscle(label)}
+                    className={`flex items-center gap-2 select-none ${!readOnly && !blankMode ? 'cursor-pointer hover:text-slate-900' : ''}`}
+                  >
+                    <div className="w-3.5 h-3.5 border border-slate-600 inline-flex items-center justify-center text-[10px] font-bold bg-white flex-shrink-0 leading-none">
+                      {isChecked ? '✓' : ''}
+                    </div>
+                    <span>{label}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          <div>
+            <span className="font-bold block mb-2">Palpation Findings:</span>
+            <EditableClinicalField 
+              packetData={packetData}
+              docKey="TPI_ASSESSMENT"
+              field="palpationFindings"
+              value={palpationFindingsText} 
+              readOnly={readOnly || blankMode || !packetData}
+              minHeightClass="min-h-[80px]"
+              className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-amber-500"
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* Plan */}
+      <div className="mb-6">
+        <h2 className="text-sm font-bold bg-slate-100 p-2 border border-slate-300 mb-3 uppercase">3. Treatment Plan</h2>
+        <div className="text-xs font-mono px-2">
+          <EditableClinicalField 
+            packetData={packetData}
+            docKey="TPI_ASSESSMENT"
+            field="treatmentPlan"
+            value={treatmentPlanText} 
+            readOnly={readOnly || blankMode || !packetData}
+            minHeightClass="min-h-[60px]"
+            className="border border-slate-300 p-2 text-slate-700 bg-slate-50 focus:ring-amber-500"
+          />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-12 left-14 right-14 border-t border-slate-300 pt-4 text-xs font-mono flex justify-between items-end">
+        <div>
+          <div className="border-b border-slate-400 pb-1 mb-1 min-h-[50px] flex flex-col justify-end w-64">
+            <EditableClinicalField
+              packetData={packetData}
+              docKey="TPI_ASSESSMENT"
+              field="providerSignature"
+              value={providerSigValue}
+              placeholder="Click to Sign"
+              readOnly={readOnly || blankMode}
+              inputType="signature"
+              className="h-8 max-w-[240px]"
+            />
+            <EditableClinicalField
+              packetData={packetData}
+              docKey="TPI_ASSESSMENT"
+              field="providerName"
+              value={providerName}
+              placeholder="Provider Name"
+              readOnly={readOnly || blankMode}
+              inputType="input"
+              className="w-full font-mono text-xs text-slate-900 font-bold bg-transparent hover:bg-slate-200/50 focus:bg-white rounded px-1 outline-none mt-0.5"
+            />
+          </div>
+          <p className="text-slate-600">Provider Signature</p>
+        </div>
+        <div>
+          <div className="border-b border-slate-400 pb-1 mb-1 min-h-[50px] flex flex-col justify-end w-40">
+            <EditableClinicalField
+              packetData={packetData}
+              docKey="TPI_ASSESSMENT"
+              field="signatureDate"
+              value={blankMode ? '' : (storage.signatureDate !== undefined ? storage.signatureDate : signatureDateVal)}
+              placeholder="YYYY-MM-DD"
+              readOnly={readOnly || blankMode}
+              inputType="input"
+              className="w-full font-mono text-xs text-slate-900 bg-transparent hover:bg-slate-200/50 focus:bg-white rounded px-1 outline-none"
+            />
+          </div>
+          <p className="text-slate-600">Date</p>
+        </div>
+      </div>
+    </div>
+  );
+};

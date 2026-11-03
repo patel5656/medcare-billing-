@@ -1,0 +1,520 @@
+// src/pages/billing/FourBillsPage.jsx
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { apiBillingService } from '../../services/api/apiBillingService';
+import { apiCaseService } from '../../services/api/apiCaseService';
+import { apiProviderService } from '../../services/api/apiProviderService';
+import { formatCurrency } from '../../utils/billingCalculations';
+import { formatStatus } from '../../utils/formatters';
+import { useUIStore } from '../../store/uiStore';
+import { Receipt, PlusCircle, AlertTriangle, ChevronRight, User, Shield, FileText, Lock, ArrowLeft, Building, Stethoscope, DollarSign, Calendar, Layers, Edit3, Trash2, FileSpreadsheet } from 'lucide-react';
+import { CreateBillModal } from '../../components/modals/CreateBillModal';
+import { ExportDataModal } from '../../components/common/ExportDataModal';
+
+export const FourBillsPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [casesList, setCasesList] = useState([]);
+  const [selectedCaseId, setSelectedCaseId] = useState(searchParams.get('caseId') || '');
+  const [caseData, setCaseData] = useState(null);
+  const [bills, setBills] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showCreateBillModal, setShowCreateBillModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [editingBill, setEditingBill] = useState(null);
+  const [editChargesAmount, setEditChargesAmount] = useState('');
+  const { addToast } = useUIStore();
+  const navigate = useNavigate();
+
+
+  // 1. Initial Load: Fetch all cases from backend
+  useEffect(() => {
+    apiCaseService.getCases().then(res => {
+      if (res && res.length > 0) {
+        setCasesList(res);
+        const queryId = searchParams.get('caseId');
+        const matched = res.find(c => c.id === queryId || c.caseId === queryId);
+        if (matched) {
+          setSelectedCaseId(matched.id || matched.caseId);
+          setCaseData(matched);
+        } else {
+          setSelectedCaseId('');
+          setCaseData(null);
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    }).catch(err => {
+      console.error('Failed to fetch cases list:', err);
+      setIsLoading(false);
+    });
+  }, []);
+
+  // 2. Load bills whenever selectedCaseId changes
+  const loadBills = async (targetId) => {
+    const idToUse = targetId || selectedCaseId;
+    if (!idToUse) return;
+    setIsLoading(true);
+    try {
+      const [cData, bData] = await Promise.all([
+        apiCaseService.getCaseById(idToUse).catch(() => null),
+        apiBillingService.getFourBillsByCase(idToUse).catch(() => ({ allBills: [] }))
+      ]);
+
+      if (cData) {
+        setCaseData(cData);
+      } else {
+        const found = casesList.find(c => c.id === idToUse || c.caseId === idToUse);
+        if (found) setCaseData(found);
+      }
+
+      setBills(bData?.allBills || []);
+    } catch (err) {
+      console.error('Failed to load bills:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCaseId) {
+      loadBills(selectedCaseId);
+    }
+  }, [selectedCaseId]);
+
+  // 3. Dropdown case change handler
+  const handleCaseChange = (newCaseId) => {
+    setSelectedCaseId(newCaseId);
+    setSearchParams({ caseId: newCaseId });
+    const localMatch = casesList.find(c => c.id === newCaseId || c.caseId === newCaseId);
+    if (localMatch) {
+      setCaseData(localMatch);
+    }
+  };
+
+  const handleDeleteBill = async (bill) => {
+    const confirmMsg = `Are you sure you want to delete ${bill.providerName} statement (#${bill.statementNumber})?\n\nThis will remove the provider bill and its service lines from the database.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await apiBillingService.deleteBill(bill.id);
+      addToast(`Bill statement for ${bill.providerName} deleted successfully!`, 'success');
+      loadBills(selectedCaseId);
+    } catch (err) {
+      console.error('Error deleting bill:', err);
+      addToast('Failed to delete bill statement', 'error');
+    }
+  };
+
+  const handleOpenEditModal = (bill) => {
+    setEditingBill(bill);
+    setEditChargesAmount(bill.totals?.totalCharges || '');
+  };
+
+  const handleSaveEditCharges = async (e) => {
+    e.preventDefault();
+    if (!editingBill) return;
+    const newCharge = Number(editChargesAmount);
+    if (isNaN(newCharge) || newCharge <= 0) {
+      addToast('Please enter a valid positive charge amount', 'warning');
+      return;
+    }
+
+    try {
+      await apiBillingService.updateBill(editingBill.id, {
+        totalCharges: newCharge
+      });
+      addToast(`Updated charges for ${editingBill.providerName} to $${newCharge.toLocaleString()}!`, 'success');
+      setEditingBill(null);
+      loadBills(selectedCaseId);
+    } catch (err) {
+      console.error('Error updating bill charges:', err);
+      addToast('Failed to update bill charges', 'error');
+    }
+  };
+
+  // Grand totals across all provider statements for this case
+  const grandTotalCharges = bills.reduce((acc, b) => acc + (b.totals?.totalCharges || 0), 0);
+  const grandTotalPayments = bills.reduce((acc, b) => acc + (b.totals?.totalPayments || 0), 0);
+  const grandTotalAdjustments = bills.reduce((acc, b) => acc + (b.totals?.totalAdjustments || 0), 0);
+  const grandBalanceDue = bills.reduce((acc, b) => acc + (b.totals?.balanceDue || 0), 0);
+
+  return (
+    <div className="space-y-5">
+      {/* -- Top Navigation & Breadcrumb -- */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer group"
+          title="Go back"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 text-slate-600 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back</span>
+        </button>
+
+        <button 
+          onClick={() => navigate('/billing/overview')} 
+          className="px-3 py-1.5 text-xs font-bold text-teal-700 hover:text-teal-900 hover:bg-teal-50 rounded-xl transition cursor-pointer"
+        >
+          Billing Overview
+        </button>
+
+        <button 
+          onClick={() => navigate('/cases')} 
+          className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer hidden sm:inline-block"
+        >
+          Clinical Cases
+        </button>
+
+        <button 
+          onClick={() => navigate('/cms-1500')} 
+          className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer hidden md:inline-block"
+        >
+          CMS-1500 Queue
+        </button>
+      </div>
+
+      {/* -- Header Title & Dynamic Case Selector -- */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">Provider Bills Ledger</h1>
+          <p className="text-xs text-slate-500">Connected practice provider statements &amp; itemized clinical ledgers tied to patient clinical cases</p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          {/* Dynamic Backend Case Dropdown */}
+          <select
+            value={selectedCaseId}
+            onChange={(e) => handleCaseChange(e.target.value)}
+            className="px-3 py-2 bg-white text-slate-900 text-xs font-bold rounded-xl border border-slate-200 shadow-sm min-w-[220px] max-w-full truncate cursor-pointer outline-none focus:border-teal-600"
+          >
+            <option value="">-- Select Patient Case --</option>
+            {casesList.length > 0 ? (
+              casesList.map((c) => (
+                <option key={c.id || c.caseId} value={c.id || c.caseId}>
+                  {c.caseId || c.id} — {c.patientName || 'Clinical Patient'}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>No cases found in database</option>
+            )}
+          </select>
+
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+            title="Export Case Provider Bills to CSV / JSON"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-teal-600" /> Export Case Bills
+          </button>
+          <button
+            onClick={() => {
+              if (!selectedCaseId) {
+                addToast('Please select a clinical patient case first.', 'warning');
+                return;
+              }
+              setShowCreateBillModal(true);
+            }}
+            className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <PlusCircle className="w-4 h-4" /> Create Provider Bill
+          </button>
+        </div>
+      </div>
+
+      {/* Patient & Case Context Banner */}
+      {caseData && (
+        <div className="bg-slate-900 text-white p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-sm space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-800 pb-3">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base sm:text-lg font-bold text-white">{caseData.patientName}</h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 font-mono">
+                  {caseData.caseId || caseData.id}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                  {caseData.accidentType || 'CLINICAL_VISIT'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Incident Date: <strong className="text-white font-mono">{caseData.accidentDate || 'N/A'}</strong>
+                {caseData.initialDate && <> • Admission: <strong className="text-white font-mono">{caseData.initialDate}</strong></>}
+              </p>
+            </div>
+            <div>
+              <span className="px-2.5 py-1 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold inline-block border border-slate-700">
+                Status: {formatStatus(caseData.status)}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300">
+            <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-800">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Attorney &amp; Law Firm:</span>
+              <strong className="text-white text-xs">{caseData.attorneyName || 'Self-Represented (Direct)'}</strong>
+              <p className="text-[10px] text-slate-400">{caseData.lawFirm || 'Personal Injury Law'}</p>
+            </div>
+            <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-800">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Auto Insurance Carrier:</span>
+              <strong className="text-white text-xs">{caseData.insuranceCompany || 'Auto Insurance Claim'}</strong>
+              <p className="text-[10px] text-slate-400">Policy: {caseData.insurancePolicyNumber || 'POL-PENDING'}</p>
+            </div>
+            <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-800">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Case Financials:</span>
+              <div className="flex items-center justify-between text-xs mt-0.5">
+                <span className="text-slate-400">Total Statements:</span>
+                <strong className="text-teal-300 font-mono">{bills.length} Bills</strong>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">Total Balance Due:</span>
+                <strong className="text-emerald-400 font-mono font-bold">{formatCurrency(grandBalanceDue)}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* -- Dynamic Provider Bill Statements -- */}
+      {!selectedCaseId ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto border border-teal-100">
+            <User className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Select a Clinical Patient Case</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+              Please select an active clinical patient case from the dropdown menu above to view or generate provider billing statements.
+            </p>
+          </div>
+        </div>
+      ) : bills.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto border border-teal-100">
+            <Receipt className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">No Provider Bills Found for This Case</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+              There are currently no provider billing statements generated for case {caseData?.caseId || selectedCaseId}. You can create one dynamically using the button below.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCreateBillModal(true)}
+            className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-sm inline-flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <PlusCircle className="w-4 h-4" /> Create First Provider Bill
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {bills.map((bill) => (
+            <div key={bill.id} className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4 hover:border-teal-300 hover:shadow-md transition">
+              <div>
+                <div className="flex items-center justify-between mb-2 gap-1">
+                  <span className="text-[11px] font-extrabold text-teal-700 truncate">{bill.serviceCategory || 'Clinical Practice Modality'}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                      bill.status === 'FINALISED_DEMO' || bill.status === 'FINALIZED' ? 'bg-slate-100 text-slate-700 border border-slate-200' :
+                      bill.status === 'CONFIGURATION_PENDING' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                      'bg-teal-50 text-teal-700 border border-teal-200'
+                    }`}>
+                      {formatStatus(bill.status || 'ISSUED')}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteBill(bill)}
+                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                      title="Delete Provider Bill Statement"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 truncate">{bill.providerName}</h3>
+                <p className="text-xs text-slate-500 font-mono">Statement #{bill.statementNumber || 'N/A'}</p>
+
+                <div className="border-t border-slate-100 pt-3 mt-3 space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Total Charges:</span>
+                    <span className="font-bold text-slate-900 font-tabular font-mono">{formatCurrency(bill.totals?.totalCharges || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Payments:</span>
+                    <span className="font-semibold text-emerald-600 font-tabular font-mono">{formatCurrency(bill.totals?.totalPayments || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Adjustments:</span>
+                    <span className="font-semibold text-amber-600 font-tabular font-mono">{formatCurrency(bill.totals?.totalAdjustments || 0)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-100 pt-2 font-bold text-xs sm:text-sm">
+                    <span className="text-slate-900">Balance Due:</span>
+                    <span className="text-teal-700 font-tabular font-mono">{formatCurrency(bill.totals?.balanceDue || 0)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => navigate(`/billing/bills/${bill.id}`)}
+                  className="flex-1 py-2 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition text-center cursor-pointer"
+                >
+                  Open Ledger
+                </button>
+                <button
+                  onClick={() => navigate(`/cms-1500/${bill.id}/preview`)}
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 text-xs font-bold rounded-xl transition text-center cursor-pointer border border-slate-200"
+                >
+                  CMS-1500
+                </button>
+                <button
+                  onClick={() => handleOpenEditModal(bill)}
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 text-xs font-bold rounded-xl transition flex items-center gap-1 cursor-pointer border border-slate-200"
+                  title="Edit Billed Charges"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-teal-600" /> Edit
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* -- Interactive Create Bill Modal -- */}
+      <CreateBillModal
+        isOpen={showCreateBillModal}
+        onClose={() => setShowCreateBillModal(false)}
+        selectedCaseId={selectedCaseId}
+        onBillCreated={() => loadBills(selectedCaseId)}
+      />
+
+      {/* -- Interactive Edit Bill Charges Modal -- */}
+      {editingBill && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleSaveEditCharges} className="bg-white p-6 rounded-3xl shadow-2xl max-w-md w-full border border-slate-200 space-y-4">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-teal-600" /> Edit Statement Charges
+              </h3>
+              <p className="text-xs text-slate-500">{editingBill.providerName} • Statement #{editingBill.statementNumber}</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-900 mb-1">Total Charges Amount ($) *</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                placeholder="e.g. 1500.00"
+                value={editChargesAmount}
+                onChange={(e) => setEditChargesAmount(e.target.value)}
+                className="w-full px-3 py-2.5 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-600 outline-none"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Increasing charges will update statement balance due in real-time in the MySQL database.</p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setEditingBill(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
+              >
+                Save Updated Charges
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* PRINT-ONLY PROVIDER BILLING SUMMARY REPORT */}
+      <div id="printable-provider-bills-report" className="hidden print:block printable-area space-y-4 bg-white text-slate-900 p-2">
+        <div className="border-b-2 border-slate-900 pb-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight">F&amp;M HEALTH &amp; WELLNESS</h1>
+              <h2 className="text-xs font-bold text-slate-700 uppercase mt-0.5">Four Practice Modality Provider Bills Ledger</h2>
+            </div>
+            <div className="text-right font-mono text-[10px] text-slate-600">
+              <p>Case ID: <strong>{caseData?.caseId || selectedCaseId}</strong></p>
+              <p>Patient: <strong>{caseData?.patientName || 'Patient Record'}</strong></p>
+              <p>Generated: <strong>{new Date().toLocaleString()}</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2 p-2 bg-slate-100 rounded text-xs font-mono border border-slate-300">
+          <div>Total Charges: <strong>{formatCurrency(grandTotalCharges)}</strong></div>
+          <div>Payments: <strong>{formatCurrency(grandTotalPayments)}</strong></div>
+          <div>Adjustments: <strong>{formatCurrency(grandTotalAdjustments)}</strong></div>
+          <div>Balance Due: <strong className="text-emerald-800">{formatCurrency(grandBalanceDue)}</strong></div>
+        </div>
+
+        <table className="w-full text-left text-xs border-collapse border border-slate-300">
+          <thead className="bg-slate-200 text-slate-900 font-bold uppercase text-[9px] border-b border-slate-400">
+            <tr>
+              <th className="p-2 border-r border-slate-300">Practice Provider</th>
+              <th className="p-2 border-r border-slate-300">Statement #</th>
+              <th className="p-2 border-r border-slate-300">Statement Date</th>
+              <th className="p-2 text-right border-r border-slate-300">Total Billed</th>
+              <th className="p-2 text-right border-r border-slate-300">Payments</th>
+              <th className="p-2 text-right border-r border-slate-300">Adjustments</th>
+              <th className="p-2 text-right border-r border-slate-300">Balance Due</th>
+              <th className="p-2 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-300">
+            {bills.map((b) => (
+              <tr key={b.id || b.statementNumber} className="font-mono text-[11px] print-avoid-break">
+                <td className="p-2 border-r border-slate-200 font-bold">{b.providerName}</td>
+                <td className="p-2 border-r border-slate-200">{b.statementNumber}</td>
+                <td className="p-2 border-r border-slate-200">{b.statementDate}</td>
+                <td className="p-2 text-right border-r border-slate-200">{formatCurrency(b.totals?.totalCharges || 0)}</td>
+                <td className="p-2 text-right border-r border-slate-200">{formatCurrency(b.totals?.totalPayments || 0)}</td>
+                <td className="p-2 text-right border-r border-slate-200">{formatCurrency(b.totals?.totalAdjustments || 0)}</td>
+                <td className="p-2 text-right border-r border-slate-200 font-bold">{formatCurrency(b.totals?.balanceDue || 0)}</td>
+                <td className="p-2 text-center text-emerald-800 font-bold">{b.status || 'ISSUED'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Export Provider Bills Modal */}
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        title="Export Provider Billing Statements"
+        subtitle={`Exporting ${bills.length} provider bills for case ${caseData?.caseId || selectedCaseId}`}
+        data={bills.map(b => ({
+          providerName: b.providerName,
+          statementNumber: b.statementNumber,
+          statementDate: b.statementDate,
+          serviceCategory: b.serviceCategory || 'Clinical Practice Modality',
+          totalCharges: b.totals?.totalCharges || 0,
+          totalPayments: b.totals?.totalPayments || 0,
+          totalAdjustments: b.totals?.totalAdjustments || 0,
+          balanceDue: b.totals?.balanceDue || 0,
+          status: b.status || 'ISSUED',
+        }))}
+        availableColumns={[
+          { key: 'providerName', label: 'Practice Provider' },
+          { key: 'statementNumber', label: 'Statement Number' },
+          { key: 'statementDate', label: 'Statement Date' },
+          { key: 'serviceCategory', label: 'Modality Category' },
+          { key: 'totalCharges', label: 'Total Charges ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'totalPayments', label: 'Payments ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'totalAdjustments', label: 'Adjustments ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'balanceDue', label: 'Balance Due ($)', formatter: (v) => formatCurrency(v) },
+          { key: 'status', label: 'Statement Status' },
+        ]}
+        defaultFilename={`case_bills_${caseData?.caseId || 'export'}`}
+        printableContainerId="printable-provider-bills-report"
+      />
+    </div>
+  );
+};
+

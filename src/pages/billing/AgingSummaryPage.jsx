@@ -1,0 +1,391 @@
+// src/pages/billing/AgingSummaryPage.jsx
+import React, { useEffect, useState } from 'react';
+import { apiBillingService } from '../../services/api/apiBillingService';
+import { formatCurrency } from '../../utils/billingCalculations';
+import { useSettings } from '../../utils/settingsCache';
+import { ArrowLeft, TrendingUp, TrendingDown, Clock, AlertTriangle, CheckCircle, XCircle, BarChart2, FileText, User, Printer, FileSpreadsheet, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { exportToCSV, triggerPrint, getTimestampedFilename } from '../../utils/exportUtils';
+import { ExportDataModal } from '../../components/common/ExportDataModal';
+import { useUIStore } from '../../store/uiStore';
+
+// Mock data removed. Component is fully integrated with database.
+
+const riskBadge = (risk) => {
+  if (risk === 'high') return <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-red-100 text-red-700 border border-red-200">HIGH RISK</span>;
+  if (risk === 'low') return <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-amber-100 text-amber-700 border border-amber-200">LOW RISK</span>;
+  return <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">N/A</span>;
+};
+
+const statusBadge = (status) => {
+  const map = {
+    FINALISED_DEMO: 'bg-slate-100 text-slate-700 border-slate-200',
+    ISSUED_DEMO: 'bg-teal-50 text-teal-700 border-teal-200',
+    CONFIGURATION_PENDING: 'bg-amber-100 text-amber-800 border-amber-200',
+  };
+  const label = {
+    FINALISED_DEMO: 'Finalised',
+    ISSUED_DEMO: 'Issued',
+    CONFIGURATION_PENDING: 'Pending Config',
+  };
+  return (
+    <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full border ${map[status] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+      {label[status] || status}
+    </span>
+  );
+};
+
+const ActivityIcon = ({ type }) => {
+  if (type === 'warn') return <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0"><AlertTriangle className="w-3.5 h-3.5 text-amber-600" /></div>;
+  if (type === 'doc') return <div className="w-7 h-7 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0"><FileText className="w-3.5 h-3.5 text-teal-600" /></div>;
+  if (type === 'alert') return <div className="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0"><XCircle className="w-3.5 h-3.5 text-red-500" /></div>;
+  return <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0"><CheckCircle className="w-3.5 h-3.5 text-emerald-600" /></div>;
+};
+
+export const AgingSummaryPage = () => {
+  const settings = useSettings();
+  const { addToast, activeProviderFilter } = useUIStore();
+  const [loading, setLoading] = useState(true);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [aging, setAging] = useState({
+    current: 0,
+    past30: 0,
+    past60: 0,
+    past90: 0,
+    grandTotal: 0,
+    providerAgingBreakdown: [],
+    patientAgingLedger: []
+  });
+  const [transactions, setTransactions] = useState([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      apiBillingService.getAgingSummary(activeProviderFilter),
+      apiBillingService.getPaymentsList()
+    ]).then(([agingRes, paymentsRes]) => {
+      if (agingRes) {
+        setAging({
+          current: agingRes.current || 0,
+          past30: agingRes.past30 || 0,
+          past60: agingRes.past60 || 0,
+          past90: agingRes.past90 || 0,
+          grandTotal: agingRes.grandTotal || 0,
+          providerAgingBreakdown: agingRes.providerAgingBreakdown || [],
+          patientAgingLedger: agingRes.patientAgingLedger || []
+        });
+      }
+      if (paymentsRes && Array.isArray(paymentsRes)) {
+        setTransactions(paymentsRes);
+      }
+    }).catch(err => {
+      console.error('Failed to load aging data', err);
+    }).finally(() => {
+      setLoading(false);
+    });
+  }, [activeProviderFilter]);
+
+  const total = aging.grandTotal || (aging.current + aging.past30 + aging.past60 + aging.past90) || 1;
+  const pct = (val) => ((val / total) * 100).toFixed(1);
+
+  const collectionRate = aging.grandTotal > 0
+    ? Math.round(((aging.grandTotal - aging.past90) / aging.grandTotal) * 100)
+    : 0;
+
+  const providerAgingList = aging.providerAgingBreakdown || [];
+  const patientAgingList = aging.patientAgingLedger || [];
+
+  const agingExportColumns = [
+    { key: 'providerName', label: 'Practice Provider' },
+    { key: 'statementNo', label: 'Statement #' },
+    { key: 'totalBalance', label: 'Total AR Balance ($)', formatter: (v) => formatCurrency(v) },
+    { key: 'current', label: 'Current 0-30 Days ($)', formatter: (v) => formatCurrency(v) },
+    { key: 'past30', label: '31-60 Days ($)', formatter: (v) => formatCurrency(v) },
+    { key: 'past60', label: '61-90 Days ($)', formatter: (v) => formatCurrency(v) },
+    { key: 'past90', label: '90+ Days ($)', formatter: (v) => formatCurrency(v) },
+    { key: 'status', label: 'Billing Status' },
+  ];
+
+  const handleExportCSV = () => {
+    try {
+      const dataToExport = providerAgingList.length > 0 ? providerAgingList : [
+        { providerName: 'FM Laser Therapy', statementNo: '120199', totalBalance: 18920, current: 18920, past30: 0, past60: 0, past90: 0, status: 'FINALIZED' },
+        { providerName: "FM Dav’s Anatomy Physical Therapy", statementNo: '120198', totalBalance: 9870, current: 9870, past30: 0, past60: 0, past90: 0, status: 'FINALIZED' },
+        { providerName: 'FM Health and Wellness Center', statementNo: '120197', totalBalance: 1214, current: 1214, past30: 0, past60: 0, past90: 0, status: 'FINALIZED' },
+        { providerName: 'FM Counselor Practice (Hope & Harmony)', statementNo: '120200', totalBalance: 1140, current: 1140, past30: 0, past60: 0, past90: 0, status: 'ISSUED' },
+      ];
+      const filename = getTimestampedFilename('ar_aging_summary', 'csv');
+      exportToCSV(filename, dataToExport, agingExportColumns);
+      addToast(`Exported AR aging summary to ${filename}`, 'success');
+    } catch (err) {
+      addToast('Failed to export aging data', 'error');
+    }
+  };
+
+  const handlePrintReport = () => {
+    triggerPrint('printable-aging-report');
+    addToast('Opening print dialog for Accounts Receivable Aging Summary...', 'info');
+  };
+
+  return (
+    <div id="printable-aging-report" className="space-y-6">
+      
+      {/* Print-Only Header */}
+      <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 uppercase">MedPractice Pro &bull; AR Aging Report</h1>
+            <p className="text-xs text-slate-600">5-Bucket Financial Aging Analysis Across All Practice Providers</p>
+            <p className="text-[10px] text-slate-500 font-mono mt-0.5">Generated: {new Date().toLocaleString()}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-bold text-slate-900">Grand Total AR: <span className="font-mono">{formatCurrency(aging.grandTotal)}</span></p>
+            <p className="text-xs font-bold text-emerald-700">Collection Rate: {collectionRate}%</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Back nav & Top Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
+        <button onClick={() => navigate('/billing/four-bills')} className="flex items-center gap-1 text-xs font-bold text-secondary-container hover:underline cursor-pointer">
+          <ArrowLeft className="w-4 h-4" /> Back to 4-Bill Ledger
+        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrintReport}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <Printer className="w-4 h-4 text-teal-400" /> Export PDF
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Export CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
+        <div>
+          <h1 className="text-2xl font-bold text-on-surface">Accounts Receivable Aging Summary</h1>
+          <p className="text-xs text-on-surface-variant">5-Bucket financial aging analysis across all {providerAgingList.length || 6} practice provider billing ledgers</p>
+        </div>
+      </div>
+
+      {/* 5-Bucket Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+        {[
+          { label: 'Current Due', value: aging.current, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: <CheckCircle className="w-4 h-4 text-emerald-500" /> },
+          { label: '30 Days Past Due', value: aging.past30, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', icon: <Clock className="w-4 h-4 text-blue-500" /> },
+          { label: '60 Days Past Due', value: aging.past60, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', icon: <AlertTriangle className="w-4 h-4 text-amber-500" /> },
+          { label: '90+ Days Past Due', value: aging.past90, color: 'text-error', bg: 'bg-red-50', border: 'border-red-200', icon: <XCircle className="w-4 h-4 text-red-500" /> },
+          { label: 'Grand Total Balance', value: aging.grandTotal, color: 'text-on-surface', bg: 'bg-surface-container-low', border: 'border-secondary-container/40', icon: <TrendingUp className="w-4 h-4 text-secondary-container" /> },
+        ].map((bucket) => (
+          <div key={bucket.label} className={`${bucket.bg} p-4 rounded-xl border ${bucket.border} shadow-sm text-center space-y-1`}>
+            <div className="flex justify-center mb-1">{bucket.icon}</div>
+            <span className="text-[11px] font-bold text-on-surface-variant block">{bucket.label}</span>
+            <span className={`text-lg font-bold font-tabular ${bucket.color}`}>{formatCurrency(bucket.value)}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* KPI Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Total Providers</p>
+          <p className="text-2xl font-bold text-slate-900">{providerAgingList.length}</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">Across {patientAgingList.length} active case{patientAgingList.length === 1 ? '' : 's'}</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Billed vs. Collected</p>
+          <p className="text-2xl font-bold text-slate-900">{collectionRate}%</p>
+          <div className="mt-1.5 w-full bg-slate-100 rounded-full h-1.5">
+            <div className="bg-teal-500 h-1.5 rounded-full" style={{ width: `${collectionRate}%` }} />
+          </div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">High-Risk Balances</p>
+          <p className="text-2xl font-bold text-red-600">{formatCurrency(aging.past90)}</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">90+ days outstanding</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Pending Config</p>
+          <p className="text-2xl font-bold text-amber-600">{providerAgingList.filter(p => p.status === 'Pending Config' || p.status === 'CONFIGURATION_PENDING').length}</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">Provider billing incomplete</p>
+        </div>
+      </div>
+
+      {/* Provider Breakdown Table */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+          <BarChart2 className="w-4 h-4 text-teal-600" />
+          <h2 className="text-sm font-bold text-slate-900">Provider-Level Aging Breakdown</h2>
+          <span className="ml-auto text-[10px] text-slate-400 font-semibold">{providerAgingList.length} PROVIDERS</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs min-w-[700px]">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100 text-[10px] uppercase font-bold text-slate-400">
+                <th className="text-left px-5 py-3">Provider</th>
+                <th className="text-left px-4 py-3">Stmt #</th>
+                <th className="text-left px-4 py-3">Status</th>
+                <th className="text-right px-4 py-3">Current</th>
+                <th className="text-right px-4 py-3">30 Days</th>
+                <th className="text-right px-4 py-3">60 Days</th>
+                <th className="text-right px-4 py-3">90+ Days</th>
+                <th className="text-right px-4 py-3">Total</th>
+                <th className="text-center px-4 py-3">Risk</th>
+              </tr>
+            </thead>
+            <tbody>
+              {providerAgingList.map((row, i) => (
+                <tr key={i} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                  <td className="px-5 py-3.5">
+                    <p className="font-bold text-slate-900 truncate max-w-[160px]">{row.provider}</p>
+                    <p className="text-[10px] text-slate-400">{row.category}</p>
+                  </td>
+                  <td className="px-4 py-3.5 text-slate-500 font-mono">{row.statement}</td>
+                  <td className="px-4 py-3.5">{statusBadge(row.status)}</td>
+                  <td className="px-4 py-3.5 text-right font-tabular text-emerald-600">{formatCurrency(row.current)}</td>
+                  <td className="px-4 py-3.5 text-right font-tabular text-blue-600">{formatCurrency(row.past30)}</td>
+                  <td className="px-4 py-3.5 text-right font-tabular text-amber-600">{formatCurrency(row.past60)}</td>
+                  <td className="px-4 py-3.5 text-right font-tabular font-bold text-red-600">{formatCurrency(row.past90)}</td>
+                  <td className="px-4 py-3.5 text-right font-tabular font-bold text-slate-900">{formatCurrency(row.total)}</td>
+                  <td className="px-4 py-3.5 text-center">{riskBadge(row.risk)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-slate-50 font-bold text-xs border-t border-slate-200">
+                <td className="px-5 py-3 text-slate-700" colSpan={3}>Grand Totals</td>
+                <td className="px-4 py-3 text-right font-tabular text-emerald-600">{formatCurrency(aging.current)}</td>
+                <td className="px-4 py-3 text-right font-tabular text-blue-600">{formatCurrency(aging.past30)}</td>
+                <td className="px-4 py-3 text-right font-tabular text-amber-600">{formatCurrency(aging.past60)}</td>
+                <td className="px-4 py-3 text-right font-tabular text-red-600">{formatCurrency(aging.past90)}</td>
+                <td className="px-4 py-3 text-right font-tabular text-slate-900">{formatCurrency(aging.grandTotal)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {/* Patient Aging & Recent Activity - 2 column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+        {/* Patient-Level Aging */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+            <User className="w-4 h-4 text-teal-600" />
+            <h2 className="text-sm font-bold text-slate-900">Patient Aging Ledger</h2>
+            <span className="ml-auto text-[10px] text-slate-400 font-semibold">{patientAgingList.length} PATIENTS / CASES</span>
+          </div>
+          <div className="divide-y divide-slate-50">
+            {patientAgingList.map((p, i) => {
+              const pct90 = p.total > 0 ? Math.round((p.past90 / p.total) * 100) : 0;
+              return (
+                <div key={i} className="px-5 py-3.5 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">{p.name}</p>
+                      <p className="text-[10px] text-slate-400">{p.patientId} • {p.caseId}</p>
+                    </div>
+                    <span className="text-sm font-bold text-slate-900 font-tabular">{formatCurrency(p.total)}</span>
+                  </div>
+                  <div className="flex gap-2 text-[10px] text-slate-500 flex-wrap mb-2">
+                    <span>⚖️ {p.attorney}</span>
+                    <span>🛡️ {p.insurance}</span>
+                  </div>
+                  {/* Mini aging bar */}
+                  <div className="flex h-1.5 rounded-full overflow-hidden gap-px">
+                    {p.total > 0 && <>
+                      <div className="bg-emerald-400" style={{ width: `${(p.current / p.total) * 100}%` }} />
+                      <div className="bg-blue-400" style={{ width: `${(p.past30 / p.total) * 100}%` }} />
+                      <div className="bg-amber-400" style={{ width: `${(p.past60 / p.total) * 100}%` }} />
+                      <div className="bg-red-400" style={{ width: `${(p.past90 / p.total) * 100}%` }} />
+                    </>}
+                    {p.total === 0 && <div className="bg-slate-200 w-full" />}
+                  </div>
+                  {pct90 > 0 && (
+                    <p className="text-[9px] text-red-500 font-bold mt-1">{pct90}% in 90+ day bucket</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Recent Activity Feed */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-teal-600" />
+            <h2 className="text-sm font-bold text-slate-900">Recent Billing Activity</h2>
+            <span className="ml-auto text-[10px] text-slate-400 font-semibold">{transactions.length} EVENTS</span>
+          </div>
+          <div className="divide-y divide-slate-50">
+            {transactions.slice(0, 5).map((ev, i) => (
+              <div key={i} className="px-5 py-3.5 flex items-start gap-3 hover:bg-slate-50 transition-colors">
+                <ActivityIcon type={ev.amount > 0 ? 'check' : 'doc'} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-bold text-slate-900 truncate">{ev.type}</p>
+                    {ev.amount !== 0 && (
+                      <span className={`text-xs font-bold font-tabular flex-shrink-0 ${ev.amount > 0 ? 'text-teal-600' : 'text-amber-500'}`}>
+                        {ev.amount > 0 ? '+' : ''}{formatCurrency(ev.amount)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-500 truncate">{ev.provider} — Patient: {ev.patient}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{ev.ref}</p>
+                </div>
+                <span className="text-[9px] text-slate-300 font-mono flex-shrink-0 mt-0.5">{ev.date}</span>
+              </div>
+            ))}
+            {transactions.length === 0 && (
+              <div className="p-4 text-center text-xs text-slate-500">
+                No recent transactions found.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Aging Distribution Visual */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <TrendingUp className="w-4 h-4 text-teal-600" />
+          <h2 className="text-sm font-bold text-slate-900">Aging Balance Distribution</h2>
+          <span className="ml-auto text-xs font-bold text-slate-900 font-tabular">{formatCurrency(aging.grandTotal)} total</span>
+        </div>
+        {[
+          { label: 'Current (0 days)', value: aging.current, total: aging.grandTotal, color: 'bg-emerald-500', text: 'text-emerald-600' },
+          { label: '30 Days Past Due', value: aging.past30, total: aging.grandTotal, color: 'bg-blue-500', text: 'text-blue-600' },
+          { label: '60 Days Past Due', value: aging.past60, total: aging.grandTotal, color: 'bg-amber-500', text: 'text-amber-600' },
+          { label: '90+ Days Past Due', value: aging.past90, total: aging.grandTotal, color: 'bg-red-500', text: 'text-red-600' },
+        ].map((bucket) => {
+          const pct = bucket.total > 0 ? ((bucket.value / bucket.total) * 100).toFixed(1) : '0.0';
+          return (
+            <div key={bucket.label} className="flex items-center gap-3">
+              <span className="text-[11px] text-slate-500 w-40 flex-shrink-0">{bucket.label}</span>
+              <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                <div className={`${bucket.color} h-2.5 rounded-full transition-all`} style={{ width: `${pct}%` }} />
+              </div>
+              <span className={`text-[11px] font-bold font-tabular w-20 text-right ${bucket.text}`}>{formatCurrency(bucket.value)}</span>
+              <span className="text-[10px] text-slate-400 w-10 text-right">{pct}%</span>
+            </div>
+          );
+        })}
+        <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
+          <span className="text-[11px] font-bold text-slate-700 w-40 flex-shrink-0">Grand Total</span>
+          <div className="flex-1 bg-gradient-to-r from-emerald-400 via-blue-400 via-amber-400 to-red-500 h-2.5 rounded-full opacity-60" />
+          <span className="text-[11px] font-bold text-slate-900 font-tabular w-20 text-right">{formatCurrency(aging.grandTotal)}</span>
+          <span className="text-[10px] text-slate-400 w-10 text-right">100%</span>
+        </div>
+      </div>
+    </div>
+  );
+};

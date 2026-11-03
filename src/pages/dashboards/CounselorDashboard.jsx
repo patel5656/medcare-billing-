@@ -1,0 +1,242 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Brain, FileText, Calendar, PlusCircle, DollarSign, CheckCircle2, 
+  ChevronRight, Users, Clock, Stethoscope, Tag, HeartPulse, Printer
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CounselorSessionModal } from '../../components/modals/CounselorSessionModal';
+import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
+import { apiCaseService } from '../../services/api/apiCaseService';
+import { apiAppointmentService } from '../../services/api/apiAppointmentService';
+import { apiBillingService } from '../../services/api/apiBillingService';
+import { formatCurrency } from '../../utils/billingCalculations';
+import { useSettings } from '../../utils/settingsCache';
+
+import { useAuthStore } from '../../store/authStore';
+import { ROLES } from '../../constants/rolePermissions';
+
+export const CounselorDashboard = () => {
+  const settings = useSettings();
+  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [notes, setNotes] = useState([]);
+  const [cases, setCases] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [bills, setBills] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { currentUser } = useAuthStore();
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const filterObj = {};
+      const isFullAccess = [ROLES.SUPER_ADMIN, ROLES.RECEPTIONIST].includes(currentUser?.role);
+      if (!isFullAccess) {
+        filterObj.providerId = currentUser?.providerId || 'prov-counselor';
+      }
+
+      const [notesRes, casesRes, apptsRes, billsRes] = await Promise.all([
+        apiClinicalNoteService.getNotes(filterObj).catch(() => []),
+        apiCaseService.getCases(filterObj).catch(() => []),
+        apiAppointmentService.getAllAppointments(filterObj).catch(() => []),
+        apiBillingService.getAllCmsClaims().catch(() => ({ bills: [] }))
+      ]);
+
+      const noteList = Array.isArray(notesRes) ? notesRes : (notesRes?.value || []);
+      setNotes(noteList);
+      setCases(casesRes || []);
+      setAppointments(Array.isArray(apptsRes) ? apptsRes : (apptsRes?.appointments || []));
+      
+      const allBills = billsRes?.bills || [];
+      const provId = filterObj.providerId || 'prov-counselor';
+      setBills(allBills.filter(b => b.providerId === provId));
+    } catch (err) {
+      console.error('Failed to load counselor dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const counselorNotes = notes.filter(n => n.providerId === 'prov-counselor' || n.providerName?.toLowerCase().includes('counselor') || n.type === 'COUNSELOR_GENERIC');
+  const signedNotesCount = counselorNotes.filter(n => n.status === 'SIGNED_LOCKED' || n.status === 'SIGNED').length;
+
+  const counselorAppts = appointments.filter(a => a.providerId === 'prov-counselor' || a.providerName?.toLowerCase().includes('counselor') || a.appointmentType?.toLowerCase().includes('psychotherapy'));
+  const activeSessionsCount = counselorAppts.length;
+
+  const counselorCases = cases.filter(c => 
+    c.assignedProviderIds?.includes('prov-counselor') || 
+    c.assignedProviderIds?.includes('COUNSELOR') || 
+    c.diagnosisCodes?.some?.(d => String(d).startsWith('F'))
+  );
+  const displayCases = counselorCases;
+
+  const counselorTotal = bills.reduce((sum, b) => sum + (b.totals?.totalCharges || 0), 0);
+  const totalPages = bills.length + counselorNotes.length;
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+              <Brain className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Counselor &amp; Behavioral Health Dashboard</h1>
+              <p className="text-xs text-slate-500">Psychological trauma intake, psychotherapy sessions &amp; billing statements</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2 flex-wrap">
+          {bills.length > 0 && (
+            <button 
+              onClick={() => navigate(`/billing/bills/${bills[0].id}`)} 
+              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <DollarSign className="w-4 h-4 text-emerald-600" /> Recent Bill
+            </button>
+          )}
+          <button 
+            onClick={() => setShowSessionModal(true)} 
+            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <PlusCircle className="w-4 h-4" /> New Counseling Note
+          </button>
+        </div>
+      </div>
+
+      {/* 4 Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500">Scheduled Sessions</span>
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+              <Calendar className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-slate-900 font-tabular">{activeSessionsCount} Active</p>
+          <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" /> Psychotherapy &amp; Intake Queue
+          </p>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500">Counselor Total Charges</span>
+            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+              <DollarSign className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-slate-900 font-tabular">{formatCurrency(counselorTotal)}</p>
+          <p className="text-[11px] text-slate-500">Itemized Service Lines (Bill Statement)</p>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500">Clinical Progress Notes</span>
+            <div className="p-2 bg-teal-50 text-teal-600 rounded-lg">
+              <FileText className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-slate-900 font-tabular">{counselorNotes.length} Notes</p>
+          <p className="text-[11px] text-teal-700 font-semibold">{signedNotesCount} Signed &bull; ICD-10 &amp; DSM-5</p>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500">Master Document Packet</span>
+            <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+              <Printer className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-slate-900 font-tabular">{totalPages} Available</p>
+          <p className="text-[11px] text-purple-700 font-semibold">Bills, Notes &amp; Forms</p>
+        </div>
+      </div>
+
+      {/* Quick Action Clinical & Billing Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        
+        {/* Today's Counseling Roster */}
+        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Users className="w-4 h-4 text-indigo-600" /> Patient Counseling Queue
+            </h2>
+            <button onClick={() => navigate('/appointments/calendar')} className="text-xs font-bold text-teal-700 hover:underline cursor-pointer">
+              View Calendar
+            </button>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            {displayCases.map((c) => (
+              <div key={c.id || c.caseId} className="p-3.5 bg-slate-50 hover:bg-indigo-50/40 rounded-xl border border-slate-200 flex items-center justify-between transition">
+                <div>
+                  <strong className="text-slate-900 text-sm block">{c.patientName || 'Clinical Patient'}</strong>
+                  <p className="text-slate-500">Case: {c.caseId || c.id} | DOI: {c.accidentDate || 'N/A'}</p>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    {c.diagnosisCodes && c.diagnosisCodes.length > 0 && (
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px]">
+                        ICD: {c.diagnosisCodes.join(', ')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowSessionModal(true)} 
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs shadow-sm transition cursor-pointer"
+                >
+                  Open Note
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Counselor Billing & Document Operations */}
+        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-emerald-600" /> Counselor Billing &amp; Legal Packet
+            </h2>
+            <button onClick={() => navigate('/billing/provider-bills')} className="text-xs font-bold text-teal-700 hover:underline cursor-pointer">
+              Provider Bills Ledger
+            </button>
+          </div>
+
+          <div className="space-y-2.5 text-xs">
+            {bills.length > 0 ? bills.slice(0, 3).map(b => (
+              <div 
+                key={b.id}
+                onClick={() => navigate(`/billing/bills/${b.id}`)}
+                className="p-3 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200 cursor-pointer transition flex items-center justify-between"
+              >
+                <div>
+                  <strong className="text-slate-900">Statement ({b.id})</strong>
+                  <p className="text-slate-500">Total Charges: {formatCurrency(b.totals?.totalCharges || 0)} | Balance Due: {formatCurrency(b.totals?.balanceDue || 0)}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </div>
+            )) : (
+              <p className="text-slate-500 text-center py-4">No billing statements available.</p>
+            )}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Interactive Counselor Session Modal */}
+      <CounselorSessionModal
+        isOpen={showSessionModal}
+        onClose={() => setShowSessionModal(false)}
+        onNoteSaved={() => loadData()}
+      />
+    </div>
+  );
+};

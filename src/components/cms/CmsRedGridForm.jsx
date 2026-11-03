@@ -1,0 +1,1194 @@
+import React, { useState, useEffect } from 'react';
+
+const FieldInput = ({ defaultValue = '', placeholder = '', className = '', readOnly = false, multiline = false, onChange }) => {
+  const [val, setVal] = useState(defaultValue);
+
+  useEffect(() => {
+    setVal(defaultValue);
+  }, [defaultValue]);
+
+  const baseClasses = "w-full bg-transparent hover:bg-amber-100/70 focus:bg-amber-100 focus:ring-1 focus:ring-amber-600 rounded px-0.5 outline-none text-slate-900 font-mono font-bold uppercase transition cursor-text border-b border-transparent focus:border-amber-500";
+  
+  if (readOnly) {
+    return <span className={`w-full bg-transparent px-0.5 text-slate-900 font-mono font-bold uppercase inline-block ${className}`} style={{ transform: 'translateY(-2.5px)' }}>{val}</span>;
+  }
+
+  if (multiline) {
+    return (
+      <textarea
+        value={val}
+        onChange={(e) => {
+          setVal(e.target.value);
+          if (onChange) onChange(e.target.value);
+        }}
+        placeholder={placeholder}
+        className={`${baseClasses} resize-none overflow-hidden ${className}`}
+        rows={val.split('\n').length > 2 ? val.split('\n').length : 2}
+      />
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      value={val}
+      onChange={(e) => {
+        setVal(e.target.value);
+        if (onChange) onChange(e.target.value);
+      }}
+      placeholder={placeholder}
+      className={`${baseClasses} ${className}`}
+    />
+  );
+};
+
+const SignatureFieldInput = ({ defaultValue = '', className = '', readOnly = false, onChange }) => {
+  const [val, setVal] = useState(defaultValue);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const canvasRef = React.useRef(null);
+  const [hasDrawn, setHasDrawn] = useState(false);
+
+  useEffect(() => {
+    setVal(defaultValue);
+  }, [defaultValue]);
+
+  const handleSave = () => {
+    if (canvasRef.current && hasDrawn) {
+      const dataUrl = canvasRef.current.toDataURL('image/png');
+      setVal(dataUrl);
+      if (onChange) onChange(dataUrl);
+    }
+    setIsModalOpen(false);
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasDrawn(false);
+  };
+
+  const handleMouseMove = (e) => {
+    if (e.buttons !== 1) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    setHasDrawn(true);
+  };
+
+  const handleMouseDown = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.beginPath();
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    ctx.moveTo(x, y);
+  };
+  
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    setHasDrawn(true);
+  };
+
+  const handleTouchStart = (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.beginPath();
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
+    ctx.moveTo(x, y);
+  };
+
+  const isBase64 = val && val.startsWith('data:image');
+  const baseClasses = "w-full bg-transparent hover:bg-amber-100/70 focus:bg-amber-100 focus:ring-1 focus:ring-amber-600 rounded px-0.5 outline-none text-slate-900 font-mono font-bold uppercase transition cursor-pointer border-b border-transparent focus:border-amber-500 min-h-[20px] flex items-end overflow-hidden";
+
+  if (readOnly) {
+    if (isBase64) {
+      return <div className={`flex items-end ${className}`}><img src={val} alt="Signature" className="h-4 max-w-[150px] object-contain" /></div>;
+    }
+    return <span className={className}>{val}</span>;
+  }
+
+  return (
+    <>
+      <div 
+        className={`${baseClasses} ${className}`} 
+        onClick={() => setIsModalOpen(true)}
+      >
+        {isBase64 ? (
+          <img src={val} alt="Signature" className="h-6 max-w-full object-contain object-left bottom-0 relative" />
+        ) : val ? (
+          <span className="leading-none pb-0.5">{val}</span>
+        ) : (
+          <span className="text-[9px] text-amber-700/60 font-sans italic w-full hover:text-amber-700 pb-0.5 text-center">Click to Sign</span>
+        )}
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}>
+          <div className="bg-white p-5 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
+            <h3 className="text-sm font-bold text-slate-900 mb-4 flex justify-between items-center font-sans uppercase">
+              <span>Draw Signature</span>
+              <button type="button" onClick={clearCanvas} className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer">Clear</button>
+            </h3>
+            
+            <div className="border-2 border-dashed border-teal-300 rounded-xl bg-slate-50 mb-4 overflow-hidden flex items-center justify-center relative cursor-crosshair">
+              {!hasDrawn && (
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-400 text-xs font-sans">
+                  Sign with mouse or touch here
+                </div>
+              )}
+              <canvas
+                ref={canvasRef}
+                width={380}
+                height={160}
+                className="w-full touch-none"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 bg-slate-100 text-xs font-bold font-sans rounded-xl text-slate-700 hover:bg-slate-200 cursor-pointer">Cancel</button>
+              <button type="button" onClick={handleSave} className="flex-1 py-2.5 bg-emerald-600 text-white text-xs font-bold font-sans rounded-xl shadow-sm hover:bg-emerald-700 cursor-pointer">Apply Signature</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+/**
+ * Authentic NUCC 02/12 Standard CMS-1500 (HCFA-1500) Red-Grid Claim Form Component
+ * Form Approved OMB-0938-1197 FORM CMS-1500 (02/12)
+ * Fits strictly on 1 US Letter portrait page (8.5" x 11")
+ */
+export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, readOnly = false, onSignatureChange, onClaimChange }) => {
+  const emptyClaim = {
+    box1: '', box1a: '', box2: '', box3Dob: { mm: '', dd: '', yy: '' }, box3Sex: '',
+    box4: '', box5Address: '', box5City: '', box5State: '', box5Zip: '', box5Phone: '',
+    box6Relation: '', box7Address: '', box7City: '', box7State: '', box7Zip: '', box7Phone: '',
+    box8Status: '', box10State: '', box12Signature: '', box12Date: '', box13Signature: '',
+    box14IllnessDate: { mm: '', dd: '', yy: '' }, box17ReferringName: '',
+    box20OutsideLab: '', box20Charges: '',
+    box21Diagnoses: [], box24Lines: [], box25TaxId: '', box28TotalCharge: '',
+    box29AmountPaid: '', box30BalanceDue: '', box31ProviderSignature: '',
+    box32Facility: '', box32Npi: '', box33BillingProvider: '', box33Phone: '', box33Npi: ''
+  };
+
+  const isBlank = blankMode || !rawClaim;
+  const claim = isBlank ? emptyClaim : rawClaim;
+
+  const [outsideLab, setOutsideLab] = useState(() => {
+    return rawClaim?.box20OutsideLab || rawClaim?.box20 || '';
+  });
+
+  useEffect(() => {
+    setOutsideLab(rawClaim?.box20OutsideLab || rawClaim?.box20 || '');
+  }, [rawClaim?.box20OutsideLab, rawClaim?.box20]);
+
+  const [claimFields, setClaimFields] = useState({
+    box1: rawClaim?.box1 || 'OTHER',
+    box3Sex: rawClaim?.box3Sex || '',
+    box6Relation: rawClaim?.box6Relation || 'Self',
+    box8Status: rawClaim?.box8Status || '',
+    box8EmploymentStatus: rawClaim?.box8EmploymentStatus || '',
+    box10Employment: rawClaim?.box10Employment || 'NO',
+    box10AutoAccident: rawClaim?.box10AutoAccident || 'YES',
+    box10OtherAccident: rawClaim?.box10OtherAccident || 'NO',
+    box11InsuredSex: rawClaim?.box11InsuredSex || '',
+    box11d: rawClaim?.box11d || 'NO',
+    box20OutsideLab: rawClaim?.box20OutsideLab || rawClaim?.box20 || '',
+    box25Type: rawClaim?.box25Type || 'EIN',
+    box27AcceptAssignment: rawClaim?.box27AcceptAssignment || 'YES',
+  });
+
+  useEffect(() => {
+    setClaimFields({
+      box1: rawClaim?.box1 || 'OTHER',
+      box3Sex: rawClaim?.box3Sex || '',
+      box6Relation: rawClaim?.box6Relation || 'Self',
+      box8Status: rawClaim?.box8Status || '',
+      box8EmploymentStatus: rawClaim?.box8EmploymentStatus || '',
+      box10Employment: rawClaim?.box10Employment || 'NO',
+      box10AutoAccident: rawClaim?.box10AutoAccident || 'YES',
+      box10OtherAccident: rawClaim?.box10OtherAccident || 'NO',
+      box11InsuredSex: rawClaim?.box11InsuredSex || '',
+      box11d: rawClaim?.box11d || 'NO',
+      box20OutsideLab: rawClaim?.box20OutsideLab || rawClaim?.box20 || '',
+      box25Type: rawClaim?.box25Type || 'EIN',
+      box27AcceptAssignment: rawClaim?.box27AcceptAssignment || 'YES',
+    });
+  }, [
+    rawClaim?.box1,
+    rawClaim?.box3Sex,
+    rawClaim?.box6Relation,
+    rawClaim?.box8Status,
+    rawClaim?.box8EmploymentStatus,
+    rawClaim?.box10Employment,
+    rawClaim?.box10AutoAccident,
+    rawClaim?.box10OtherAccident,
+    rawClaim?.box11InsuredSex,
+    rawClaim?.box11d,
+    rawClaim?.box20OutsideLab,
+    rawClaim?.box20,
+    rawClaim?.box25Type,
+    rawClaim?.box27AcceptAssignment,
+  ]);
+
+  const toggleClaimField = (field, targetVal) => {
+    if (readOnly || blankMode) return;
+    const current = claimFields[field] || '';
+    const nextVal = current === targetVal ? '' : targetVal;
+    const updated = { ...claimFields, [field]: nextVal };
+    if (field === 'box20OutsideLab') {
+      setOutsideLab(nextVal);
+      updated.box20 = nextVal;
+    }
+    setClaimFields(updated);
+    if (rawClaim) {
+      rawClaim[field] = nextVal;
+      if (field === 'box20OutsideLab') {
+        rawClaim.box20 = nextVal;
+        rawClaim.box20OutsideLab = nextVal;
+      }
+    }
+    if (onClaimChange) {
+      onClaimChange({ ...(rawClaim || {}), ...updated });
+    }
+  };
+
+  const handleOutsideLabToggle = (val) => {
+    toggleClaimField('box20OutsideLab', val);
+  };
+
+  const handleFieldChange = (field, val) => {
+    if (readOnly || blankMode) return;
+    if (rawClaim) {
+      rawClaim[field] = val;
+    }
+    if (onClaimChange) {
+      onClaimChange({ ...(rawClaim || {}), [field]: val });
+    }
+  };
+
+  const renderCmsBox = (field, targetVal, label = '', options = {}) => {
+    const isChecked = !blankMode && (
+      (claimFields[field] !== undefined ? claimFields[field] === targetVal : rawClaim?.[field] === targetVal) ||
+      (field === 'box20OutsideLab' && outsideLab === targetVal)
+    );
+    const { labelPosition = 'left', subLabel = '', className = '', boxOnly = false } = options;
+
+    const boxSquare = (
+      <span
+        className={`w-3 h-3 min-w-[12px] min-h-[12px] border border-[#b91c1c] inline-flex items-center justify-center font-bold text-[8px] leading-none bg-white text-slate-950 transition ${
+          !readOnly && !blankMode ? 'group-hover:border-red-700 group-hover:bg-red-50/50' : ''
+        }`}
+      >
+        {isChecked ? <span style={{ transform: readOnly ? 'translateY(-1.5px)' : 'none', display: 'inline-block' }}>X</span> : ''}
+      </span>
+    );
+
+    if (boxOnly) {
+      return (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={isChecked}
+          aria-label={`${label || field} ${targetVal}`}
+          disabled={readOnly || blankMode}
+          onClick={() => toggleClaimField(field, targetVal)}
+          className={`cursor-pointer inline-flex items-center justify-center p-0.5 rounded transition ${
+            readOnly || blankMode ? 'cursor-default pointer-events-none' : 'hover:bg-red-100/60 active:scale-95'
+          } ${className}`}
+          title={readOnly ? undefined : `Click to toggle ${label || targetVal}`}
+        >
+          {boxSquare}
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={isChecked}
+        aria-label={`${label || field} ${targetVal}`}
+        disabled={readOnly || blankMode}
+        onClick={() => toggleClaimField(field, targetVal)}
+        className={`inline-flex items-center gap-1 cursor-pointer py-0.5 px-0.5 rounded transition select-none group ${
+          readOnly || blankMode ? 'cursor-default pointer-events-none' : 'hover:bg-red-50 hover:text-red-900 active:scale-95'
+        } ${className}`}
+        title={readOnly ? undefined : `Click to toggle ${label || targetVal}`}
+      >
+        {subLabel && (
+          <span className="text-[5px] font-sans font-normal leading-none block mb-0.5 text-slate-500 group-hover:text-red-800">
+            {subLabel}
+          </span>
+        )}
+        {label && labelPosition === 'left' && (
+          <span className="font-bold text-slate-900 group-hover:text-red-900 text-[7.5px] leading-none">
+            {label}
+          </span>
+        )}
+        {boxSquare}
+        {label && labelPosition === 'right' && (
+          <span className="font-bold text-slate-900 group-hover:text-red-900 text-[7.5px] leading-none">
+            {label}
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  const cleanAmount = (val) => {
+    if (blankMode) return '';
+    if (!val) return '0.00';
+    return String(val).replace('$', '').trim();
+  };
+
+  const c = (v) => blankMode ? '' : (v || '');
+  const chk = (cond) => {
+    if (blankMode || !cond) return '';
+    return <span style={{ transform: readOnly ? 'translateY(-1.5px)' : 'none', display: 'inline-block' }}>X</span>;
+  };
+
+  const formatDos = (dosString) => {
+    if (!dosString) return { mm: '', dd: '', yy: '' };
+    const parts = String(dosString).split(/[-/]/);
+    if (parts.length < 3) return { mm: '', dd: '', yy: '' };
+    if (parts[0].length === 4) {
+      return { mm: parts[1], dd: parts[2], yy: parts[0].slice(-2) };
+    }
+    return { mm: parts[0], dd: parts[1], yy: parts[2].length === 4 ? parts[2].slice(-2) : parts[2] };
+  };
+
+  const padLines = (lines = [], targetLen = 6) => {
+    const res = [...lines];
+    while (res.length < targetLen) {
+      res.push({
+        fromDos: '',
+        toDos: '',
+        pos: '',
+        emg: '',
+        cpt: '',
+        mod1: '',
+        mod2: '',
+        mod3: '',
+        mod4: '',
+        diagPtr: '',
+        charge: '',
+        units: '',
+        epsdt: '',
+        qual: '',
+        renderingId: '',
+        renderingNpi: '',
+        note: ''
+      });
+    }
+    return res;
+  };
+
+  const serviceRows = padLines(blankMode ? [] : (claim.box24Lines || []), 6);
+
+  return (
+    <div
+      className="cms-claim-page relative bg-white text-black font-sans mx-auto px-5 py-2 print:mx-auto print:p-2 print:m-0 print:shadow-none select-text overflow-hidden box-border"
+      style={{
+        width: '816px',
+        minWidth: '816px',
+        maxWidth: '816px',
+        height: '1035px',
+        minHeight: '1035px',
+        maxHeight: '1035px',
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact'
+      }}
+    >
+      {/* 🔴 HEADER AREA */}
+      <div className="flex pb-1 items-start justify-between relative">
+        <div className="w-[460px] pr-2 pt-0.5">
+          <div className="flex items-end gap-1.5 mb-0.5">
+            <div className="border border-[#b91c1c] w-[34px] h-[15px] flex items-center justify-center bg-white z-10">
+              <span className="text-[13px] font-bold text-[#991b1b] font-mono tracking-tighter leading-none" style={{ transform: readOnly ? 'translateY(-8px)' : 'translateY(-1.5px)' }}>1500</span>
+            </div>
+            <span className="text-[12px] font-black text-[#991b1b] tracking-widest leading-none pt-[1px]">HEALTH INSURANCE CLAIM FORM</span>
+          </div>
+          <p className="text-[6px] font-bold text-[#991b1b] tracking-tight leading-none">
+            APPROVED BY NATIONAL UNIFORM CLAIM COMMITTEE 08/05
+          </p>
+        </div>
+
+        <div className="flex-1 flex flex-col items-end relative">
+          <div className="font-bold text-slate-900 whitespace-pre-line uppercase text-[10px] pt-1 pr-8 text-left w-full pl-6 leading-tight">
+            <FieldInput multiline={true} defaultValue={c(claim.carrierHeader || '')} readOnly={readOnly} className="font-mono text-[10px]" />
+          </div>
+          
+          {/* RIGHT MARGIN VERTICAL CARRIER TEXT */}
+          <div className="absolute -right-5 top-1 w-4 flex flex-col items-center gap-[1px] text-[#991b1b] font-sans font-bold text-[7px] tracking-[0.15em]">
+             <span className="text-[9px] leading-none font-mono">∧</span>
+             <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>CARRIER</span>
+             <span className="text-[9px] leading-none font-mono">∨</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 🔴 MAIN FORM BORDER WRAPPER */}
+      <div className="border-[1.5px] border-[#b91c1c] print:border-[1.5px] print:border-[#b91c1c] flex flex-col relative mt-1">
+        {/* PICA Alignment Boxes (Left & Right) */}
+        <div className="absolute bottom-full left-0 flex z-10 mb-[-1.5px]">
+          <div className="w-[8px] h-[13px] border border-[#b91c1c] border-r-0 bg-white"></div>
+          <div className="w-[8px] h-[13px] border border-[#b91c1c] border-r-0 bg-white"></div>
+          <div className="w-[8px] h-[13px] border border-[#b91c1c] bg-white"></div>
+        </div>
+        <div className="absolute bottom-full right-0 flex z-10 mb-[-1.5px]">
+          <div className="w-[8px] h-[13px] border border-[#b91c1c] border-r-0 bg-white"></div>
+          <div className="w-[8px] h-[13px] border border-[#b91c1c] border-r-0 bg-white"></div>
+          <div className="w-[8px] h-[13px] border border-[#b91c1c] bg-white"></div>
+        </div>
+
+        {/* 🔴 ROW 1: BOX 1 & 1a */}
+        <div className="flex border-b border-[#b91c1c] text-[7.5px] font-bold text-[#991b1b]">
+          <div className="w-[470px] p-0.5 border-r-2 border-[#b91c1c]">
+            <div className="flex justify-between w-full pr-2 text-[6.5px] leading-none">
+              <button type="button" disabled={readOnly || blankMode} onClick={() => toggleClaimField('box1', 'MEDICARE')} className="font-bold cursor-pointer hover:text-red-800 text-left bg-transparent border-none p-0">1. MEDICARE</button>
+              <button type="button" disabled={readOnly || blankMode} onClick={() => toggleClaimField('box1', 'MEDICAID')} className="font-bold cursor-pointer hover:text-red-800 bg-transparent border-none p-0">MEDICAID</button>
+              <button type="button" disabled={readOnly || blankMode} onClick={() => toggleClaimField('box1', 'TRICARE')} className="text-center font-bold cursor-pointer hover:text-red-800 bg-transparent border-none p-0">TRICARE<br/><span className="text-[5px] font-normal leading-none block -mt-0.5">CHAMPUS</span></button>
+              <button type="button" disabled={readOnly || blankMode} onClick={() => toggleClaimField('box1', 'CHAMPVA')} className="font-bold cursor-pointer hover:text-red-800 bg-transparent border-none p-0">CHAMPVA</button>
+              <button type="button" disabled={readOnly || blankMode} onClick={() => toggleClaimField('box1', 'GROUP')} className="text-center font-bold cursor-pointer hover:text-red-800 bg-transparent border-none p-0">GROUP<br/><span className="text-[5px] font-normal leading-none block -mt-0.5">HEALTH PLAN</span></button>
+              <button type="button" disabled={readOnly || blankMode} onClick={() => toggleClaimField('box1', 'FECA')} className="text-center font-bold cursor-pointer hover:text-red-800 bg-transparent border-none p-0">FECA<br/><span className="text-[5px] font-normal leading-none block -mt-0.5">BLK LUNG</span></button>
+              <button type="button" disabled={readOnly || blankMode} onClick={() => toggleClaimField('box1', 'OTHER')} className="font-bold cursor-pointer hover:text-red-800 bg-transparent border-none p-0">OTHER</button>
+            </div>
+            <div className="flex items-center mt-0.5 font-mono text-[8.5px] text-slate-900 justify-between w-full pr-1 pl-1">
+              <div className="flex flex-col items-center">{renderCmsBox('box1', 'MEDICARE', '', { subLabel: '(Medicare #)' })}</div>
+              <div className="flex flex-col items-center">{renderCmsBox('box1', 'MEDICAID', '', { subLabel: '(Medicaid #)' })}</div>
+              <div className="flex flex-col items-center">{renderCmsBox('box1', 'TRICARE', '', { subLabel: "(Sponsor's SSN)" })}</div>
+              <div className="flex flex-col items-center">{renderCmsBox('box1', 'CHAMPVA', '', { subLabel: '(Member ID#)' })}</div>
+              <div className="flex flex-col items-center">{renderCmsBox('box1', 'GROUP', '', { subLabel: '(SSN or ID)' })}</div>
+              <div className="flex flex-col items-center">{renderCmsBox('box1', 'FECA', '', { subLabel: '(SSN)' })}</div>
+              <div className="flex flex-col items-center">{renderCmsBox('box1', 'OTHER', '', { subLabel: '(ID)' })}</div>
+            </div>
+          </div>
+
+          <div className="flex-1 p-0.5 flex flex-col justify-between">
+            <div className="flex justify-between w-full text-[6.5px]">
+              <span>1a. INSURED'S I.D. NUMBER</span>
+              <span className="font-normal">(For Program in Item 1)</span>
+            </div>
+            <div className="mt-0.5">
+              <FieldInput defaultValue={c(claim.box1a || '')} readOnly={readOnly} className="text-xs font-mono font-bold tracking-widest" />
+            </div>
+          </div>
+        </div>
+
+        {/* 🔴 ROW 2: BOXES 2, 3, 4 */}
+        <div className="flex border-b border-[#b91c1c] text-[7.5px] font-bold text-[#991b1b]">
+          <div className="w-[310px] p-0.5 border-r border-[#b91c1c]">
+            <span>2. PATIENT'S NAME (Last Name, First Name, Middle Initial)</span>
+            <div className="mt-0.5">
+              <FieldInput defaultValue={c(claim.box2 || claim.patientName || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+            </div>
+          </div>
+
+          <div className="w-[170px] p-0.5 border-r-2 border-[#b91c1c]">
+            <span>3. PATIENT'S BIRTH DATE &bull; SEX</span>
+            <div className="flex justify-between items-center mt-0.5 font-mono text-xs text-slate-900">
+              <FieldInput defaultValue={blankMode || !claim.box3Dob?.mm ? '' : `${claim.box3Dob.mm} ${claim.box3Dob.dd || ''} ${claim.box3Dob.yy || ''}`} readOnly={readOnly} className="w-22 text-xs font-mono font-bold" />
+              <div className="flex gap-1 pr-1 items-center">
+                {renderCmsBox('box3Sex', 'M', 'M', { labelPosition: 'left' })}
+                {renderCmsBox('box3Sex', 'F', 'F', { labelPosition: 'left' })}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 p-0.5">
+            <span>4. INSURED'S NAME (Last Name, First Name, Middle Initial)</span>
+            <div className="mt-0.5">
+              <FieldInput defaultValue={c(claim.box4 || claim.box2 || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+            </div>
+          </div>
+        </div>
+
+        {/* 🔴 3-COLUMN STRUCTURE (ROWS 3 & 4: BOXES 5-11) */}
+        <div className="flex border-b border-[#b91c1c] text-[7.5px] font-bold text-[#991b1b]">
+          
+          {/* LEFT COLUMN: BOXES 5 & 9 */}
+          <div className="w-[310px] border-r border-[#b91c1c] flex flex-col justify-between">
+            {/* BOX 5 */}
+            <div className="border-b border-[#b91c1c]">
+              <div className="p-0.5 border-b border-[#b91c1c]">
+                <span>5. PATIENT'S ADDRESS (No., Street)</span>
+                <div className="mt-0.5">
+                  <FieldInput defaultValue={c(claim.box5Address || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+                </div>
+              </div>
+              <div className="flex">
+                <div className="w-[200px] p-0.5 border-r border-[#b91c1c] flex flex-col justify-between">
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase">
+                    <span>CITY:</span> <FieldInput defaultValue={c(claim.box5City || '')} readOnly={readOnly} className="w-[130px] inline-block text-[10px]" />
+                  </div>
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase mt-0.5">
+                    <span>ZIP:</span> <FieldInput defaultValue={c(claim.box5Zip || '')} readOnly={readOnly} className="w-[130px] inline-block text-[10px]" />
+                  </div>
+                </div>
+                <div className="flex-1 p-0.5 flex flex-col justify-between">
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase">
+                    <span>STATE:</span> <FieldInput defaultValue={c(claim.box5State || '')} readOnly={readOnly} className="w-8 inline-block text-[10px]" />
+                  </div>
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase mt-0.5">
+                    <span>TEL:</span> <FieldInput defaultValue={c(claim.box5Phone || '( )')} readOnly={readOnly} className="w-[60px] inline-block text-[10px]" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* BOX 9 */}
+            <div>
+              <div className="p-0.5 border-b border-[#b91c1c]">
+                <span>9. OTHER INSURED'S NAME (Last Name, First Name, Middle Initial)</span>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+              </div>
+              <div className="p-0.5 border-b border-[#b91c1c]">
+                <span>a. OTHER INSURED'S POLICY OR GROUP NUMBER</span>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9a)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+              </div>
+              <div className="flex border-b border-[#b91c1c]">
+                <div className="w-1/2 p-0.5 border-r border-[#b91c1c]">
+                  <span>b. OTHER INSURED'S DATE OF BIRTH</span>
+                  <div className="flex gap-1 mt-0.5">
+                    <FieldInput defaultValue={c(claim.box9bDob?.mm)} readOnly={readOnly} className="w-5 text-[10px] text-center" placeholder="MM" /> 
+                    <FieldInput defaultValue={c(claim.box9bDob?.dd)} readOnly={readOnly} className="w-5 text-[10px] text-center" placeholder="DD" /> 
+                    <FieldInput defaultValue={c(claim.box9bDob?.yy)} readOnly={readOnly} className="w-8 text-[10px] text-center" placeholder="YY" />
+                  </div>
+                </div>
+                <div className="w-1/2 p-0.5">
+                  <span>SEX</span>
+                  <div className="flex gap-1.5 mt-0.5 font-mono text-slate-900">
+                    <span className="text-[7.5px]">M <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box9bSex === 'M')}</span></span>
+                    <span className="text-[7.5px]">F <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box9bSex === 'F')}</span></span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-0.5 border-b border-[#b91c1c]">
+                <span>c. EMPLOYER'S NAME OR SCHOOL NAME</span>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9c)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+              </div>
+              <div className="p-0.5">
+                <span>d. INSURANCE PLAN NAME OR PROGRAM NAME</span>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9d)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+              </div>
+            </div>
+          </div>
+
+          {/* MIDDLE COLUMN: BOXES 6, 8, 10 */}
+          <div className="w-[170px] border-r-2 border-[#b91c1c] flex flex-col justify-between">
+            {/* BOX 6 */}
+            <div className="p-0.5 border-b border-[#b91c1c]">
+              <span>6. PATIENT RELATIONSHIP TO INSURED</span>
+              <div className="grid grid-cols-2 gap-0.5 mt-0.5 font-mono text-[8px] text-slate-900">
+                {renderCmsBox('box6Relation', 'Self', 'Self', { labelPosition: 'left' })}
+                {renderCmsBox('box6Relation', 'Spouse', 'Spouse', { labelPosition: 'left' })}
+                {renderCmsBox('box6Relation', 'Child', 'Child', { labelPosition: 'left' })}
+                {renderCmsBox('box6Relation', 'Other', 'Other', { labelPosition: 'left' })}
+              </div>
+            </div>
+
+            {/* BOX 8 */}
+            <div className="p-0.5 border-b border-[#b91c1c]">
+              <span>8. PATIENT STATUS</span>
+              <div className="grid grid-cols-3 gap-x-0.5 gap-y-0.5 mt-0.5 font-mono text-[6.5px] text-slate-900 leading-none">
+                {renderCmsBox('box8Status', 'Single', 'Single', { labelPosition: 'left' })}
+                {renderCmsBox('box8Status', 'Married', 'Married', { labelPosition: 'left' })}
+                {renderCmsBox('box8Status', 'Other', 'Other', { labelPosition: 'left' })}
+                {renderCmsBox('box8EmploymentStatus', 'Employed', 'Employed', { labelPosition: 'left' })}
+                {renderCmsBox('box8EmploymentStatus', 'Student', 'Full-Time Student', { labelPosition: 'left' })}
+                {renderCmsBox('box8EmploymentStatus', 'Part-Time Student', 'Part-Time Student', { labelPosition: 'left' })}
+              </div>
+            </div>
+
+            {/* BOX 10 */}
+            <div className="p-0.5 flex-1 flex flex-col justify-between">
+              <span>10. IS PATIENT'S CONDITION RELATED TO:</span>
+              <div className="space-y-1 mt-0.5 font-mono text-[8px] text-slate-900 flex-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-[7.5px]">a. EMPLOYMENT?</span>
+                  <div className="flex gap-1 items-center">
+                    {renderCmsBox('box10Employment', 'YES', 'YES', { labelPosition: 'left' })}
+                    {renderCmsBox('box10Employment', 'NO', 'NO', { labelPosition: 'left' })}
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[7.5px]">b. AUTO ACCIDENT?</span>
+                  <div className="flex gap-1 items-center">
+                    {renderCmsBox('box10AutoAccident', 'YES', 'YES', { labelPosition: 'left' })}
+                    {renderCmsBox('box10AutoAccident', 'NO', 'NO', { labelPosition: 'left' })}
+                  </div>
+                </div>
+                <div className="text-right"><span className="ml-1 font-bold text-[7.5px]">PLACE (State) <FieldInput defaultValue={c(claim.box10State || '')} onChange={(v) => handleFieldChange('box10State', v)} readOnly={readOnly} className="w-6 inline-block text-center text-[9px]" /></span></div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[7.5px]">c. OTHER ACCIDENT?</span>
+                  <div className="flex gap-1 items-center">
+                    {renderCmsBox('box10OtherAccident', 'YES', 'YES', { labelPosition: 'left' })}
+                    {renderCmsBox('box10OtherAccident', 'NO', 'NO', { labelPosition: 'left' })}
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-[#b91c1c] pt-0.5">
+                <span>10d. RESERVED FOR LOCAL USE</span>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box10d)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: BOXES 7 & 11 */}
+          <div className="flex-1 flex flex-col justify-between">
+            {/* BOX 7 */}
+            <div className="border-b border-[#b91c1c]">
+              <div className="p-0.5 border-b border-[#b91c1c]">
+                <span>7. INSURED'S ADDRESS (No., Street)</span>
+                <div className="mt-0.5">
+                  <FieldInput defaultValue={c(claim.box7Address || claim.box5Address || '')} readOnly={readOnly} className="text-xs font-mono font-bold" />
+                </div>
+              </div>
+              <div className="flex">
+                <div className="w-[155px] p-0.5 border-r border-[#b91c1c] flex flex-col justify-between">
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase">
+                    <span>CITY:</span> <FieldInput defaultValue={c(claim.box7City || claim.box5City || '')} readOnly={readOnly} className="w-[95px] inline-block text-[10px]" />
+                  </div>
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase mt-0.5">
+                    <span>ZIP:</span> <FieldInput defaultValue={c(claim.box7Zip || claim.box5Zip || '')} readOnly={readOnly} className="w-[95px] inline-block text-[10px]" />
+                  </div>
+                </div>
+                <div className="flex-1 p-0.5 flex flex-col justify-between">
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase">
+                    <span>STATE:</span> <FieldInput defaultValue={c(claim.box7State || claim.box5State || '')} readOnly={readOnly} className="w-8 inline-block text-[10px]" />
+                  </div>
+                  <div className="flex justify-between font-mono text-[10px] text-slate-900 uppercase mt-0.5">
+                    <span>TEL:</span> <FieldInput defaultValue={c(claim.box7Phone || '( )')} readOnly={readOnly} className="w-[60px] inline-block text-[10px]" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* BOX 11 */}
+            <div>
+              <div className="p-0.5 border-b border-[#b91c1c]">
+                <span>11. INSURED'S POLICY GROUP OR FECA NUMBER</span>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box11)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+              </div>
+              <div className="flex border-b border-[#b91c1c]">
+                <div className="w-1/2 p-0.5 border-r border-[#b91c1c]">
+                  <span>a. INSURED'S DATE OF BIRTH</span>
+                  <div className="flex gap-1 mt-0.5">
+                    <FieldInput defaultValue={c(claim.box11InsuredDob?.mm || '')} readOnly={readOnly} className="w-5 text-[10px] text-center" placeholder="MM" /> 
+                    <FieldInput defaultValue={c(claim.box11InsuredDob?.dd || '')} readOnly={readOnly} className="w-5 text-[10px] text-center" placeholder="DD" /> 
+                    <FieldInput defaultValue={c(claim.box11InsuredDob?.yy || '')} readOnly={readOnly} className="w-8 text-[10px] text-center" placeholder="YY" />
+                  </div>
+                </div>
+                <div className="w-1/2 p-0.5">
+                  <span>SEX</span>
+                  <div className="flex gap-1 pr-1 items-center font-mono text-slate-900 mt-0.5">
+                    {renderCmsBox('box11InsuredSex', 'M', 'M', { labelPosition: 'left' })}
+                    {renderCmsBox('box11InsuredSex', 'F', 'F', { labelPosition: 'left' })}
+                  </div>
+                </div>
+              </div>
+              <div className="p-0.5 border-b border-[#b91c1c]">
+                <span>b. EMPLOYER'S NAME OR SCHOOL NAME</span>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box11b)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+              </div>
+              <div className="p-0.5 border-b border-[#b91c1c]">
+                <span>c. INSURANCE PLAN NAME OR PROGRAM NAME</span>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box11c)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+              </div>
+              <div className="p-0.5">
+                <span>d. IS THERE ANOTHER HEALTH BENEFIT PLAN?</span>
+                <div className="flex gap-1.5 mt-0.5 font-mono text-[8px] text-slate-900 items-center">
+                  {renderCmsBox('box11d', 'YES', 'YES', { labelPosition: 'left' })}
+                  {renderCmsBox('box11d', 'NO', 'NO', { labelPosition: 'left' })}
+                  <span className="text-[6px] font-normal leading-none self-center">If yes, return to item 9 a-d.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* 🔴 ROW 5: BOXES 12 & 13 SIGNATURES */}
+        <div className="flex border-b-2 border-[#b91c1c] text-[7.5px] font-bold text-[#991b1b]">
+          <div className="w-[480px] p-1 border-r-2 border-[#b91c1c]">
+            <span className="leading-none block">READ BACK OF FORM BEFORE COMPLETING &amp; SIGNING THIS FORM.</span>
+            <span className="text-[6.5px] font-normal leading-tight block mt-0.5">12. PATIENT'S OR AUTHORIZED PERSON'S SIGNATURE I authorize the release of any medical or other information necessary to process this claim. I also request payment of government benefits either to myself or to the party who accepts assignment below.</span>
+            <div className="flex justify-between items-end mt-1 font-mono text-xs text-slate-900">
+              <div className="flex items-end flex-1 pr-4">
+                <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1 mb-0.5">SIGNED</span>
+                <SignatureFieldInput defaultValue={c(claim.box12Signature || '')} onChange={(val) => { if (claim) { claim.box12Signature = val; if (onSignatureChange) onSignatureChange(claim); } }} readOnly={readOnly} className="font-bold border-b border-slate-400 flex-1" />
+              </div>
+              <div>
+                <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1">DATE</span>
+                <span className="font-bold">{c(claim.box12Date || '')}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 p-1 flex flex-col justify-between">
+            <div>
+              <span>13. INSURED'S OR AUTHORIZED PERSON'S SIGNATURE</span>
+              <span className="text-[6.5px] font-normal leading-tight block mt-0.5">I authorize payment of medical benefits to the undersigned physician or supplier for services described below.</span>
+            </div>
+            <div className="font-mono text-xs text-slate-900 mt-1 flex items-end w-full pr-4">
+              <span className="text-[7.5px] text-[#991b1b] inline-block font-sans mr-1 mb-0.5">SIGNED</span>
+              <SignatureFieldInput defaultValue={c(claim.box13Signature || '')} onChange={(val) => { if (claim) { claim.box13Signature = val; if (onSignatureChange) onSignatureChange(claim); } }} readOnly={readOnly} className="font-bold border-b border-slate-400 flex-1" />
+            </div>
+          </div>
+        </div>
+
+        {/* 🔴 ROW 6: BOXES 14 - 16 */}
+        <div className="flex border-b border-[#b91c1c] text-[7.5px] font-bold text-[#991b1b]">
+          <div className="w-[310px] p-0.5 border-r border-[#b91c1c]">
+            <span className="leading-tight block uppercase text-[6.5px]">14. DATE OF CURRENT: ILLNESS(First symptom) OR INJURY (Accident) OR PREGNANCY(LMP)</span>
+            <div className="flex gap-2 mt-0.5 items-center">
+              <div className="flex gap-1 font-mono text-slate-900 ml-1">
+                <FieldInput defaultValue={blankMode || !claim.box14IllnessDate?.mm ? '' : claim.box14IllnessDate.mm} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="MM" />
+                <FieldInput defaultValue={blankMode || !claim.box14IllnessDate?.dd ? '' : claim.box14IllnessDate.dd} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="DD" />
+                <FieldInput defaultValue={blankMode || !claim.box14IllnessDate?.yy ? '' : claim.box14IllnessDate.yy} readOnly={readOnly} className="w-8 text-xs text-center font-bold" placeholder="YY" />
+              </div>
+            </div>
+          </div>
+
+          <div className="w-[170px] p-0.5 border-r-2 border-[#b91c1c]">
+            <span className="leading-tight block uppercase text-[6.5px]">15. IF PATIENT HAS HAD SAME OR SIMILAR ILLNESS. GIVE FIRST DATE</span>
+            <div className="flex gap-2 mt-0.5 items-center">
+              <div className="flex gap-1 font-mono text-slate-900 ml-1">
+                <FieldInput defaultValue={c(claim.box15Date?.mm)} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="MM" />
+                <FieldInput defaultValue={c(claim.box15Date?.dd)} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="DD" />
+                <FieldInput defaultValue={c(claim.box15Date?.yy)} readOnly={readOnly} className="w-8 text-xs text-center font-bold" placeholder="YY" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 p-0.5">
+            <span className="leading-tight block text-[6.5px]">16. DATES PATIENT UNABLE TO WORK IN CURRENT OCCUPATION</span>
+            <div className="flex justify-between mt-0.5 px-2 font-mono text-slate-900">
+              <div className="flex gap-1 items-center">
+                <span className="text-[6.5px] font-sans text-[#991b1b]">FROM</span>
+                <FieldInput defaultValue={c(claim.box16From?.mm)} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="MM" />
+                <FieldInput defaultValue={c(claim.box16From?.dd)} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="DD" />
+                <FieldInput defaultValue={c(claim.box16From?.yy)} readOnly={readOnly} className="w-8 text-xs text-center font-bold" placeholder="YY" />
+              </div>
+              <div className="flex gap-1 items-center">
+                <span className="text-[6.5px] font-sans text-[#991b1b]">TO</span>
+                <FieldInput defaultValue={c(claim.box16To?.mm)} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="MM" />
+                <FieldInput defaultValue={c(claim.box16To?.dd)} readOnly={readOnly} className="w-5 text-xs text-center font-bold" placeholder="DD" />
+                <FieldInput defaultValue={c(claim.box16To?.yy)} readOnly={readOnly} className="w-8 text-xs text-center font-bold" placeholder="YY" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 🔴 ROW 6B: BOXES 17 - 20 */}
+        <div className="flex border-b border-[#b91c1c] text-[7.5px] font-bold text-[#991b1b]">
+          {/* Box 17 */}
+          <div className="w-[310px] border-r border-[#b91c1c]">
+            <div className="p-0.5 border-b border-[#b91c1c] h-[24px]">
+              <span>17. NAME OF REFERRING PROVIDER OR OTHER SOURCE</span>
+              <div className="mt-0.5 flex gap-1">
+                <FieldInput defaultValue="" readOnly={readOnly} className="text-xs font-mono font-bold uppercase flex-1" />
+              </div>
+            </div>
+            <div className="flex border-b border-[#b91c1c]">
+              <div className="w-[12%] p-0.5 border-r border-[#b91c1c] text-center">17a.</div>
+              <div className="flex-1 p-0.5"><FieldInput defaultValue={c(claim.box17a || claim.box17ReferringName)} readOnly={readOnly} className="text-xs font-mono font-bold bg-transparent uppercase" /></div>
+            </div>
+            <div className="flex">
+              <div className="w-[12%] p-0.5 border-r border-[#b91c1c] text-center">17b. <span className="text-[6.5px]">NPI</span></div>
+              <div className="flex-1 p-0.5"><FieldInput defaultValue={c(claim.box17Npi)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+            </div>
+          </div>
+
+          {/* Box 18, 19, 20 */}
+          <div className="flex-1 flex flex-col">
+            <div className="flex border-b border-[#b91c1c] h-[28px]">
+              <div className="w-[60%] p-0.5 border-r border-[#b91c1c]">
+                <span className="leading-tight block text-[6.5px]">18. HOSPITALIZATION DATES RELATED TO CURRENT SERVICES</span>
+                <div className="flex justify-between mt-0.5 px-1 font-mono text-slate-900">
+                  <div className="flex gap-0.5 items-center">
+                    <span className="text-[6px] font-sans text-[#991b1b]">FROM</span>
+                    <FieldInput defaultValue={c(claim.box18From?.mm)} readOnly={readOnly} className="w-4 text-[10px] text-center font-bold" placeholder="MM" />
+                    <FieldInput defaultValue={c(claim.box18From?.dd)} readOnly={readOnly} className="w-4 text-[10px] text-center font-bold" placeholder="DD" />
+                    <FieldInput defaultValue={c(claim.box18From?.yy)} readOnly={readOnly} className="w-6 text-[10px] text-center font-bold" placeholder="YY" />
+                  </div>
+                  <div className="flex gap-0.5 items-center">
+                    <span className="text-[6px] font-sans text-[#991b1b]">TO</span>
+                    <FieldInput defaultValue={c(claim.box18To?.mm)} readOnly={readOnly} className="w-4 text-[10px] text-center font-bold" placeholder="MM" />
+                    <FieldInput defaultValue={c(claim.box18To?.dd)} readOnly={readOnly} className="w-4 text-[10px] text-center font-bold" placeholder="DD" />
+                    <FieldInput defaultValue={c(claim.box18To?.yy)} readOnly={readOnly} className="w-6 text-[10px] text-center font-bold" placeholder="YY" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 px-1 py-0.5 flex flex-col justify-between overflow-hidden">
+                <span className="text-[6.5px] leading-none block">20. OUTSIDE LAB? &bull; $ CHARGES</span>
+                <div className="flex justify-between items-center font-mono text-[7.5px] text-slate-900">
+                  <div className="flex gap-1.5 items-center">
+                    {renderCmsBox('box20OutsideLab', 'YES', 'YES', { labelPosition: 'left' })}
+                    {renderCmsBox('box20OutsideLab', 'NO', 'NO', { labelPosition: 'left' })}
+                  </div>
+                  <FieldInput 
+                    defaultValue={c(claim.box20Charges)} 
+                    readOnly={readOnly} 
+                    className="w-12 text-right font-mono font-bold text-[8px]"
+                    onChange={(val) => {
+                      if (rawClaim) rawClaim.box20Charges = val;
+                      if (onClaimChange) onClaimChange({ ...(rawClaim || {}), box20Charges: val });
+                    }} 
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="p-0.5 flex-1">
+              <span>19. RESERVED FOR LOCAL USE</span>
+              <div className="mt-0.5"><FieldInput defaultValue={c(claim.box19)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+            </div>
+          </div>
+        </div>
+
+        {/* 🔴 ROW 7: BOX 21 - 23 */}
+        <div className="flex border-b-2 border-[#b91c1c] text-[7.5px] font-bold text-[#991b1b]">
+          <div className="w-[65%] p-1 border-r border-[#b91c1c] relative">
+            <div className="flex justify-between items-center pr-2">
+              <span>21. DIAGNOSIS OR NATURE OF ILLNESS OR INJURY (Relate Items 1, 2, 3 or 4 to Item 24E by Line)</span>
+              {/* Downward pointer arrow targeting Box 24E */}
+              <div className="absolute right-6 top-3 text-[#991b1b] font-bold text-sm leading-none flex flex-col items-center">
+                <span>|</span>
+                <span className="rotate-90 -mt-1">&gt;</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-x-8 gap-y-1 mt-1 font-mono text-xs text-slate-900 px-3">
+              {/* Column 1: 1, 2 */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
+                  <span className="text-[#991b1b] font-bold text-[8px]">1.</span>
+                  <FieldInput defaultValue={c(claim.box21Diagnoses?.[0])} readOnly={readOnly} className="font-bold flex-1" />
+                </div>
+                <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
+                  <span className="text-[#991b1b] font-bold text-[8px]">2.</span>
+                  <FieldInput defaultValue={c(claim.box21Diagnoses?.[1])} readOnly={readOnly} className="font-bold flex-1" />
+                </div>
+              </div>
+
+              {/* Column 2: 3, 4 */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
+                  <span className="text-[#991b1b] font-bold text-[8px]">3.</span>
+                  <FieldInput defaultValue={c(claim.box21Diagnoses?.[2])} readOnly={readOnly} className="font-bold flex-1" />
+                </div>
+                <div className="flex items-center gap-1 border-b border-[#b91c1c]/40 pb-0.5">
+                  <span className="text-[#991b1b] font-bold text-[8px]">4.</span>
+                  <FieldInput defaultValue={c(claim.box21Diagnoses?.[3])} readOnly={readOnly} className="font-bold flex-1" />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex-1 flex flex-col">
+            <div className="p-0.5 border-b border-[#b91c1c] h-[26px]">
+              <div className="flex justify-between text-[6.5px]">
+                <span>22. MEDICAID RESUBMISSION CODE</span>
+                <span>ORIGINAL REF. NO.</span>
+              </div>
+              <div className="flex gap-1 mt-0.5">
+                <FieldInput defaultValue={c(claim.box22Code)} readOnly={readOnly} className="w-[30%] text-xs font-mono font-bold" />
+                <FieldInput defaultValue={c(claim.box22Ref)} readOnly={readOnly} className="flex-1 text-xs font-mono font-bold" />
+              </div>
+            </div>
+            <div className="p-0.5 flex-1">
+              <span>23. PRIOR AUTHORIZATION NUMBER</span>
+              <div className="mt-0.5">
+                <FieldInput defaultValue={c(claim.box23)} readOnly={readOnly} className="text-xs font-mono font-bold" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 🔴 ROW 8: BOX 24 SERVICE LINE TABLE (6 OFFICIAL ROWS WITH MARGIN NUMBERS 1-6) */}
+        <div className="border-b-2 border-[#b91c1c] text-[7px] font-bold text-[#991b1b] relative">
+          
+          {/* Table Column Headers */}
+          <div className="grid grid-cols-12 bg-red-50/50 p-0.5 border-b border-[#b91c1c] text-center text-[6.5px] leading-tight">
+            <div className="col-span-3 border-r border-[#b91c1c]">
+              24. A. DATE(S) OF SERVICE<br />
+              <span className="text-[5.5px]">From (MM DD YY) &bull; To (MM DD YY)</span>
+            </div>
+            <div className="col-span-1 border-r border-[#b91c1c]">
+              B.<br />PLACE OF<br />SERVICE
+            </div>
+            <div className="col-span-1 border-r border-[#b91c1c]">
+              C.<br />EMG
+            </div>
+            <div className="col-span-3 border-r border-[#b91c1c]">
+              D. PROCEDURES, SERVICES, OR SUPPLIES<br />
+              <span className="text-[5px] block -mt-0.5">(Explain Unusual Circumstances)</span>
+              <div className="flex justify-between px-2 text-[5.5px] tracking-widest mt-0.5"><span>CPT/HCPCS</span><span>MODIFIER</span></div>
+            </div>
+            <div className="col-span-1 border-r border-[#b91c1c] text-[5.5px] leading-tight flex flex-col justify-center">
+              <span>E.</span><span>DIAGNOSIS</span><span>POINTER</span>
+            </div>
+            <div className="col-span-1 border-r border-[#b91c1c]">
+              F.<br />$CHARGES
+            </div>
+            <div className="col-span-1 border-r border-[#b91c1c] text-[5.5px] leading-tight flex flex-col justify-center">
+              <span>G.</span><span>DAYS</span><span>OR</span><span>UNITS</span>
+            </div>
+            <div className="col-span-1 flex text-[4.5px] leading-tight text-center">
+              <div className="flex-1 border-r border-[#b91c1c]/50 flex flex-col justify-between py-0.5"><span>H.</span><span>EPSDT</span><span>Family</span><span>Plan</span></div>
+              <div className="flex-1 border-r border-[#b91c1c]/50 flex flex-col justify-between py-0.5"><span>I.</span><span>ID.</span><span>QUAL.</span></div>
+              <div className="flex-[2] flex flex-col justify-between py-0.5 text-[5px]"><span>J.</span><span>RENDERING</span><span>PROVIDER ID #</span></div>
+            </div>
+          </div>
+
+          {/* 6 Form Rows with Left Margin Line Numbers 1 to 6 */}
+          <div className="divide-y divide-[#b91c1c]/40 font-mono text-[9.5px] text-slate-900 relative">
+            {serviceRows.map((line, idx) => {
+              const hasData = !!line.cpt || !!line.fromDos;
+              const fDos = formatDos(line.fromDos || line.dos || claim.dos);
+              const tDos = formatDos(line.toDos || line.fromDos || line.dos || claim.dos);
+
+              return (
+                <div key={idx} className="h-[25px] min-h-[25px] max-h-[25px] flex flex-col justify-between relative px-0.5 py-0.5">
+                  {/* Left Outside Margin Line Number (1-6) */}
+                  <span className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-3 text-center font-sans font-bold text-[9.5px] text-[#991b1b] select-none pointer-events-none">
+                    {idx + 1}
+                  </span>
+
+                  <div className="h-full flex flex-col justify-between overflow-hidden">
+                    {/* Top Sub-line: Note / Rendering Provider ID (Upper 24J) */}
+                    <div className="grid grid-cols-12 items-center text-[7px] font-bold leading-none h-[9px]">
+                      <div className="col-span-11 text-slate-700 uppercase tracking-tight overflow-hidden text-ellipsis whitespace-nowrap pl-1">
+                        {line.note && <span>Note: {line.note}</span>}
+                      </div>
+                      <div className="col-span-1 flex text-[7.5px] font-mono h-full items-center">
+                        <div className="flex-1"></div>
+                        <div className="flex-1"></div>
+                        <div className="flex-[2] h-full flex items-center justify-center">
+                          <FieldInput defaultValue={hasData ? (line.renderingId || '') : ''} readOnly={readOnly} className="w-full text-center text-[7.5px]" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Line: Main Grid Data */}
+                    <div className="grid grid-cols-12 text-center items-center font-bold h-[14px]">
+                      {/* 24.A Dates of Service */}
+                      <div className="col-span-3 text-[9px] border-r border-[#b91c1c]/20 flex">
+                        <div className="w-1/2 flex px-0.5 border-r border-slate-300">
+                          <FieldInput defaultValue={hasData ? fDos.mm : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                          <FieldInput defaultValue={hasData ? fDos.dd : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                          <FieldInput defaultValue={hasData ? fDos.yy : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                        </div>
+                        <div className="w-1/2 flex px-0.5">
+                          <FieldInput defaultValue={hasData ? tDos.mm : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                          <FieldInput defaultValue={hasData ? tDos.dd : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                          <FieldInput defaultValue={hasData ? tDos.yy : ''} readOnly={readOnly} className="w-1/3 text-center" />
+                        </div>
+                      </div>
+                      
+                      {/* 24.B Place of Service */}
+                      <div className="col-span-1 border-r border-[#b91c1c]/20">
+                        <FieldInput defaultValue={hasData ? (line.pos || '11') : ''} readOnly={readOnly} className="text-center" />
+                      </div>
+
+                      {/* 24.C EMG */}
+                      <div className="col-span-1 border-r border-[#b91c1c]/20">
+                        <FieldInput defaultValue={hasData ? (line.emg) : ''} readOnly={readOnly} className="text-center" />
+                      </div>
+
+                      {/* 24.D CPT & Modifiers */}
+                      <div className="col-span-3 border-r border-[#b91c1c]/20 flex items-center justify-between px-0.5 gap-0.5 text-[9px]">
+                        <FieldInput defaultValue={line.cpt || ''} readOnly={readOnly} placeholder="CPT" className="w-12 font-mono font-black text-slate-950 text-center" />
+                        <FieldInput defaultValue={line.mod1 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
+                        <FieldInput defaultValue={line.mod2 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
+                        <FieldInput defaultValue={line.mod3 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
+                        <FieldInput defaultValue={line.mod4 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
+                      </div>
+
+                      {/* 24.E Diagnosis Pointer */}
+                      <div className="col-span-1 border-r border-[#b91c1c]/20 font-black">
+                        <FieldInput defaultValue={line.diagPtr || ''} readOnly={readOnly} className="text-center" />
+                      </div>
+
+                      {/* 24.F Charges */}
+                      <div className="col-span-1 border-r border-[#b91c1c]/20 text-right pr-1 font-black">
+                        <FieldInput defaultValue={hasData ? cleanAmount(line.charge) : ''} readOnly={readOnly} className="text-right" />
+                      </div>
+
+                      {/* 24.G Units */}
+                      <div className="col-span-1 border-r border-[#b91c1c]/20 font-bold">
+                        <FieldInput defaultValue={hasData ? (line.units || '1') : ''} readOnly={readOnly} className="text-center" />
+                      </div>
+
+                      {/* 24.H-J Rendering NPI & ID Qual */}
+                      <div className="col-span-1 flex text-[8.5px] font-mono h-full items-center">
+                        <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
+                          <FieldInput defaultValue="" readOnly={readOnly} className="w-full text-center" />
+                        </div>
+                        <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
+                          <FieldInput defaultValue={hasData ? 'NPI' : ''} readOnly={readOnly} className="w-full text-center text-[5.5px]" />
+                        </div>
+                        <div className="flex-[2] h-full flex items-center justify-center">
+                          <FieldInput defaultValue={hasData ? (line.renderingNpi || claim.box33Npi || '') : ''} readOnly={readOnly} className="w-full text-center text-[5px] px-0 tracking-tighter" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 🔴 ROW 9: FOOTER BOXES 25 - 30 */}
+        <div className="grid grid-cols-12 border-b-2 border-[#b91c1c] text-[7.5px] font-bold text-[#991b1b]">
+          <div className="col-span-3 p-0.5 border-r border-[#b91c1c]">
+            <span>25. FEDERAL TAX I.D. NUMBER</span>
+            <div className="flex items-center justify-between mt-0.5 font-mono text-xs text-slate-900 pr-1">
+              <FieldInput defaultValue={c(claim.box25TaxId || '')} readOnly={readOnly} className="font-bold w-24" />
+              <div className="flex gap-1 text-[7px] items-center">
+                {renderCmsBox('box25Type', 'SSN', 'SSN', { labelPosition: 'left' })}
+                {renderCmsBox('box25Type', 'EIN', 'EIN', { labelPosition: 'left' })}
+              </div>
+            </div>
+          </div>
+
+          <div className="col-span-3 p-0.5 border-r border-[#b91c1c]">
+            <span>26. PATIENT'S ACCOUNT NO.</span>
+            <div className="mt-0.5"><FieldInput defaultValue={c(claim.box26Account)} readOnly={readOnly} className="font-mono text-xs font-bold" /></div>
+          </div>
+
+          <div className="col-span-2 p-0.5 border-r border-[#b91c1c]">
+            <span>27. ACCEPT ASSIGNMENT?</span>
+            <span className="text-[5.5px] font-normal leading-none block">(For govt. claims, see back)</span>
+            <div className="flex gap-2 mt-0.5 font-mono text-[8px] text-slate-900 items-center">
+              {renderCmsBox('box27AcceptAssignment', 'YES', 'YES', { labelPosition: 'left' })}
+              {renderCmsBox('box27AcceptAssignment', 'NO', 'NO', { labelPosition: 'left' })}
+            </div>
+          </div>
+
+          <div className="col-span-1 p-0.5 border-r border-[#b91c1c] text-right">
+            <span>28. TOTAL CHARGE</span>
+            <div className="mt-0.5">
+              <FieldInput defaultValue={blankMode || !claim.box28TotalCharge ? '' : `$${cleanAmount(claim.box28TotalCharge)}`} readOnly={readOnly} className="font-mono text-[10px] font-black text-right" />
+            </div>
+          </div>
+
+          <div className="col-span-1 p-0.5 border-r border-[#b91c1c] text-right">
+            <span>29. AMOUNT PAID</span>
+            <div className="mt-0.5">
+              <FieldInput defaultValue={blankMode || claim.box29AmountPaid === undefined || claim.box29AmountPaid === null || claim.box29AmountPaid === '' ? '' : `$${cleanAmount(claim.box29AmountPaid)}`} readOnly={readOnly} className="font-mono text-[10px] font-bold text-right" />
+            </div>
+          </div>
+
+          <div className="col-span-2 p-0.5 text-right">
+            <span>30. BALANCE DUE</span>
+            <div className="mt-0.5">
+              <FieldInput defaultValue={blankMode || (!claim.box30BalanceDue && !claim.box28TotalCharge) ? '' : `$${cleanAmount(claim.box30BalanceDue || claim.box28TotalCharge)}`} readOnly={readOnly} className="font-mono text-[10px] font-black text-right" />
+            </div>
+          </div>
+        </div>
+
+        {/* 🔴 ROW 10: BOXES 31, 32, 33 */}
+        <div className="grid grid-cols-12 text-[7.5px] font-bold text-[#991b1b] font-mono h-14">
+          <div className="col-span-4 border-r border-[#b91c1c] pr-1 flex flex-col justify-between p-0.5">
+            <div>
+              <span className="leading-none block text-[7px]">31. SIGNATURE OF PHYSICIAN OR SUPPLIER INCLUDING DEGREES OR CREDENTIALS</span>
+              <span className="text-[5.5px] font-normal leading-tight block text-slate-500">(I certify that the statements on the reverse apply to this bill and are made a part thereof.)</span>
+            </div>
+            <div className="flex justify-between items-end mt-0.5">
+              <SignatureFieldInput defaultValue={c(claim.box31ProviderSignature || '')} onChange={(val) => { if (claim) { claim.box31ProviderSignature = val; if (onSignatureChange) onSignatureChange(claim); } }} readOnly={readOnly} className="font-bold text-[9px] w-2/3" />
+              <FieldInput defaultValue={blankMode || !claim.box31Date ? '' : `DATE ${claim.box31Date}`} readOnly={readOnly} className="text-[7.5px] text-slate-600 w-1/3 text-right" />
+            </div>
+          </div>
+
+          <div className="col-span-4 border-r border-[#b91c1c] px-1 flex flex-col justify-between p-0.5 relative">
+            <div>
+              <span className="text-[7px]">32. SERVICE FACILITY LOCATION INFORMATION</span>
+              <FieldInput defaultValue={c(claim.box32Facility || '')} readOnly={readOnly} multiline={true} className="font-bold text-[8.5px] mt-0.5 leading-tight" />
+            </div>
+            <div className="flex justify-between text-[6.5px] mt-0.5 border-t border-[#b91c1c]/40 pt-0.5 absolute bottom-0 left-0 right-0 px-1">
+              <span>a. <span className="font-mono text-slate-900 text-[7.5px]">{c(claim.box32Npi || claim.box32aNpi)}</span></span>
+              <span>b.</span>
+            </div>
+          </div>
+
+          <div className="col-span-4 pl-1 flex flex-col justify-between p-0.5 relative">
+            <div>
+              <span className="text-[7px]">33. BILLING PROVIDER INFO &amp; PH # {c(claim.box33Phone || '')}</span>
+              <FieldInput defaultValue={c(claim.box33BillingProvider || '')} readOnly={readOnly} multiline={true} className="font-bold text-[8.5px] mt-0.5 leading-tight" />
+            </div>
+            <div className="flex justify-between text-[6.5px] mt-0.5 border-t border-[#b91c1c]/40 pt-0.5 absolute bottom-0 left-0 right-0 px-1">
+              <span>a. <span className="font-mono text-slate-900 text-[7.5px]">{c(claim.box33Npi)}</span></span>
+              <span>b.</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 🔴 RIGHT MARGIN VERTICAL LABELS */}
+        <div className="absolute -right-5 top-0 bottom-0 w-4 flex flex-col items-center text-[#991b1b] font-sans font-bold text-[7.5px] tracking-[0.15em]">
+          
+          {/* Top Section: Patient and Insured Information */}
+          <div className="flex flex-col items-center h-[42%] justify-between pb-2 relative w-full">
+            <span className="text-[9px] leading-none -ml-1 mt-1">&gt;&lt;</span>
+            <div className="flex-1 flex items-center justify-center w-full">
+              <span className="whitespace-nowrap" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                PATIENT AND INSURED INFORMATION
+              </span>
+            </div>
+            <span className="text-[9px] leading-none -ml-1">&gt;&lt;</span>
+          </div>
+
+          {/* Bottom Section: Physician or Supplier Information */}
+          <div className="flex flex-col items-center h-[54%] justify-between pt-1 relative w-full">
+            <div className="flex-1 flex items-center justify-center w-full">
+              <span className="whitespace-nowrap" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                PHYSICIAN OR SUPPLIER INFORMATION
+              </span>
+            </div>
+            <span className="text-[9px] leading-none mb-1 -ml-1">&lt;</span>
+          </div>
+        </div>
+
+      </div> {/* 🔴 END MAIN FORM BORDER WRAPPER */}
+
+      {/* 🔴 FOOTER TEXT OUTSIDE BORDER */}
+      <div className="flex justify-between text-[#991b1b] font-sans font-bold text-[6.5px] mt-0.5 w-full">
+        <span>NUCC Instruction Manual available at: www.nucc.org</span>
+        <span>APPROVED OMB-0938-0999 FORM CMS-1500 (08-05)</span>
+      </div>
+
+    </div>
+  );
+};
+

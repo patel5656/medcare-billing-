@@ -1,0 +1,357 @@
+// src/pages/documents/PacketBuilderPage.jsx
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { apiDocumentService } from '../../services/api/apiDocumentService';
+import { apiCaseService } from '../../services/api/apiCaseService';
+import { useUIStore } from '../../store/uiStore';
+import { UnifiedPacketViewer } from '../../components/packets/UnifiedPacketViewer';
+import { useAuthStore } from '../../store/authStore';
+import { ROLES } from '../../constants/rolePermissions';
+import { FolderOpen, CheckSquare, Download, Sparkles, ArrowLeft, FileText, CheckCircle2, DollarSign, User, Shield, Eye, X } from 'lucide-react';
+
+export const PacketBuilderPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryCaseId = searchParams.get('caseId') || 'case-001';
+  const queryPatientId = searchParams.get('patientId');
+
+  const DEFAULT_DOCS = [
+    { id: 'doc-001', name: 'FM Health Pain Evaluation - Initial', providerName: 'FM Health and Wellness Center', type: 'Clinical Note', size: '2.4 MB' },
+    { id: 'doc-002', name: 'FM Laser Therapy Procedure Form', providerName: 'FM Laser Therapy', type: 'Procedure Record', size: '1.1 MB' },
+    { id: 'doc-003', name: 'FM Dav’s Anatomy ESWT Therapy Record', providerName: 'FM Dav’s Anatomy', type: 'Treatment Note', size: '3.2 MB' },
+    { id: 'doc-004', name: 'Behavioral Health Progress Note', providerName: 'FM Counselor Practice (Hope Behavioral Health)', type: 'Therapy Note', size: '1.5 MB' },
+  ];
+
+  const [docs, setDocs] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [cases, setCases] = useState([]);
+  const [selectedCaseId, setSelectedCaseId] = useState(queryCaseId);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isBuilding, setIsBuilding] = useState(false);
+  const [packetResult, setPacketResult] = useState(null);
+  const [showViewerModal, setShowViewerModal] = useState(false);
+  const [viewerProvider, setViewerProvider] = useState('prov-anik');
+  const { addToast } = useUIStore();
+  const { currentUser } = useAuthStore();
+  const navigate = useNavigate();
+
+  const canViewBilling = [ROLES.SUPER_ADMIN, ROLES.BILLING_STAFF, ROLES.COUNSELOR].includes(currentUser?.role);
+
+  // Load cases once on mount
+  useEffect(() => {
+    apiCaseService.getCases().then(res => {
+      if (res && res.length > 0) {
+        setCases(res);
+        // Set initial case from URL param, else first case
+        const matched = res.find(c => c.id === queryCaseId || c.caseId === queryCaseId);
+        setSelectedCaseId(matched ? matched.id : (res[0].id || 'case-001'));
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Re-fetch documents and fresh case details whenever selectedCaseId changes
+  useEffect(() => {
+    if (!selectedCaseId) return;
+
+    // Refresh case details to get latest clinical notes
+    apiCaseService.getCaseById(selectedCaseId).then(freshCase => {
+      if (freshCase) {
+        setCases(prev => {
+          const idx = prev.findIndex(c => c.id === selectedCaseId || c.caseId === selectedCaseId);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = freshCase;
+            return updated;
+          }
+          return [...prev, freshCase];
+        });
+      }
+    }).catch(console.error);
+
+    setDocsLoading(true);
+    setDocs([]);
+    setSelectedIds([]);
+    setPacketResult(null);
+    apiDocumentService.getDocuments(selectedCaseId)
+      .then(res => {
+        if (Array.isArray(res) && res.length > 0) {
+          // Filter to only docs belonging to this case
+          const caseDocs = res.filter(d => !d.caseId || d.caseId === selectedCaseId);
+          const finalDocs = caseDocs.length > 0 ? caseDocs : res;
+          setDocs(finalDocs);
+          setSelectedIds(finalDocs.map(d => d.id)); // auto-select all
+        } else {
+          setDocs([]);
+        }
+      })
+      .catch(() => setDocs([]))
+      .finally(() => setDocsLoading(false));
+  }, [selectedCaseId]);
+
+  // Dynamically compute included providers from selected docs
+  const includedProviders = [...new Set(
+    docs.filter(d => selectedIds.includes(d.id)).map(d => d.providerName).filter(Boolean)
+  )];
+
+
+  const toggleSelect = (id) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(i => i !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const selectAll = () => {
+    if (selectedIds.length === docs.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(docs.map(d => d.id));
+    }
+  };
+
+  const handleBuildPacket = async () => {
+    setIsBuilding(true);
+    try {
+      const blob = await apiDocumentService.buildPatientPacket(selectedIds, selectedCaseId);
+      const url = window.URL.createObjectURL(blob);
+      setPacketResult({ packetId: `PKT-${Date.now()}`, url });
+      addToast(`Master Patient Document Packet generated!`, 'success');
+    } catch (err) {
+      addToast('Failed to build packet', 'error');
+    } finally {
+      setIsBuilding(false);
+    }
+  };
+
+  const currentCase = cases.find(c => c.id === selectedCaseId || c.caseId === selectedCaseId);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-2 flex-wrap print:hidden">
+        <button onClick={() => navigate('/documents')} className="flex items-center gap-1 text-xs font-bold text-teal-700 hover:underline cursor-pointer">
+          <ArrowLeft className="w-4 h-4" /> Back to Document Repository
+        </button>
+
+        {/* Quick Nav Links */}
+        <div className="flex items-center gap-2">
+          {currentCase && canViewBilling && (
+            <button
+              onClick={() => navigate(`/billing/provider-bills?caseId=${currentCase.id || selectedCaseId}`)}
+              className="px-3 py-1.5 bg-teal-50 border border-teal-200 text-teal-800 hover:bg-teal-100 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1"
+            >
+              <DollarSign className="w-3.5 h-3.5" /> Provider Bills Ledger
+            </button>
+          )}
+          <button
+            onClick={() => setShowViewerModal(true)}
+            className="px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1 shadow-xs"
+          >
+            <Eye className="w-3.5 h-3.5" /> Preview Live Forms
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">Patient Document Packet Builder</h1>
+          <p className="text-xs text-slate-500">Compile multi-provider clinical notes, billing statements &amp; CMS-1500 claims into a single attorney packet</p>
+        </div>
+
+        {/* Case Selector Dropdown */}
+        <div className="min-w-[240px]">
+          <select
+            value={selectedCaseId}
+            onChange={e => {
+              setSelectedCaseId(e.target.value);
+              setSearchParams({ caseId: e.target.value });
+            }}
+            className="w-full px-3 py-2 bg-white text-slate-900 text-xs font-bold rounded-xl border border-slate-200 shadow-sm outline-none cursor-pointer"
+          >
+            {cases.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.caseId || c.id} — {c.patientName}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
+        {/* Document Tree Selector */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <CheckSquare className="w-4 h-4 text-teal-600" /> Select Documents for Master Packet ({selectedIds.length} Selected)
+            </h2>
+            <button
+              onClick={selectAll}
+              className="text-xs font-bold text-teal-700 hover:underline cursor-pointer"
+            >
+              {selectedIds.length === docs.length ? 'Deselect All' : 'Select All'}
+            </button>
+          </div>
+
+              <div className="space-y-2">
+            {docsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs text-slate-500 font-medium">Loading documents for this case...</p>
+              </div>
+            ) : docs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+                <FileText className="w-8 h-8 text-slate-300" />
+                <p className="text-sm font-bold text-slate-600">No documents found for this case</p>
+                <p className="text-xs text-slate-400">Upload documents via the Document Repository first</p>
+              </div>
+            ) : (
+              docs.map((d) => {
+              const isChecked = selectedIds.includes(d.id);
+              return (
+                <div
+                  key={d.id}
+                  onClick={() => toggleSelect(d.id)}
+                  className={`p-3.5 rounded-xl border cursor-pointer transition flex items-center justify-between ${
+                    isChecked ? 'border-teal-400 bg-teal-50/40' : 'border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {}}
+                      className="rounded text-teal-600 focus:ring-teal-500 cursor-pointer"
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">{d.name}</p>
+                      <p className="text-[10px] text-slate-500">{d.providerName} | {d.type || d.documentType}</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-slate-400">{d.size}</span>
+                </div>
+              );
+            })
+            )}
+          </div>
+        </div>
+
+        {/* Packet Summary & Generation Panel */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6 flex flex-col justify-between">
+          <div className="space-y-4">
+            <h2 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
+              <FolderOpen className="w-4 h-4 text-teal-600" /> Packet Compilation Summary
+            </h2>
+
+            <div className="space-y-2 text-xs text-slate-600">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Target Patient / Case:</span>
+                <strong className="text-slate-900 truncate max-w-[150px]">{currentCase?.patientName || 'Select a case'}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Selected Files:</span>
+                <strong className="text-slate-900">{selectedIds.length} Documents</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Estimated Pages:</span>
+                <strong className="text-slate-900">{selectedIds.length * 4} Pages</strong>
+              </div>
+              <div className="flex justify-between items-start gap-2">
+                <span className="text-slate-400 shrink-0">Included Providers:</span>
+                <strong className="text-emerald-700 font-bold text-right">
+                  {includedProviders.length > 0
+                    ? `${includedProviders.length} Provider${includedProviders.length > 1 ? 's' : ''}`
+                    : '—'}
+                </strong>
+              </div>
+              {includedProviders.length > 0 && (
+                <div className="pt-1 space-y-0.5">
+                  {includedProviders.map(p => (
+                    <p key={p} className="text-[10px] text-slate-400 truncate">• {p}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleBuildPacket}
+              disabled={isBuilding || selectedIds.length === 0}
+              className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              <Sparkles className="w-4 h-4" /> {isBuilding ? 'Compiling Packet...' : 'Generate Master Legal Packet'}
+            </button>
+          </div>
+
+          {packetResult && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 text-xs">
+              <p className="font-bold text-emerald-800 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Master Packet Ready
+              </p>
+              <p className="text-[11px] text-slate-500 font-mono">Packet ID: {packetResult.packetId}</p>
+              <a
+                href={packetResult.url}
+                download={`Master_Legal_Packet_${selectedCaseId}.pdf`}
+                onClick={() => addToast('Downloading Complete PDF Packet...', 'success')}
+                className="w-full mt-2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer text-center"
+              >
+                <Download className="w-4 h-4" /> Download Complete PDF Packet
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Full Screen Live Forms Viewer Modal */}
+      {showViewerModal && (
+        <div className="printable-modal-backdrop fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200 print:static print:bg-white print:p-0 print:block print:overflow-visible print:inset-auto print:z-auto">
+          <div className="printable-modal bg-white rounded-2xl w-full h-full max-w-7xl flex flex-col shadow-2xl overflow-hidden relative print:shadow-none print:h-auto print:block print:overflow-visible print:w-full">
+            {/* Modal Header */}
+            <div className="shrink-0 p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 print:hidden">
+              <div>
+                <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-teal-600" /> Live Clinical Forms Viewer
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">Dynamically generated forms from {currentCase?.patientName || 'Database'}</p>
+              </div>
+              <button 
+                onClick={() => setShowViewerModal(false)}
+                className="p-2 hover:bg-slate-200 text-slate-500 rounded-xl transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Provider Switcher */}
+            <div className="shrink-0 p-4 bg-white border-b border-slate-200 flex items-center gap-2 overflow-x-auto print:hidden">
+              {[
+                { id: 'prov-anik', label: 'FM Laser Therapy' },
+                { id: 'prov-davs', label: 'FM Dav’s Anatomy ESWT' },
+                { id: 'prov-josmic', label: 'FM Health Consult' },
+                { id: 'prov-counselor', label: 'Counselor' },
+                { id: 'prov-general', label: 'Final Treatment Report' }
+              ].map(prov => (
+                <button
+                  key={prov.id}
+                  onClick={() => setViewerProvider(prov.id)}
+                  className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition whitespace-nowrap cursor-pointer ${
+                    viewerProvider === prov.id ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 bg-slate-50 border border-slate-200'
+                  }`}
+                >
+                  {prov.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Viewer Content */}
+            <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6 print:overflow-visible print:bg-white print:p-0 print:block">
+              <UnifiedPacketViewer 
+                providerId={viewerProvider} 
+                selectedCase={currentCase} 
+                initialBlank={false} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};

@@ -1,0 +1,415 @@
+// src/components/modals/ScheduleAppointmentModal.jsx
+import React, { useState, useEffect } from 'react';
+import { Modal } from './Modal';
+import { apiAppointmentService } from '../../services/api/apiAppointmentService';
+import { apiPatientService } from '../../services/api/apiPatientService';
+import { apiCaseService } from '../../services/api/apiCaseService';
+import { apiProviderService } from '../../services/api/apiProviderService';
+import { getGeneralSettings } from '../../services/api/apiSettingsService';
+import { INITIAL_PROVIDER_CONFIGS } from '../../constants/providerConfigs';
+import { createDefaultServiceLine } from '../../constants/servicesCatalog';
+import { MultiLineCptTable } from '../common/MultiLineCptTable';
+import { isClinicClosed, getTodayDateStr, getNextBusinessDay } from '../../constants/usHolidays';
+import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
+import { Calendar, Clock, User, Save, AlertCircle, Phone, Stethoscope } from 'lucide-react';
+
+const inputCls = 'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none transition';
+const labelCls = 'block text-xs font-bold text-slate-800 mb-1';
+
+export const ScheduleAppointmentModal = ({
+  isOpen,
+  onClose,
+  onAppointmentBooked,
+  prefillPatientId = '',
+  prefillPatientName = '',
+  prefillPhone = '',
+  prefillCaseId = ''
+}) => {
+  const { addToast } = useUIStore();
+  const [isLoading, setIsLoading] = useState(false);
+  const [patients, setPatients] = useState([]);
+  const [cases, setCases] = useState([]);
+  const [dbProviders, setDbProviders] = useState([]);
+  const [practiceSettings, setPracticeSettings] = useState(null);
+
+  const [serviceLines, setServiceLines] = useState([
+    createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
+    createDefaultServiceLine(2, '97039', 'High Intensity Laser Therapy (HILT)', 250.00)
+  ]);
+
+  const { currentUser } = useAuthStore();
+  const [formData, setFormData] = useState(() => {
+    const defaultProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+    return {
+      patientId: prefillPatientId || '',
+      patientName: prefillPatientName || '',
+      patientPhone: prefillPhone || '',
+      caseId: prefillCaseId || '',
+      providerId: defaultProviderId,
+      visitType: 'INITIAL',
+      appointmentType: 'Pain Consult',
+      date: getNextBusinessDay(),
+      startTime: '09:00 AM',
+      endTime: '10:00 AM',
+      duration: '60',
+      reasonForVisit: 'Post-MVA pain management & clinical evaluation',
+      reminderPreference: 'SMS',
+      holidayOverride: false,
+    };
+  });
+
+  // Load patients and cases
+  useEffect(() => {
+    if (isOpen) {
+      getGeneralSettings().then(res => {
+        if (res) {
+          setPracticeSettings(res);
+          if (res.defaultAppointmentDuration) {
+             setFormData(prev => ({ ...prev, duration: res.defaultAppointmentDuration }));
+          }
+        }
+      }).catch(console.error);
+
+      apiPatientService.getPatients().then(res => {
+        if (res && res.length > 0) {
+          setPatients(res);
+          if (!prefillPatientName) {
+            const found = res.find(p => p.id === prefillPatientId) || res[0];
+            setFormData(prev => ({
+              ...prev,
+              patientId: found.id,
+              patientName: `${found.firstName} ${found.lastName}`.trim(),
+              patientPhone: prefillPhone || found.phone || found.mobilePhone || ''
+            }));
+          }
+        }
+      }).catch(() => { });
+
+      apiCaseService.getCases().then(res => {
+        if (res && res.length > 0) {
+          setCases(res);
+        }
+      }).catch(() => { });
+
+      apiProviderService.getProviders().then(res => {
+        if (res) {
+          const list = Array.isArray(res) ? res : Object.values(res);
+          setDbProviders(list || []);
+        }
+      }).catch(console.error);
+    }
+  }, [isOpen, prefillPatientId, prefillPatientName, prefillPhone, prefillCaseId]);
+
+  const set = (f, v) => setFormData(p => ({ ...p, [f]: v }));
+
+  const handlePatientSelect = (patientId) => {
+    const selected = patients.find(p => p.id === patientId);
+    if (selected) {
+      const patientCases = cases.filter(c => c.patientId === selected.id || c.patientId === selected.patientId);
+      setFormData(prev => ({
+        ...prev,
+        patientId: selected.id,
+        patientName: `${selected.firstName} ${selected.lastName}`.trim(),
+        patientPhone: selected.phone || selected.mobilePhone || '',
+        caseId: patientCases.length > 0 ? (patientCases[0].caseId || patientCases[0].id) : ''
+      }));
+    }
+  };
+
+  let closedCheck = isClinicClosed(formData.date);
+  if (practiceSettings && practiceSettings.autoBlockUSHolidays === false && closedCheck.isClosed && !closedCheck.isWeekend) {
+    closedCheck = { isClosed: false, isPast: closedCheck.isPast, isWeekend: false, reason: '' };
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (closedCheck.isPast) {
+      addToast('Booking is disabled for past dates. Please select today or a future working day.', 'error');
+      return;
+    }
+    if (closedCheck.isClosed && !formData.holidayOverride) {
+      addToast(`${closedCheck.reason}. Enable Admin Override to force book.`, 'warning');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === formData.providerId);
+      const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseFloat(l.units) || 1) * (parseFloat(l.charge) || 0)), 0);
+      const created = await apiAppointmentService.createAppointment({
+        ...formData,
+        status: practiceSettings?.autoConfirmAppointments ? 'CONFIRMED' : 'SCHEDULED',
+        serviceLines,
+        totalEstimatedCharge,
+        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(',').substring(0, 10),
+        modifiers: serviceLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
+        providerName: selectedProv?.name || 'FM Health and Wellness Center'
+      });
+      addToast(`Appointment scheduled for ${created.patientName || formData.patientName}!`, 'success');
+      if (onAppointmentBooked) onAppointmentBooked(created);
+      onClose();
+    } catch (err) {
+      addToast(err?.message || 'Failed to schedule appointment', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Filter cases to ONLY show cases belonging to the currently selected patient
+  const selectedPatientObj = patients.find(p => p.id === formData.patientId);
+  const availableCases = cases.filter(c => {
+    if (!formData.patientId) return false;
+    const pSysId = selectedPatientObj?.patientId;
+    const pName = selectedPatientObj ? `${selectedPatientObj.firstName} ${selectedPatientObj.lastName}`.trim().toLowerCase() : '';
+    const cPatId = c.patientId;
+    const cPatName = (c.patientName || '').trim().toLowerCase();
+
+    return (cPatId && (cPatId === formData.patientId || cPatId === pSysId)) || (pName && cPatName && cPatName === pName);
+  });
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Book Patient Visit"
+      subtitle="Select practice provider, appointment time & multi-code CPT billing lines"
+      icon={Calendar}
+      size="xl"
+      iconColor="text-teal-600"
+      iconBg="bg-teal-50"
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="w-full sm:w-auto px-5 py-2.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Save className="w-4 h-4" /> {isLoading ? 'Booking...' : 'Confirm Appointment'}
+          </button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Dynamic Patient & Linked Case Selection */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-800">Select Patient *</label>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    patientId: prev.patientId ? '' : (patients[0]?.id || ''),
+                    patientName: prev.patientId ? '' : `${patients[0]?.firstName || ''} ${patients[0]?.lastName || ''}`,
+                    patientPhone: prev.patientId ? '' : (patients[0]?.phone || ''),
+                    caseId: ''
+                  }));
+                }}
+                className="text-[10px] font-bold text-teal-700 hover:underline cursor-pointer"
+              >
+                {formData.patientId ? '+ New Walk-In Patient' : 'Select Existing'}
+              </button>
+            </div>
+            {formData.patientId && patients.length > 0 ? (
+              <select
+                value={formData.patientId}
+                onChange={e => handlePatientSelect(e.target.value)}
+                className={inputCls}
+              >
+                {patients.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.firstName} {p.lastName} ({p.patientId || p.mrn || p.id})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                required
+                className={inputCls}
+                value={formData.patientName}
+                onChange={e => set('patientName', e.target.value)}
+                placeholder="Enter Full Name (e.g. John Doe)"
+              />
+            )}
+          </div>
+
+          <div>
+            <label className={labelCls}>Patient Mobile</label>
+            <input type="tel" className={inputCls} value={formData.patientPhone} onChange={e => set('patientPhone', e.target.value)} />
+          </div>
+
+          <div>
+            <label className={labelCls}>Linked Accident Case</label>
+            <select
+              value={formData.caseId}
+              onChange={e => set('caseId', e.target.value)}
+              className={inputCls}
+            >
+              <option value="">-- No Case / General Visit --</option>
+              {availableCases.map(c => (
+                <option key={c.id} value={c.caseId || c.id}>
+                  {c.caseId || c.id} - {c.patientName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Provider & Encounter Type Selection */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Select Practice Care Provider *</label>
+            <select
+              value={formData.providerId}
+              onChange={e => {
+                const pid = e.target.value;
+                let aptType = 'Pain Consult';
+                if (pid === 'prov-davs') { aptType = 'ESWT Shockwave Session 1'; }
+                if (pid === 'prov-anik') { aptType = 'Laser Therapy Session 1'; }
+                if (pid === 'prov-counselor') { aptType = 'Counseling Psychotherapy (45m)'; }
+                if (pid === 'prov-tpi') { aptType = 'Trigger Point Injection'; }
+                if (pid === 'prov-tecar') { aptType = 'TECAR Therapy Session'; }
+                setFormData(p => ({ ...p, providerId: pid, appointmentType: aptType }));
+              }}
+              className={inputCls}
+            >
+              <option value="prov-josmic">FM Health and Wellness Center (Pain Management)</option>
+              <option value="prov-davs">FM Dav’s Anatomy (Shockwave ESWT)</option>
+              <option value="prov-anik">FM Laser Therapy (Laser Session)</option>
+              <option value="prov-counselor">FM Counselor Practice (Behavioral Health &amp; PTSD)</option>
+              <option value="prov-tpi">FM Trigger Point Injection Clinic (Pain Management & Injections)</option>
+              <option value="prov-tecar">FM TECAR Therapy Clinic (Deep Tissue Radiofrequency)</option>
+              {dbProviders
+                .filter(p => !['prov-josmic', 'prov-davs', 'prov-anik', 'prov-counselor', 'prov-tpi', 'prov-tecar'].includes(p.id))
+                .map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.serviceCategory || 'Specialist Provider'})</option>
+                ))
+              }
+            </select>
+          </div>
+
+          <div>
+            <label className={labelCls}>Encounter Type *</label>
+            <select
+              value={formData.visitType}
+              onChange={e => {
+                const val = e.target.value;
+                set('visitType', val);
+                if (val === 'SUBSEQUENT') {
+                  setServiceLines([
+                    createDefaultServiceLine(1, '99214', 'Office/Outpatient Visit Established Moderate (30-39 min)', 275.00),
+                    createDefaultServiceLine(2, '97110', 'Therapeutic Exercise (15 min)', 110.00)
+                  ]);
+                } else {
+                  setServiceLines([
+                    createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
+                    createDefaultServiceLine(2, '97039', 'High Intensity Laser Therapy (HILT)', 250.00)
+                  ]);
+                }
+              }}
+              className={`${inputCls} font-bold text-teal-800 bg-teal-50/40`}
+            >
+              <option value="INITIAL">Initial Visit (New Patient)</option>
+              <option value="SUBSEQUENT">Follow-Up Visit (Established Patient)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Date & Time */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Visit Date *</label>
+            <input
+              type="date"
+              min={practiceSettings?.allowSameDayBooking === false ? getNextBusinessDay() : getTodayDateStr()}
+              required
+              className={inputCls}
+              value={formData.date}
+              onChange={e => set('date', e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Start Time *</label>
+            <select className={inputCls} value={formData.startTime} onChange={e => set('startTime', e.target.value)}>
+              <option value="08:30 AM">08:30 AM</option>
+              <option value="09:00 AM">09:00 AM</option>
+              <option value="09:30 AM">09:30 AM</option>
+              <option value="10:00 AM">10:00 AM</option>
+              <option value="10:30 AM">10:30 AM</option>
+              <option value="11:00 AM">11:00 AM</option>
+              <option value="01:00 PM">01:00 PM</option>
+              <option value="02:00 PM">02:00 PM</option>
+              <option value="03:00 PM">03:00 PM</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Multi-Line CPT & Modifiers Table */}
+        <div className="pt-2">
+          <MultiLineCptTable
+            lines={serviceLines}
+            onChange={setServiceLines}
+            title="Service CPT Billing Lines (Line 1, 2, 3... & Modifiers)"
+          />
+        </div>
+
+        {/* Weekend / Holiday / Past Date Alert Banner */}
+        {closedCheck.isClosed && (
+          closedCheck.isPast ? (
+            <div className="p-3.5 bg-red-50 border border-red-300 rounded-xl text-red-950 space-y-1.5 text-xs">
+              <div className="flex items-center gap-2 font-bold text-red-900">
+                <span>🚫</span>
+                <span>Past Date - Booking Disabled</span>
+              </div>
+              <p className="text-[11px] text-red-800">
+                Appointments cannot be created for past dates (yesterday or earlier). Please select today or a future valid working day.
+              </p>
+            </div>
+          ) : (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-950 space-y-1.5 text-xs">
+              <div className="flex items-center gap-2 font-bold text-amber-900">
+                <span>{closedCheck.isWeekend ? '📅' : '🇺🇸'}</span>
+                <span>Clinic Closed: {closedCheck.reason}</span>
+              </div>
+              <p className="text-[11px] text-amber-800">
+                {closedCheck.isWeekend
+                  ? 'Routine clinic visits are not scheduled on Saturdays and Sundays. Please select a Monday-Friday date or toggle Admin Override.'
+                  : 'Routine appointments are suspended for this US Federal Holiday.'}
+              </p>
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-amber-950 pt-1">
+                <input
+                  type="checkbox"
+                  checked={formData.holidayOverride}
+                  onChange={e => set('holidayOverride', e.target.checked)}
+                  className="rounded text-amber-600 focus:ring-amber-500"
+                />
+                Admin Override: Authorize Weekend / Emergency Visit
+              </label>
+            </div>
+          )
+        )}
+
+        <div>
+          <label className={labelCls}>Reason for Visit &amp; Clinical Notes</label>
+          <textarea
+            rows={2}
+            className={inputCls}
+            value={formData.reasonForVisit}
+            onChange={e => set('reasonForVisit', e.target.value)}
+            placeholder="Clinical chief complaint and visit goals"
+          />
+        </div>
+      </form>
+    </Modal>
+  );
+};

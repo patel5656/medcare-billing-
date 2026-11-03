@@ -1,0 +1,217 @@
+// src/components/packets/common/PrintableBillingStatement.jsx
+import React from 'react';
+import { formatCurrency } from '../../../utils/billingCalculations';
+import { useSettings } from '../../../utils/settingsCache';
+import { INITIAL_PROVIDER_CONFIGS } from '../../../constants/providerConfigs';
+
+export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selectedCase = null, providerId = null }) => {
+  const settings = useSettings();
+
+  // Extract patient info from bill or selectedCase
+  const pt = selectedCase?.patient || bill?.patient || {};
+  const patientName = bill?.patientName || selectedCase?.patientName || (pt.firstName ? `${pt.firstName || ''} ${pt.lastName || ''}`.trim() : '') || pt.name || '';
+  
+  const ptStreet = pt.street || pt.addressLine1 || pt.address || '';
+  const ptCity = pt.city || '';
+  const ptState = pt.state || '';
+  const ptZip = pt.zipCode || pt.zip || '';
+  const casePtAddress = [ptStreet, ptCity, ptState, ptZip].filter(Boolean).join(', ');
+  const patientAddress = bill?.patientAddress || casePtAddress || '';
+
+  const patientSystemId = bill?.patientSystemId || pt.patientId || selectedCase?.patient?.patientId || selectedCase?.patientId || '';
+  const caseId = bill?.caseId || selectedCase?.caseId || selectedCase?.id || '';
+
+  const patientIdCaseDisplay = () => {
+    if (patientSystemId && caseId) return `${patientSystemId} (${caseId})`;
+    if (patientSystemId) return patientSystemId;
+    if (caseId) return caseId;
+    return '';
+  };
+
+  const getBillToName = () => {
+    if (bill?.billToName) return bill.billToName;
+    if (!selectedCase) return '';
+    const att = selectedCase.attorneyName || selectedCase.attorney || '';
+    const firm = selectedCase.lawFirm || selectedCase.lawFirmName || '';
+    if (att && firm) {
+      if (att.includes(firm)) return att;
+      return `${att} (${firm})`;
+    }
+    return att || firm || '';
+  };
+
+  const billToName = getBillToName();
+  const billToAddress = bill?.billToAddress || selectedCase?.attorneyAddress || selectedCase?.lawFirmAddress || '';
+
+  const getProviderConfig = () => {
+    const pid = providerId || bill?.providerId || selectedCase?.providerId || 'prov-anik';
+    const key = pid.replace('prov-', '');
+    return INITIAL_PROVIDER_CONFIGS[key] || INITIAL_PROVIDER_CONFIGS['anik'];
+  };
+  const cfg = getProviderConfig();
+
+  const providerName = bill?.providerName || bill?.provider?.name || cfg?.name || selectedCase?.providerName || selectedCase?.treatingClinic || 'FM Laser Therapy';
+  const providerAddress = bill?.providerAddress || bill?.provider?.address || (cfg?.address ? `${cfg.address.street}, ${cfg.address.city}, ${cfg.address.state} ${cfg.address.zipCode}` : '9900 Westpark Dr, Houston, TX 77063');
+  const providerPhone = bill?.providerPhone || bill?.provider?.phone || cfg?.contact?.phone || '346-338-7020';
+  const statementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || selectedCase?.statementNumber || '121560';
+  const statementDate = bill?.statementDate || bill?.date || selectedCase?.incidentDate || selectedCase?.dateOfService || '04/13/2026';
+
+  const rawLines = bill?.serviceLines || bill?.lineItems || bill?.items || selectedCase?.serviceLines || selectedCase?.items || [];
+  
+  const displayItems = rawLines.map(item => {
+    const charge = Number(item.charge) || 0;
+    const insPay = Number(item.payments?.insurance || item.insurancePayment || item.insPay) || 0;
+    const patPay = Number(item.payments?.patient || item.patientPayment || item.patPay) || 0;
+    const adj = Number(item.adjustments || item.adjustment || item.adj) || 0;
+    const lineBal = item.lineBalance !== undefined && item.lineBalance !== null
+      ? Number(item.lineBalance)
+      : (item.balance !== undefined && item.balance !== null
+          ? Number(item.balance)
+          : Math.max(0, charge - (insPay + patPay + adj)));
+    return {
+      ...item,
+      dos: item.dos || item.dateOfService || item.date || '',
+      cptCode: item.cptCode || item.cpt || '',
+      description: item.description || item.serviceDescription || '',
+      charge,
+      insPay,
+      patPay,
+      adj,
+      lineBal
+    };
+  });
+
+  const totalCharges = rawLines.reduce((sum, i) => sum + (Number(i.charge) || 0), 0);
+  const totalInsPay = rawLines.reduce((sum, i) => sum + (Number(i.payments?.insurance || i.insurancePayment || i.insPay) || 0), 0);
+  const totalPatPay = rawLines.reduce((sum, i) => sum + (Number(i.payments?.patient || i.patientPayment || i.patPay) || 0), 0);
+  const totalAdj = rawLines.reduce((sum, i) => sum + (Number(i.adjustments || i.adjustment || i.adj) || 0), 0);
+
+  const calculatedBalance = Math.max(0, totalCharges - (totalInsPay + totalPatPay + totalAdj));
+  const balanceDue = bill?.totals?.balanceDue !== undefined && bill?.totals?.balanceDue !== null && bill?.totals?.balanceDue > 0
+    ? Number(bill.totals.balanceDue)
+    : (bill?.balanceDue !== undefined && bill?.balanceDue !== null && bill?.balanceDue > 0
+        ? Number(bill.balanceDue)
+        : calculatedBalance);
+
+  const agingCurrent = Number(bill?.aging?.current) || 0;
+  const aging30 = Number(bill?.aging?.past30) || 0;
+  const aging60 = Number(bill?.aging?.past60) || 0;
+  const aging90 = Number(bill?.aging?.past90) || 0;
+
+  const sumAging = agingCurrent + aging30 + aging60 + aging90;
+  const finalCurrentDue = (sumAging === 0 && balanceDue > 0) ? balanceDue : agingCurrent;
+  const totalPages = 1;
+
+  return (
+    <div
+      className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 p-8 sm:p-9 space-y-6 flex flex-col justify-between print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none"
+      style={{ width: '100%', maxWidth: '850px', minHeight: '1100px' }}
+    >
+      <div className="space-y-6 flex-1 flex flex-col">
+        {/* Statement Top Header */}
+        <div className="flex justify-between items-start border-b-2 border-[#722F37] pb-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">{providerName}</h1>
+            <p className="text-xs sm:text-sm text-slate-600 font-medium mt-1">{providerAddress}</p>
+            <p className="text-xs text-slate-600 font-medium mt-0.5">TEL: {providerPhone || '346-338-7020'}</p>
+          </div>
+          <div className="text-right font-mono">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 uppercase tracking-tight">Billing Statement</h2>
+            <p className="text-xs sm:text-sm font-bold text-slate-800 mt-1">Statement No: <span className="text-slate-950 font-extrabold">{statementNumber}</span></p>
+            <p className="text-xs font-semibold text-slate-700 mt-0.5">Statement Date: {statementDate}</p>
+            <p className="text-xs text-slate-500 font-bold mt-1 tracking-wider">PAGE {pageIndex + 1} OF {totalPages}</p>
+          </div>
+        </div>
+
+        {/* Bill To Box */}
+        <div className="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-300 w-full sm:w-7/12 shadow-sm">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Bill To:</p>
+          <h3 className="text-sm sm:text-base font-bold text-slate-900 mt-1">{billToName}</h3>
+          <p className="text-xs sm:text-sm text-slate-700 whitespace-pre-line mt-1 leading-relaxed">{billToAddress}</p>
+        </div>
+
+        {/* Patient Details Banner */}
+        <div className="grid grid-cols-3 gap-4 p-4 bg-slate-100 rounded-xl border border-slate-300 text-xs sm:text-sm shadow-sm">
+          <div>
+            <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider mb-0.5">Patient Name:</span>
+            <strong className="text-slate-900 font-bold text-sm sm:text-base">{patientName}</strong>
+          </div>
+          <div>
+            <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider mb-0.5">Patient Address:</span>
+            <span className="text-slate-800 text-xs sm:text-sm font-medium truncate block">{patientAddress}</span>
+          </div>
+          <div>
+            <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider mb-0.5">Patient ID / Case:</span>
+            <span className="font-mono font-bold text-slate-900 text-xs sm:text-base">{patientIdCaseDisplay()}</span>
+          </div>
+        </div>
+
+        {/* Service Line Table */}
+        <div className="overflow-x-auto border border-slate-300 rounded-lg shadow-sm flex-1">
+          <table className="w-full text-left text-xs sm:text-sm border-collapse">
+            <thead className="bg-[#722F37] text-white uppercase font-bold text-xs border-b border-[#722F37]">
+              <tr>
+                <th className="p-3 border-r border-slate-700 w-[14%]">Date of Service</th>
+                <th className="p-3 border-r border-slate-700 w-[11%]">Procedure</th>
+                <th className="p-3 border-r border-slate-700 w-[27%]">Description</th>
+                <th className="p-3 text-right border-r border-slate-700 w-[12%]">Charge</th>
+                <th className="p-3 text-right border-r border-slate-700 w-[12%]">Ins. Pay</th>
+                <th className="p-3 text-right border-r border-slate-700 w-[12%]">Pat. Pay</th>
+                <th className="p-3 text-right border-r border-slate-700 w-[12%]">Adjustment</th>
+                <th className="p-3 text-right w-[10%]">Balance</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 bg-white">
+              {displayItems.length > 0 ? (
+                displayItems.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50 font-tabular">
+                    <td className="p-3 border-r border-slate-200 font-mono text-xs whitespace-nowrap">{item.dos}</td>
+                    <td className="p-3 border-r border-slate-200 font-bold font-mono text-xs">{item.cptCode}</td>
+                    <td className="p-3 border-r border-slate-200 text-slate-800 font-medium">{item.description}</td>
+                    <td className="p-3 text-right border-r border-slate-200 font-bold text-slate-900">{formatCurrency(item.charge)}</td>
+                    <td className="p-3 text-right border-r border-slate-200 text-slate-700 font-medium">{formatCurrency(item.insPay)}</td>
+                    <td className="p-3 text-right border-r border-slate-200 text-slate-700 font-medium">{formatCurrency(item.patPay)}</td>
+                    <td className="p-3 text-right border-r border-slate-200 text-slate-700 font-medium">{formatCurrency(item.adj)}</td>
+                    <td className="p-3 text-right font-bold text-slate-900 bg-slate-50/50">{formatCurrency(item.lineBal)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center text-slate-400 font-mono text-xs sm:text-sm">No service lines recorded for this statement.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Aging Grid Footer */}
+      <div className="pt-4 space-y-4 mt-auto">
+        <div className="border border-slate-300 rounded-xl overflow-hidden shadow-sm">
+          <table className="w-full text-center text-xs sm:text-sm font-tabular">
+            <thead className="bg-[#722F37] text-white font-bold text-xs uppercase tracking-wider">
+              <tr>
+                <th className="p-3 border-r border-slate-700">Current Due</th>
+                <th className="p-3 border-r border-slate-700">Past Due 30 Days</th>
+                <th className="p-3 border-r border-slate-700">Past Due 60 Days</th>
+                <th className="p-3 border-r border-slate-700">Past Due 90 Days</th>
+                <th className="p-3 bg-[#722F37] text-white font-bold">Balance Due</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white">
+              <tr className="font-bold text-slate-900">
+                <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(finalCurrentDue)}</td>
+                <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(aging30)}</td>
+                <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(aging60)}</td>
+                <td className="p-3.5 border-r border-slate-300 font-mono">{formatCurrency(aging90)}</td>
+                <td className="p-3.5 bg-slate-100 text-slate-950 font-black text-sm sm:text-base">{formatCurrency(balanceDue)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+

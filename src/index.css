@@ -1,0 +1,393 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ── Base Reset for mobile ── */
+  html {
+    height: 100%;
+    /* Prevent horizontal scroll on ALL viewports */
+    overflow-x: hidden;
+    /* Smooth scroll */
+    scroll-behavior: smooth;
+  }
+
+  body {
+    height: 100%;
+    overflow-x: hidden;
+    @apply bg-surface text-on-surface font-sans antialiased selection:bg-teal-500 selection:text-white;
+  }
+
+  #root {
+    height: 100%;
+    overflow-x: hidden;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   App Shell — Mobile-safe full-height layout
+   Uses 100dvh (dynamic viewport height) so Android Chrome URL bar
+   doesn't eat into layout. Falls back to 100vh for older browsers.
+   ───────────────────────────────────────────────────────────────── */
+.app-shell {
+  height: 100vh;          /* Fallback for browsers without dvh */
+  height: 100dvh;         /* Dynamic viewport: excludes browser chrome (URL bar) */
+  width: 100%;
+  overflow: hidden;       /* Root must NOT scroll — only <main> scrolls */
+  position: relative;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Touch Scroll — Smooth momentum scrolling on Android & iOS
+   ───────────────────────────────────────────────────────────────── */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Tabular numbers for financial / dosage data
+   ───────────────────────────────────────────────────────────────── */
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Scrollbars — hide on mobile touch devices, thin on desktop
+   ───────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+@media (max-width: 1023px) {
+  /* Hide scrollbar on mobile — touch devices don't need it */
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0d9488;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Mobile Tables — make them horizontally scrollable
+   Wrap any table in .table-mobile-scroll to enable this
+   ───────────────────────────────────────────────────────────────── */
+.table-mobile-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Show a faint scroll hint shadow on right edge */
+  background:
+    linear-gradient(to right, white 30%, rgba(255,255,255,0)),
+    linear-gradient(to right, rgba(255,255,255,0), white 70%) 0 100%,
+    radial-gradient(farthest-side at 0% 50%, rgba(0,0,0,.08), rgba(0,0,0,0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.08), rgba(0,0,0,0)) 0 100%;
+  background-repeat: no-repeat;
+  background-color: white;
+  background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Prevent tap highlight flash on buttons (Android Chrome)
+   ───────────────────────────────────────────────────────────────── */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Medical Card Hover Glow
+   ───────────────────────────────────────────────────────────────── */
+.medical-card-hover {
+  @apply transition-all duration-200 hover:shadow-md hover:border-teal-500/40;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Print Styles for Clinical Packets, Reports, Statements & Forms
+   ───────────────────────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 6mm !important;
+  }
+
+  /* Reset global layout for printing */
+  html, body, #root, .app-shell, main {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+  }
+
+  /* Universal hide for non-printable navigation, sidebar, headers & buttons */
+  .print\:hidden,
+  header,
+  nav,
+  aside,
+  button,
+  .no-print,
+  .sidebar,
+  .top-header,
+  .fixed:not(.printable-modal-backdrop),
+  [role="button"] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Deep hide for buttons & non-printable bars inside printable elements */
+  #printable-cms-queue-report .print\:hidden,
+  #printable-cms-queue-report .no-print,
+  #printable-cms-queue-report button,
+  #printable-packet .print\:hidden,
+  #printable-packet .no-print,
+  #printable-packet button,
+  #printable-statement .print\:hidden,
+  #printable-statement .no-print,
+  #printable-statement button,
+  #printable-cms-claim .print\:hidden,
+  #printable-cms-claim .no-print,
+  #printable-cms-claim button,
+  #printable-report .print\:hidden,
+  #printable-report .no-print,
+  #printable-report button,
+  #printable-aging-report .print\:hidden,
+  #printable-aging-report .no-print,
+  #printable-aging-report button,
+  .printable-area .print\:hidden,
+  .printable-area .no-print,
+  .printable-area button,
+  .printable-modal .print\:hidden,
+  .printable-modal .no-print,
+  .printable-modal button {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Target printable container sections */
+  #printable-cms-queue-report,
+  #printable-provider-bills-report,
+  #printable-patient-roster-report,
+  #printable-packet,
+  #printable-statement,
+  #printable-cms-claim,
+  #printable-report,
+  #printable-aging-report,
+  #printable-booking-receipt,
+  .printable-area {
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    display: block !important;
+    visibility: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  #printable-cms-queue-report *,
+  #printable-provider-bills-report *,
+  #printable-patient-roster-report *,
+  #printable-packet *,
+  #printable-statement *,
+  #printable-cms-claim *,
+  #printable-report *,
+  #printable-aging-report *,
+  #printable-booking-receipt *,
+  .printable-area * {
+    visibility: visible !important;
+  }
+
+  /* Reset overflow to prevent browser print engine from creating blank Page 1 */
+  .overflow-hidden,
+  .overflow-x-auto,
+  .overflow-y-auto {
+    overflow: visible !important;
+  }
+
+  /* Modal preview printing override */
+  .printable-modal {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
+
+  /* Sheet scaling & 850px container width reset to fit printable area */
+  .print-page-sheet-wrapper,
+  .print-page-sheet,
+  #printable-packet > div,
+  #printable-packet > div > div,
+  #printable-packet div[style*="850px"],
+  #printable-statement div[style*="850px"],
+  #printable-cms-claim div[style*="850px"],
+  .printable-area div[style*="850px"],
+  .printable-modal div[style*="850px"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    box-sizing: border-box !important;
+  }
+
+  .print-page-item,
+  .print-page-sheet {
+    break-after: page !important;
+    page-break-after: always !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Eliminate trailing extra blank page on last child elements */
+  .print-page-item:last-child,
+  .print-page-sheet:last-child,
+  .cms-claim-page:last-child,
+  #printable-packet > div:last-child,
+  #printable-statement > div:last-child,
+  #printable-cms-claim > div:last-child,
+  #printable-report > div:last-child,
+  #printable-aging-report > div:last-child,
+  #printable-booking-receipt > div:last-child,
+  .printable-area > div:last-child,
+  .printable-modal > div:last-child {
+    break-after: auto !important;
+    page-break-after: auto !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Form controls reset to clean data text values only */
+  input, select, textarea {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    padding: 0 !important;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: transparent !important;
+  }
+
+  /* Table paged-media breaking rules */
+  table {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tbody {
+    display: table-row-group !important;
+  }
+
+  tr, td, th, .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Exact color fidelity */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Google Translate Widget Overrides
+   ───────────────────────────────────────────────────────────────── */
+.skiptranslate iframe {
+  display: none !important;
+}
+body {
+  top: 0px !important; 
+}
+.goog-tooltip {
+  display: none !important;
+}
+.goog-tooltip:hover {
+  display: none !important;
+}
+.goog-text-highlight {
+  background-color: transparent !important;
+  border: none !important; 
+  box-shadow: none !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Treatment Areas Checkbox (Anatomical Diagram)
+   ───────────────────────────────────────────────────────────────── */
+.treatment-checkbox {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkbox-box {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkbox-checkmark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+}

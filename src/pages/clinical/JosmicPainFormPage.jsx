@@ -1,0 +1,221 @@
+// src/pages/clinical/JosmicPainFormPage.jsx
+import React, { useState, useEffect } from 'react';
+import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteService';
+import { apiPatientService } from '../../services/api/apiPatientService';
+import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Save, FileText, CheckSquare, PenTool } from 'lucide-react';
+
+const PAIN_LOCATIONS = [
+  'Neck', 'Chest', 'Head', 'Upper back', 'Middle back', 'Lower back',
+  'Right shoulder', 'Left shoulder', 'Right knee', 'Left knee', 'Right ankle', 'Left ankle',
+  'Right wrist', 'Left wrist', 'Joint pain', 'Muscle pain', 'Headache', 'Right arm',
+  'Left arm', 'Right leg', 'Left leg', 'Right elbow', 'Left elbow', 'Other'
+];
+
+export const JosmicPainFormPage = () => {
+  const [patients, setPatients] = useState([]);
+  const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [chiefComplaint, setChiefComplaint] = useState('Motor vehicle collision resulting in severe neck and lower back pain');
+  const [selectedLocations, setSelectedLocations] = useState(['Neck', 'Lower back', 'Left ankle']);
+  const [painScale, setPainScale] = useState(7);
+  const [hpiText, setHpiText] = useState('Patient was involved in a rear-end MVA on 12/27/2025. Immediate pain reported in cervical and lumbar spine.');
+  const [planText, setPlanText] = useState('Ordered MRI cervical/lumbar. Recommend ESWT and Laser therapy 3x weekly.');
+  const [isLoading, setIsLoading] = useState(false);
+  const { addToast } = useUIStore();
+  const { currentUser } = useAuthStore();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    apiPatientService.getPatients().then(data => {
+      setPatients(data);
+      if (data.length > 0) setSelectedPatientId(data[0].id);
+    }).catch(console.error);
+  }, []);
+
+  const toggleLocation = (loc) => {
+    if (selectedLocations.includes(loc)) {
+      setSelectedLocations(selectedLocations.filter(l => l !== loc));
+    } else {
+      setSelectedLocations([...selectedLocations, loc]);
+    }
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const selectedPatient = patients.find(p => p.id === selectedPatientId);
+      const patientNameToSave = selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : 'Unknown Patient';
+      
+      const note = await apiClinicalNoteService.createNote({
+        patientId: selectedPatientId || 'pat-001',
+        patientName: patientNameToSave,
+        caseId: 'case-001',
+        providerId: currentUser?.providerId || currentUser?.id || 'prov-josmic',
+        providerName: currentUser?.name || 'FM Health and Wellness Center',
+        type: 'JOSMIC_PAIN',
+        title: 'FM Health Pain Management Report',
+        author: 'Dr. Segun Adeoye',
+        content: {
+          chiefComplaint,
+          painLocations: selectedLocations,
+          painScale: selectedLocations.length,
+          hpiText,
+          planText
+        }
+      });
+      addToast('FM Health Pain Management Report saved as draft!', 'success');
+      navigate(`/clinical-notes/${note.id}/edit`);
+    } catch (err) {
+      addToast('Failed to save report', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <button onClick={() => navigate('/clinical-notes')} className="flex items-center gap-1 text-xs font-bold text-secondary-container hover:underline">
+        <ArrowLeft className="w-4 h-4" /> Back to Clinical Notes
+      </button>
+
+      <div>
+        <h1 className="text-2xl font-bold text-on-surface">FM Health and Wellness Center - Pain Management Consultation Form</h1>
+        <p className="text-xs text-on-surface-variant">Structured consultation, 24 anatomical pain location grid, HPI pain scale & diagnostic plan</p>
+      </div>
+
+      <form onSubmit={handleSave} className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant shadow-sm space-y-6">
+        {/* Section 1: Patient Header */}
+        <div className="space-y-4">
+          <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-2 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-secondary-container" /> Section 1 - Patient & Chief Complaint
+          </h2>
+
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-1">Select Patient *</label>
+            <select
+              value={selectedPatientId}
+              onChange={(e) => setSelectedPatientId(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface"
+              required
+            >
+              <option value="" disabled>Select a patient</option>
+              {patients.map(p => (
+                <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-1">Chief Complaint *</label>
+            <input
+              type="text"
+              required
+              value={chiefComplaint}
+              onChange={(e) => setChiefComplaint(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-1">History of Present Illness (HPI)</label>
+            <textarea
+              rows={3}
+              value={hpiText}
+              onChange={(e) => setHpiText(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface"
+            />
+          </div>
+        </div>
+
+        {/* Section 2: Pain Areas Progress Bar (0-24) */}
+        <div className="space-y-3">
+          <label className="block text-xs font-bold text-on-surface">
+            Anatomical Areas Selected (0 - 24): <span className="text-secondary-container font-extrabold text-sm">{selectedLocations.length} / 24</span>
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="24"
+            value={selectedLocations.length}
+            readOnly
+            className="w-full h-2 rounded-lg appearance-none pointer-events-none accent-teal-600"
+            style={{
+              background: `linear-gradient(to right, #0d9488 ${(selectedLocations.length / 24) * 100}%, #e2e8f0 ${(selectedLocations.length / 24) * 100}%)`
+            }}
+          />
+          <div className="flex justify-between text-[10px] text-on-surface-variant font-bold">
+            <span>0 - No Areas</span>
+            <span>12 - Half Body</span>
+            <span>24 - All Areas</span>
+          </div>
+        </div>
+
+        {/* Section 3: 24 Anatomical Pain Locations Checkbox Grid */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-2 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-secondary-container" /> Anatomical Pain Locations (24 Areas)
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedLocations.length === PAIN_LOCATIONS.length) {
+                    setSelectedLocations([]);
+                  } else {
+                    setSelectedLocations([...PAIN_LOCATIONS]);
+                  }
+                }}
+                className="text-[10px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2 py-0.5 rounded cursor-pointer transition"
+              >
+                {selectedLocations.length === PAIN_LOCATIONS.length ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
+              {selectedLocations.length} / 24 Selected
+            </span>
+          </h2>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            {PAIN_LOCATIONS.map((loc) => {
+              const isChecked = selectedLocations.includes(loc);
+              return (
+                <label
+                  key={loc}
+                  onClick={() => toggleLocation(loc)}
+                  className={`p-2.5 rounded-lg border text-xs font-medium cursor-pointer transition flex items-center gap-2 ${
+                    isChecked ? 'border-secondary-container bg-surface-container-low text-secondary-container font-bold' : 'border-outline-variant bg-surface hover:bg-surface-container'
+                  }`}
+                >
+                  <input type="checkbox" checked={isChecked} readOnly className="rounded text-secondary-container focus:ring-secondary-container" />
+                  <span>{loc}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Section 4: Treatment Plan & Recommendations */}
+        <div className="space-y-4">
+          <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-2">Plan & Recommendations</h2>
+          <textarea
+            rows={3}
+            value={planText}
+            onChange={(e) => setPlanText(e.target.value)}
+            className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface"
+          />
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t border-outline-variant">
+          <button type="button" onClick={() => navigate('/clinical-notes')} className="px-4 py-2 bg-surface-container text-xs font-bold rounded-lg">Cancel</button>
+          <button type="submit" disabled={isLoading} className="px-5 py-2 bg-secondary-container text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5">
+            <Save className="w-4 h-4" /> {isLoading ? 'Saving...' : 'Save Draft & Proceed to Sign'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};

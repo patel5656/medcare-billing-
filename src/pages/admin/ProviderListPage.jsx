@@ -1,0 +1,605 @@
+import React, { useState, useEffect } from 'react';
+import { apiProviderService } from '../../services/api/apiProviderService';
+import { apiModalityService } from '../../services/api/apiModalityService';
+import { getAllICDCodes } from '../../services/api/apiIcdService';
+import { maskTaxId, maskNpi } from '../../utils/formatters';
+import { Shield, Eye, EyeOff, AlertTriangle, Edit3, Plus, X, Trash2 } from 'lucide-react';
+import { useUIStore } from '../../store/uiStore';
+
+export const ProviderListPage = () => {
+  const [providers, setProviders] = useState({});
+  const [modalitiesList, setModalitiesList] = useState([]);
+  const [icdCodesList, setIcdCodesList] = useState([]);
+  const [showSensitive, setShowSensitive] = useState({});
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editProviderId, setEditProviderId] = useState(null);
+  const { addToast, activeProviderFilter } = useUIStore();
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 6;
+
+  const filteredProvidersList = Object.values(providers).filter(prov => {
+    if (!activeProviderFilter || activeProviderFilter === 'ALL') {
+      return true;
+    }
+    const pId = (prov.id || '').toLowerCase();
+    const pName = (prov.name || '').toLowerCase();
+    const pCat = (prov.serviceCategory || '').toLowerCase();
+    const filterId = activeProviderFilter.toLowerCase();
+
+    const isExactMatch = pId === filterId;
+    const isAliasMatch = 
+      (filterId.includes('josmic') && (pName.includes('josmic') || pCat.includes('pain'))) ||
+      (filterId.includes('dav') && (pName.includes('dav') || pName.includes('anatomy') || pCat.includes('shockwave') || pCat.includes('eswt'))) ||
+      (filterId.includes('anik') && (pName.includes('anik') || pCat.includes('laser'))) ||
+      (filterId.includes('counselor') && (pName.includes('counselor') || pName.includes('behavioral') || pName.includes('hope') || pCat.includes('counseling') || pCat.includes('mental'))) ||
+      (filterId.includes('tpi') && (pName.includes('trigger') || pName.includes('tpi') || pCat.includes('injection'))) ||
+      (filterId.includes('tecar') && (pName.includes('tecar') || pName.includes('physio') || pCat.includes('radiofrequency')));
+
+    return isExactMatch || isAliasMatch;
+  });
+
+  // Form states for adding provider
+  const [name, setName] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [serviceCategory, setServiceCategory] = useState('');
+  const [street, setStreet] = useState('');
+  const [suite, setSuite] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('TX');
+  const [zipCode, setZipCode] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [taxId, setTaxId] = useState('');
+  const [npi, setNpi] = useState('');
+  const [renderingName, setRenderingName] = useState('');
+  const [renderingCredentials, setRenderingCredentials] = useState('');
+  const [selectedDiagnoses, setSelectedDiagnoses] = useState([]);
+
+  const loadProviders = () => {
+    apiProviderService.getProviders().then(setProviders);
+    apiModalityService.getModalities().then(res => {
+      if (res) setModalitiesList(res);
+    }).catch(() => {});
+    getAllICDCodes().then(res => {
+      if (res) setIcdCodesList(res);
+    }).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadProviders();
+  }, []);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeProviderFilter]);
+
+  const toggleShowSensitive = (provId) => {
+    setShowSensitive(prev => ({ ...prev, [provId]: !prev[provId] }));
+  };
+
+  const openAddModal = () => {
+    setEditProviderId(null);
+    setName('');
+    setBusinessName('');
+    setServiceCategory('');
+    setStreet('');
+    setSuite('');
+    setCity('');
+    setState('TX');
+    setZipCode('');
+    setPhone('');
+    setEmail('');
+    setTaxId('');
+    setNpi('');
+    setRenderingName('');
+    setRenderingCredentials('');
+    setSelectedDiagnoses([]);
+    setIsAddModalOpen(true);
+  };
+
+  const handleEditClick = (prov) => {
+    setEditProviderId(prov.id);
+    setName(prov.name || '');
+    setBusinessName(prov.businessName || '');
+    setServiceCategory(prov.serviceCategory || '');
+    
+    const addr = typeof prov.address === 'string' ? JSON.parse(prov.address || '{}') : (prov.address || {});
+    setStreet(addr.street || '');
+    setSuite(addr.suite || '');
+    setCity(addr.city || '');
+    setState(addr.state || 'TX');
+    setZipCode(addr.zipCode || '');
+
+    const contact = typeof prov.contact === 'string' ? JSON.parse(prov.contact || '{}') : (prov.contact || {});
+    setPhone(contact.phone || '');
+    setEmail(contact.email || '');
+
+    const idents = typeof prov.identifiers === 'string' ? JSON.parse(prov.identifiers || '{}') : (prov.identifiers || {});
+    setTaxId(idents.taxId || '');
+    setNpi(idents.npi || '');
+
+    const rendering = typeof prov.renderingProvider === 'string' ? JSON.parse(prov.renderingProvider || '{}') : (prov.renderingProvider || {});
+    setRenderingName(rendering.name || '');
+    setRenderingCredentials(rendering.credentials || '');
+
+    const diags = typeof prov.availableDiagnoses === 'string' ? JSON.parse(prov.availableDiagnoses || '[]') : (prov.availableDiagnoses || []);
+    setSelectedDiagnoses(diags.map(d => d.code));
+
+    setIsAddModalOpen(true);
+  };
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim() || !taxId.trim() || !npi.trim()) {
+      addToast('Please fill out the required fields.', 'error');
+      return;
+    }
+    const payload = {
+      name,
+      businessName: businessName.trim() || name.trim(),
+      serviceCategory,
+      street,
+      suite,
+      city,
+      state,
+      zipCode,
+      phone,
+      email,
+      taxId,
+      npi,
+      renderingName,
+      renderingCredentials,
+      availableDiagnoses: icdCodesList
+        .filter(c => selectedDiagnoses.includes(c.code))
+        .map(c => ({ code: c.code, description: c.description }))
+    };
+    try {
+      if (editProviderId) {
+        await apiProviderService.updateProvider(editProviderId, payload);
+        addToast('Provider updated successfully!', 'success');
+      } else {
+        await apiProviderService.addProvider(payload);
+        addToast('New provider configured successfully!', 'success');
+      }
+      setIsAddModalOpen(false);
+      
+      // Reset form
+      setName('');
+      setBusinessName('');
+      setServiceCategory('');
+      setStreet('');
+      setSuite('');
+      setCity('');
+      setZipCode('');
+      setPhone('');
+      setEmail('');
+      setTaxId('');
+      setNpi('');
+      setRenderingName('');
+      setRenderingCredentials('');
+      setSelectedDiagnoses([]);
+      
+      // Reload
+      loadProviders();
+    } catch (err) {
+      addToast('Failed to add provider', 'error');
+    }
+  };
+
+  const handleDeleteClick = async (provId) => {
+    if (window.confirm('Are you sure you want to permanently delete this provider? This action cannot be undone.')) {
+      try {
+        await apiProviderService.deleteProvider(provId);
+        addToast('Provider deleted successfully!', 'success');
+        loadProviders();
+      } catch (err) {
+        addToast('Failed to delete provider', 'error');
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-6 w-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Provider Profiles & Billing Configurations</h1>
+          <p className="text-xs text-slate-500">Legal entity identities, Tax IDs, NPI registrations & service categories</p>
+        </div>
+        <button
+          onClick={openAddModal}
+          className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl shadow flex items-center justify-center gap-1.5 self-start sm:self-auto border border-teal-500 transition"
+        >
+          <Plus className="w-4 h-4" /> Add New Provider
+        </button>
+      </div>
+
+      <div className="p-4 bg-teal-50 border border-teal-200 rounded-2xl text-xs text-teal-900 flex items-start gap-3">
+        <Shield className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="font-bold">Provider Identifier Security Notice</p>
+          <p className="text-[11px] text-teal-800">
+            Provider Tax IDs & NPI numbers are sensitive identifiers restricted to authorized Provider Settings. They are masked by default across all screens and cards.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {filteredProvidersList.length === 0 ? (
+          <div className="col-span-full py-12 text-center bg-white rounded-2xl border border-slate-200 p-8 space-y-2">
+            <p className="text-sm font-bold text-slate-700">No provider profiles match the selected filter.</p>
+            <p className="text-xs text-slate-500">Select "All Practice Providers" in the top navbar dropdown to view all provider configurations.</p>
+          </div>
+        ) : (
+          filteredProvidersList
+            .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+            .map((prov) => {
+            const isVisible = showSensitive[prov.id];
+            const isCounselor = prov.id === 'prov-counselor';
+
+            return (
+              <div key={prov.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 flex flex-col justify-between medical-card-hover">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-teal-700 uppercase tracking-wider">{prov.serviceCategory}</span>
+                    <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
+                      prov.isPlaceholder ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-teal-50 text-teal-700 border border-teal-200'
+                    }`}>
+                      {prov.isPlaceholder ? 'Configuration Pending' : 'Active'}
+                    </span>
+                  </div>
+
+                  <h3 className="text-lg font-bold text-slate-900">{prov.name}</h3>
+
+                  {/* Masked Identifiers */}
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Federal Tax ID (EIN):</span>
+                      <span className="font-mono font-bold text-slate-900">{maskTaxId(prov.identifiers?.taxId || 'XX-XXXXXXX', isVisible)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Rendering NPI:</span>
+                      <span className="font-mono font-bold text-slate-900">{maskNpi(prov.identifiers?.npi || 'XXXXXXXXXX', isVisible)}</span>
+                    </div>
+                  </div>
+                  
+                  {/* System Settings Assigned Modality (Read-Only) */}
+                  {(() => {
+                    const assignedModality = modalitiesList.find(m => m.providerId === prov.id);
+                    if (assignedModality) {
+                      return (
+                        <div className="p-3 bg-teal-50/50 border border-teal-100 rounded-xl space-y-1.5 mt-2">
+                          <p className="text-[10px] font-bold text-teal-800 uppercase">Assigned Service Modality</p>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-800">{assignedModality.name}</span>
+                            <span className="font-mono font-bold text-teal-700">{assignedModality.cptCode} / {assignedModality.fee}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500">Assigned via General Settings</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => toggleShowSensitive(prov.id)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-teal-600 cursor-pointer"
+                  >
+                    {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {isVisible ? 'Hide Identifiers' : 'Show Masked Identifiers'}
+                  </button>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleEditClick(prov)}
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" /> Edit Profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteClick(prov.id)}
+                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Pagination */}
+      {filteredProvidersList.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-5 py-3">
+          <span className="text-xs text-slate-500">
+            Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, filteredProvidersList.length)} of {filteredProvidersList.length} providers
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+            >‹ Prev</button>
+            {Array.from({length: Math.ceil(filteredProvidersList.length / PAGE_SIZE)}, (_, i) => i + 1).map(pg => (
+              <button
+                key={pg}
+                type="button"
+                onClick={() => setCurrentPage(pg)}
+                className={`w-8 h-8 text-xs font-bold rounded-xl transition cursor-pointer ${
+                  currentPage === pg
+                    ? 'bg-teal-600 text-white shadow-sm shadow-teal-500/30'
+                    : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >{pg}</button>
+            ))}
+            <button
+              type="button"
+              disabled={currentPage === Math.ceil(filteredProvidersList.length / PAGE_SIZE)}
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+            >Next ›</button>
+          </div>
+        </div>
+      )}
+
+      {/* 🔴 ADD NEW PROVIDER DIALOG MODAL */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg flex flex-col shadow-2xl overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                {editProviderId ? <Edit3 className="w-4 h-4 text-teal-600" /> : <Plus className="w-4 h-4 text-teal-600" />}
+                {editProviderId ? 'Edit Practice Provider' : 'Configure New Practice Provider'}
+              </h2>
+              <button onClick={() => setIsAddModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleAddSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Provider/Facility Name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. HOPE Behavioral Health"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Corporate Business Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Hope Behavioral Health LLC"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Service Specialty Category</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Counseling & Mental Health, Acupuncture"
+                  value={serviceCategory}
+                  onChange={(e) => setServiceCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="border-t border-slate-100 pt-3">
+                <h3 className="text-xs font-bold text-slate-700 mb-2">Facility Contact Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Street Address</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 10101 Harwin Dr."
+                      value={street}
+                      onChange={(e) => setStreet(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Suite/Room</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Suite 774-C"
+                      value={suite}
+                      onChange={(e) => setSuite(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">City</label>
+                    <input
+                      type="text"
+                      placeholder="Houston"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">State</label>
+                    <input
+                      type="text"
+                      placeholder="TX"
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Zip Code</label>
+                    <input
+                      type="text"
+                      placeholder="77036"
+                      value={zipCode}
+                      onChange={(e) => setZipCode(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Phone Number</label>
+                    <input
+                      type="text"
+                      placeholder="713-555-0188"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Email</label>
+                    <input
+                      type="email"
+                      placeholder="contact@hope.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {editProviderId && (() => {
+                const assignedModality = modalitiesList.find(m => m.providerId === editProviderId);
+                if (assignedModality) {
+                  return (
+                    <div className="border border-teal-200 bg-teal-50 rounded-lg p-3 mt-3">
+                      <h3 className="text-xs font-bold text-teal-800 mb-1">Assigned Service Modality</h3>
+                      <p className="text-[11px] text-teal-700 mb-2">This provider is currently assigned to a Modality in System Settings.</p>
+                      <div className="flex justify-between text-xs bg-white rounded-md p-2 border border-teal-100">
+                        <span className="font-bold text-slate-700">{assignedModality.name}</span>
+                        <span className="font-mono font-bold text-teal-600">{assignedModality.cptCode} | {assignedModality.fee}</span>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              <div className="border-t border-slate-100 pt-3 mt-4">
+                <h3 className="text-xs font-bold text-slate-700 mb-2">Assigned ICD-10 Diagnoses</h3>
+                <div className="max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-slate-50 space-y-1">
+                  {icdCodesList.length === 0 ? (
+                    <p className="text-[10px] text-slate-500 p-1">No ICD-10 codes found in System Settings.</p>
+                  ) : (
+                    icdCodesList.map(icd => (
+                      <label key={icd.id} className="flex items-center gap-2 p-1.5 hover:bg-white rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="w-3.5 h-3.5 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer"
+                          checked={selectedDiagnoses.includes(icd.code)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedDiagnoses([...selectedDiagnoses, icd.code]);
+                            } else {
+                              setSelectedDiagnoses(selectedDiagnoses.filter(code => code !== icd.code));
+                            }
+                          }}
+                        />
+                        <span className="text-[11px] font-bold text-slate-800">{icd.code}</span>
+                        <span className="text-[11px] text-slate-500 truncate">{icd.description}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-3 mt-4">
+                <h3 className="text-xs font-bold text-slate-700 mb-2">Identifiers & Rendering Practitioner</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Federal Tax ID (EIN) *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 84-7891234"
+                      value={taxId}
+                      onChange={(e) => setTaxId(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Rendering NPI *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 1487965213"
+                      value={npi}
+                      onChange={(e) => setNpi(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Rendering Provider Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Dr. Jordan Miller"
+                      value={renderingName}
+                      onChange={(e) => setRenderingName(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Practitioner Credentials</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. LCSW, BCD"
+                      value={renderingCredentials}
+                      onChange={(e) => setRenderingCredentials(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg shadow transition cursor-pointer"
+                >
+                  Save Configuration
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
