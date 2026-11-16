@@ -119,7 +119,7 @@ export const INITIAL_BILLS = [
     patientName: 'Demo Patient 001',
     caseId: 'case-001',
     providerId: 'prov-davs',
-    providerName: 'FM Dav’s Anatomy',
+    providerName: 'Shockwave',
     serviceCategory: 'Shockwave Therapy (ESWT)',
     status: 'ISSUED_DEMO',
     items: [
@@ -238,9 +238,9 @@ export const INITIAL_DOCUMENTS = [
   },
   {
     id: 'doc-003',
-    name: 'FM_Davs_Shockwave_Narrative_Report.pdf',
+    name: 'Shockwave_Narrative_Report.pdf',
     type: 'Narrative Report',
-    providerName: 'FM Dav’s Anatomy',
+    providerName: 'Shockwave',
     date: '01/08/2026',
     status: 'SIGNED',
     size: '3.37 MB'

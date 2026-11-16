@@ -1,16 +1,26 @@
 // src/components/modals/AppointmentDetailsModal.jsx
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Modal } from './Modal';
-import { Calendar, Clock, User, Phone, MapPin, CheckCircle2, AlertCircle, Edit3, Tag, FileText, DollarSign, Shield, Stethoscope } from 'lucide-react';
+import { Calendar, Clock, User, Phone, MapPin, CheckCircle2, AlertCircle, Edit3, Tag, FileText, DollarSign, Shield, Stethoscope, Brain } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { formatCurrency } from '../../utils/billingCalculations';
 import { formatStatus } from '../../utils/formatters';
 import { apiAppointmentService } from '../../services/api/apiAppointmentService';
 
 export const AppointmentDetailsModal = ({ isOpen, onClose, appointment, onStatusUpdated, onEditAppointment }) => {
+  const navigate = useNavigate();
   const { addToast } = useUIStore();
 
   if (!appointment) return null;
+
+  const isCompleted = appointment.status === 'COMPLETED' || appointment.status === 'Completed';
+  const isCheckedIn = appointment.status === 'CHECKED_IN';
+  const isCounselor = appointment.providerId === 'prov-counselor' ||
+    appointment.providerName?.toLowerCase().includes('counselor') ||
+    appointment.appointmentType?.toLowerCase().includes('psychotherapy') ||
+    appointment.appointmentType?.toLowerCase().includes('counseling') ||
+    ['90791', '90834', '90837', '90832', '90847'].some(c => (appointment.cptCode || '').includes(c));
 
   const handleUpdateStatus = async (newStatus) => {
     try {
@@ -21,6 +31,21 @@ export const AppointmentDetailsModal = ({ isOpen, onClose, appointment, onStatus
     } catch (err) {
       console.error('Failed to update status:', err);
       addToast('Failed to update appointment status.', 'error');
+    }
+  };
+
+  const handleDocumentSession = async () => {
+    try {
+      if (!isCompleted) {
+        await apiAppointmentService.updateStatus(appointment.id, 'COMPLETED');
+        if (onStatusUpdated) onStatusUpdated({ ...appointment, status: 'COMPLETED' });
+      }
+      onClose();
+      navigate(`/clinical-notes/counselor-session?appointmentId=${encodeURIComponent(appointment.id)}&patientId=${encodeURIComponent(appointment.patientId)}&caseId=${encodeURIComponent(appointment.caseId || '')}`);
+    } catch (e) {
+      console.error('Failed to update visit status before documenting:', e);
+      onClose();
+      navigate(`/clinical-notes/counselor-session?appointmentId=${encodeURIComponent(appointment.id)}&patientId=${encodeURIComponent(appointment.patientId)}&caseId=${encodeURIComponent(appointment.caseId || '')}`);
     }
   };
 
@@ -64,13 +89,33 @@ export const AppointmentDetailsModal = ({ isOpen, onClose, appointment, onStatus
               <Edit3 className="w-3.5 h-3.5 text-teal-400" /> Edit / Reschedule Visit
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => handleUpdateStatus('CHECKED_IN')}
-            className="w-full sm:w-auto px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <CheckCircle2 className="w-4 h-4" /> Check-In Patient
-          </button>
+          {!isCompleted && !isCheckedIn && (
+            <button
+              type="button"
+              onClick={() => handleUpdateStatus('CHECKED_IN')}
+              className="w-full sm:w-auto px-4 py-2.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4 text-teal-400" /> Check-In Patient
+            </button>
+          )}
+          {!isCompleted && (
+            <button
+              type="button"
+              onClick={() => handleUpdateStatus('COMPLETED')}
+              className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4" /> Mark as Completed
+            </button>
+          )}
+          {isCounselor && (
+            <button
+              type="button"
+              onClick={handleDocumentSession}
+              className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Brain className="w-4 h-4 text-indigo-200" /> Document Session Note
+            </button>
+          )}
         </>
       }
     >
@@ -97,10 +142,44 @@ export const AppointmentDetailsModal = ({ isOpen, onClose, appointment, onStatus
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
-            <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-xl font-bold text-xs">
+            <span className={`px-3 py-1 rounded-xl font-bold text-xs border ${
+              isCompleted 
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+                : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+            }`}>
               {formatStatus(appointment.status || 'SCHEDULED')}
             </span>
           </div>
+        </div>
+
+        {/* Completed Visit Distinction Alert */}
+        <div className={`p-3 rounded-xl border flex items-center justify-between text-xs flex-wrap gap-2 ${
+          isCompleted ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-700'
+        }`}>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className={`w-4 h-4 shrink-0 ${isCompleted ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <div>
+              <p className="font-bold text-xs">
+                {isCompleted 
+                  ? 'Completed Visit Record' 
+                  : 'Scheduled Appointment (Pending Visit Completion)'}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {isCompleted 
+                  ? 'This visit is completed and eligible for Clinical Documentation & Open Ledger / Statement billing.' 
+                  : 'Scheduled appointments are not counted as completed visits until marked completed.'}
+              </p>
+            </div>
+          </div>
+          {isCounselor && !isCompleted && (
+            <button
+              type="button"
+              onClick={handleDocumentSession}
+              className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 underline flex items-center gap-1 cursor-pointer"
+            >
+              Complete &amp; Document Now &rarr;
+            </button>
+          )}
         </div>
 
         {/* Schedule & Provider Key Information */}

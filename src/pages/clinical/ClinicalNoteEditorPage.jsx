@@ -64,7 +64,7 @@ export const ClinicalNoteEditorPage = () => {
     subjective: 'Patient reports persistent 7/10 pain with radiculopathy into right upper extremity after rear-end collision.',
     objective: 'Cervical spine tenderness at C4-C6, restricted ROM. Positive Spurling test. Lumbar paraspinal spasms noted.',
     assessment: '1. Cervicalgia (M54.2)\n2. Lumbar Sprain (S39.012A)\n3. Post-Traumatic Myofascial Pain Syndrome',
-    plan: 'Initiate 4-week multi-modality protocol: FM Health pain management, FM Dav’s Shockwave (ESWT) 2x/wk, FM Laser therapy 2x/wk, and counselor supportive session.',
+    plan: 'Initiate 4-week multi-modality protocol: FM Health pain management, Shockwave (ESWT) 2x/wk, FM Laser therapy 2x/wk, and counselor supportive session.',
     cptCodes: '99204, 0101T, 97039'
   });
 
@@ -311,7 +311,7 @@ export const ClinicalNoteEditorPage = () => {
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-teal-600 outline-none font-bold text-teal-800"
                 >
                   <option value="FM Health and Wellness Center">FM Health and Wellness Center (Pain Management)</option>
-                  <option value="FM Dav’s Anatomy">FM Dav’s Anatomy (Shockwave ESWT)</option>
+                  <option value="Shockwave">Shockwave (Shockwave ESWT)</option>
                   <option value="FM Laser Therapy">FM Laser Therapy (Laser Session)</option>
                   <option value="FM Counselor Practice (Hope Behavioral Health)">FM Counselor Practice (Behavioral Health)</option>
                 </select>

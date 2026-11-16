@@ -14,16 +14,30 @@ export const EditableClinicalField = ({
   placeholder = "",
   minHeightClass = "min-h-[4rem]",
   className = "",
-  inputType = "textarea"
+  inputType = "textarea",
+  autoGrow = false
 }) => {
   const [val, setVal] = useState(value || '');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const canvasRef = useRef(null);
+  const textareaRef = useRef(null);
   const [hasDrawn, setHasDrawn] = useState(false);
+
+  const adjustHeight = () => {
+    if (autoGrow && textareaRef.current && inputType === 'textarea') {
+      const el = textareaRef.current;
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  };
 
   useEffect(() => {
     setVal(value || '');
   }, [value]);
+
+  useEffect(() => {
+    adjustHeight();
+  }, [val, autoGrow]);
 
   const handleSave = async (newValue) => {
     if (!packetData || !packetData.id) return;
@@ -235,7 +249,7 @@ export const EditableClinicalField = ({
     if (inputType === 'input') {
       return <span className={`inline-block ${className}`}>{val}</span>;
     }
-    return <p className={`${minHeightClass} whitespace-pre-wrap ${className}`}>{val}</p>;
+    return <p className={`${minHeightClass} whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${className}`}>{val}</p>;
   }
 
   if (inputType === 'input') {
@@ -257,15 +271,22 @@ export const EditableClinicalField = ({
 
   return (
     <textarea
+      ref={textareaRef}
       placeholder={placeholder}
       value={val}
-      onChange={(e) => setVal(e.target.value)}
+      onChange={(e) => {
+        setVal(e.target.value);
+        if (autoGrow) {
+          e.target.style.height = 'auto';
+          e.target.style.height = `${e.target.scrollHeight}px`;
+        }
+      }}
       onBlur={(e) => {
         if (e.target.value !== (value || '')) {
           handleSave(e.target.value);
         }
       }}
-      className={`w-full bg-transparent hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-indigo-400 rounded px-1 outline-none text-slate-800 font-sans cursor-text transition resize-none mt-2 print:border-none print:bg-transparent print:p-0 print:shadow-none print:text-black ${minHeightClass} ${className}`}
+      className={`w-full bg-transparent hover:bg-slate-50 focus:bg-white focus:ring-1 focus:ring-indigo-400 rounded px-1 outline-none text-slate-800 font-sans cursor-text transition break-words [overflow-wrap:anywhere] ${autoGrow ? 'overflow-hidden resize-y' : 'resize-none'} mt-2 print:border-none print:bg-transparent print:p-0 print:shadow-none print:text-black ${minHeightClass} ${className}`}
     />
   );
 };

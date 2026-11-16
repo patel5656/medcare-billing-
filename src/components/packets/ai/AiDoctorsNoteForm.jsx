@@ -45,7 +45,7 @@ export const AiDoctorsNoteForm = ({ readOnly = false, packetData = null, isPrevi
                 <h2 className="text-sm font-bold bg-[#722F37] text-white p-2 rounded-t-md uppercase tracking-wider mb-0 print:bg-[#722F37] print:text-white print:border print:border-black print:border-b-0 print:rounded-none">
                   {sec.title}
                 </h2>
-                <div className="border-x border-b border-[#722F37] rounded-b-md bg-white p-3 text-sm text-slate-800 whitespace-pre-wrap print:border-black print:rounded-none">
+                <div className="border-x border-b border-[#722F37] rounded-b-md bg-white p-3 text-sm text-slate-800 whitespace-pre-wrap break-words [overflow-wrap:anywhere] overflow-hidden print:border-black print:rounded-none">
                   {val}
                 </div>
               </div>
@@ -110,8 +110,9 @@ export const AiDoctorsNoteForm = ({ readOnly = false, packetData = null, isPrevi
               field={sec.id}
               value={displayVal} 
               readOnly={readOnly}
+              autoGrow={true}
               minHeightClass="min-h-[100px]"
-              className="w-full p-4 text-sm text-slate-800 placeholder:text-slate-300 resize-y border-none focus:ring-0 outline-none"
+              className="w-full p-4 text-sm text-slate-800 placeholder:text-slate-300 resize-y border-none focus:ring-0 outline-none leading-relaxed"
             />
           </div>
         );

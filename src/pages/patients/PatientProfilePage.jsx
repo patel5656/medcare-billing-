@@ -29,6 +29,7 @@ export const PatientProfilePage = () => {
   const [showAddCaseModal, setShowAddCaseModal] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
   const navigate = useNavigate();
+  const activeCase = cases.length > 0 ? (cases.find(c => c.status === 'ACTIVE') || cases[0]) : null;
 
   const loadData = () => {
     const targetId = id || 'pat-001';
@@ -365,7 +366,7 @@ export const PatientProfilePage = () => {
                 <Stethoscope className="w-5 h-5 text-teal-600" /> Clinical Notes &amp; SOAP Documentation
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Physician evaluations (FM Health), ESWT notes (FM Dav’s Anatomy), Laser records (FM Laser Therapy) &amp; Behavioral counseling sessions
+                Physician evaluations (FM Health), ESWT notes (Shockwave), Laser records (FM Laser Therapy) &amp; Behavioral counseling sessions
               </p>
             </div>
             <button
@@ -554,7 +555,7 @@ export const PatientProfilePage = () => {
                   </div>
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2 leading-relaxed">
                     <p><strong>Document Category:</strong> {previewDoc.type || 'Clinical Report'}</p>
-                    <p><strong>Associated Practice:</strong> {previewDoc.providerName || 'FM Health / FM Dav’s Anatomy / FM Laser Therapy / FM Counselor Practice'}</p>
+                    <p><strong>Associated Practice:</strong> {previewDoc.providerName || 'FM Health / Shockwave / FM Laser Therapy / FM Counselor Practice'}</p>
                     <p><strong>Upload Date:</strong> {previewDoc.createdAt || '2026-01-26'}</p>
                     <p className="text-slate-500 pt-2 border-t border-slate-200">
                       Standardized medical attachment verified under HIPAA guidelines. Retain in patient chart for legal billing submission.

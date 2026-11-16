@@ -4,10 +4,35 @@ import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteServic
 import { apiPatientService } from '../../services/api/apiPatientService';
 import { apiCaseService } from '../../services/api/apiCaseService';
 import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Activity, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Save, Activity, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 export const DavsEswtFormPage = () => {
+  const { currentUser } = useAuthStore();
+  const isDoctor = currentUser?.role === 'Doctor';
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isDoctor) {
+      navigate('/403', { replace: true });
+    }
+  }, [isDoctor, navigate]);
+
+  if (isDoctor) {
+    return (
+      <div className="bg-white border border-rose-200 rounded-2xl p-8 text-center space-y-3 shadow-sm max-w-md mx-auto my-12">
+        <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-6 h-6" />
+        </div>
+        <h2 className="text-base font-bold text-slate-900">403 - Access Forbidden</h2>
+        <p className="text-xs text-slate-500">
+          Doctor accounts are restricted from accessing Shockwave ESWT forms.
+        </p>
+      </div>
+    );
+  }
+
   const [patients, setPatients] = useState([]);
   const [activeCaseId, setActiveCaseId] = useState('');
   const [formData, setFormData] = useState({
@@ -26,7 +51,6 @@ export const DavsEswtFormPage = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useUIStore();
-  const navigate = useNavigate();
 
   const fetchPreviousVitals = async (id) => {
     try {
@@ -96,13 +120,13 @@ export const DavsEswtFormPage = () => {
         patientName: formData.patientName || 'Demo Patient',
         caseId: caseIdToUse,
         providerId: 'prov-davs',
-        providerName: 'FM Dav’s Anatomy',
+        providerName: 'Shockwave',
         type: 'DAVS_ESWT',
-        title: 'FM Dav’s Anatomy ESWT Radial Device Procedure Form',
+        title: 'Shockwave ESWT Radial Device Procedure Form',
         author: 'Alex Rivera (Lead Therapist)',
         content: formData
       });
-      addToast('FM Dav’s Anatomy ESWT Procedure Form saved!', 'success');
+      addToast('Shockwave ESWT Procedure Form saved!', 'success');
       navigate(`/clinical-notes/${note.id}/edit`);
     } catch (err) {
       addToast('Failed to save procedure form', 'error');
@@ -118,7 +142,7 @@ export const DavsEswtFormPage = () => {
       </button>
 
       <div>
-        <h1 className="text-2xl font-bold text-on-surface">FM Dav’s Anatomy - Shockwave Therapy (ESWT) Radial Device Form</h1>
+        <h1 className="text-2xl font-bold text-on-surface">Shockwave - Shockwave Therapy (ESWT) Radial Device Form</h1>
         <p className="text-xs text-on-surface-variant">Vitals verification, Bar setting (3.0), Hz (10 Hz), Wave Count (3000) & BLT cream application</p>
       </div>
 

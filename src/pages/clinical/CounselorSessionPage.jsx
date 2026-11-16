@@ -96,20 +96,39 @@ export const CounselorSessionPage = () => {
     isApproved: false
   });
 
-  // Load initial cases and CPT schedule
+  // Load initial cases and CPT schedule, supporting URL appointmentId, patientId, caseId parameters
   useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const paramAptId = searchParams.get('appointmentId');
+    const paramPatId = searchParams.get('patientId');
+    const paramCaseId = searchParams.get('caseId');
+
     apiCaseService.getCases()
       .then(res => {
         if (res && res.length > 0) {
           setCases(res);
-          const first = res[0];
+          let targetCase = null;
+          if (paramCaseId) {
+            targetCase = res.find(c => c.id === paramCaseId || c.caseId === paramCaseId);
+          }
+          if (!targetCase && paramPatId) {
+            targetCase = res.find(c => c.patientId === paramPatId);
+          }
+          if (!targetCase) {
+            targetCase = res[0];
+          }
+
+          const targetPatientId = paramPatId || targetCase.patientId;
+          const targetCaseId = targetCase.id || targetCase.caseId;
+
           setFormData(prev => ({
             ...prev,
-            caseId: first.id || first.caseId,
-            patientId: first.patientId,
-            patientName: first.patientName || 'Unknown Patient'
+            caseId: targetCaseId,
+            patientId: targetPatientId,
+            patientName: targetCase.patientName || 'Unknown Patient'
           }));
-          loadPatientVisits(first.patientId, first.id || first.caseId);
+
+          loadPatientVisits(targetPatientId, targetCaseId, paramAptId);
         }
       })
       .catch(console.error);
@@ -126,15 +145,22 @@ export const CounselorSessionPage = () => {
         }
       })
       .catch(console.error);
-  }, []);
+  }, [location.search]);
 
   // Fetch recorded visits whenever selected case/patient changes
-  const loadPatientVisits = async (pId, cId) => {
+  const loadPatientVisits = async (pId, cId, preferredAptId = null) => {
     if (!pId) return;
     try {
       const data = await apiBillingService.getCounselingVisits(pId, cId);
       setVisitsData(data);
       if (data.visits && data.visits.length > 0) {
+        if (preferredAptId) {
+          const matchPref = data.visits.find(v => v.id === preferredAptId);
+          if (matchPref) {
+            handleSelectVisit(matchPref.id, data.visits);
+            return;
+          }
+        }
         // Default to latest visit
         const latest = data.visits[data.visits.length - 1];
         handleSelectVisit(latest.id, data.visits);
@@ -362,6 +388,7 @@ export const CounselorSessionPage = () => {
       }
 
       const notePayload = {
+        ...(existingNoteObj?.id ? { id: existingNoteObj.id } : {}),
         patientId: formData.patientId,
         patientName: formData.patientName,
         caseId: formData.caseId,
@@ -387,7 +414,10 @@ export const CounselorSessionPage = () => {
         }
       };
 
-      await apiClinicalNoteService.createNote(notePayload);
+      const savedNote = await apiClinicalNoteService.createNote(notePayload);
+      if (savedNote) {
+        setExistingNoteObj(savedNote);
+      }
 
       addToast(
         isSignAndLock 
@@ -397,7 +427,7 @@ export const CounselorSessionPage = () => {
       );
 
       // Refresh patient visits list so counters & note status update
-      await loadPatientVisits(formData.patientId, formData.caseId);
+      await loadPatientVisits(formData.patientId, formData.caseId, finalVisitId);
     } catch (err) {
       console.error('Error saving clinical note:', err);
       addToast(err.message || 'Failed to save session note', 'error');

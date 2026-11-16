@@ -94,7 +94,7 @@ export const PatientPacketsPage = () => {
             selectedProvider === 'prov-davs' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100'
           }`}
         >
-          FM Dav’s Anatomy ESWT (13 Pages)
+          Shockwave ESWT (13 Pages)
         </button>
         <button
           onClick={() => setSelectedProvider('prov-josmic')}

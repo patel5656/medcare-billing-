@@ -3,7 +3,7 @@
 /**
  * Exact QA Reference Fixtures matching sample PDF pages:
  * 1. ANIK LASER THERAPY (Pages 4, 5, 6 of ANIK PDF)
- * 2. DAV'S ANATOMY (Pages 4, 5, 6 of DAV'S PDF)
+ * 2. SHOCKWAVE (Pages 4, 5, 6 of DAV'S PDF)
  * 3. FM HEALTH AND WELLNESS CENTER (Page 3 of JOSMIC PDF)
  */
 
@@ -187,14 +187,14 @@ export const CMS_REFERENCE_FIXTURES = {
     }
   ],
 
-  // --- DAV'S ANATOMY (3 Date-Grouped CMS-1500 Claims) ---
+  // --- SHOCKWAVE (3 Date-Grouped CMS-1500 Claims) ---
   'bill-davs-001': [
     // Claim 1: DOS 01/06/2026 (PDF Page 4)
     {
       claimId: 'cms-davs-010626',
       billId: 'bill-davs-001',
       providerId: 'prov-davs',
-      providerName: "DAV'S ANATOMY",
+      providerName: "SHOCKWAVE",
       dos: '01/06/2026',
       dosDisplay: '01/06/2026',
       status: 'Generated - Demo',
@@ -242,8 +242,8 @@ export const CMS_REFERENCE_FIXTURES = {
       box30BalanceDue: '3390.00',
       box31ProviderSignature: 'Adeoye, Segun',
       box31Date: '04/13/2026',
-      box32Facility: "DAV'S ANATOMY\n10101 harwin dr #320\nHOUSTON, TX 77036",
-      box33BillingProvider: "DAV'S ANATOMY\n10101 HARWIN DR\nHOUSTON, TX 77036",
+      box32Facility: "SHOCKWAVE\n10101 harwin dr #320\nHOUSTON, TX 77036",
+      box33BillingProvider: "SHOCKWAVE\n10101 HARWIN DR\nHOUSTON, TX 77036",
       box33Phone: '(832) 815 0959',
       carrierHeader: 'O.J LAWAL REMI ADESHOLA\n11711 BEDFORD ST. SUITE 01\nHOUSTON, TX 77031',
     },
@@ -253,7 +253,7 @@ export const CMS_REFERENCE_FIXTURES = {
       claimId: 'cms-davs-010726',
       billId: 'bill-davs-001',
       providerId: 'prov-davs',
-      providerName: "DAV'S ANATOMY",
+      providerName: "SHOCKWAVE",
       dos: '01/07/2026',
       dosDisplay: '01/07/2026',
       status: 'Generated - Demo',
@@ -300,8 +300,8 @@ export const CMS_REFERENCE_FIXTURES = {
       box30BalanceDue: '3140.00',
       box31ProviderSignature: 'Adeoye, Segun',
       box31Date: '04/13/2026',
-      box32Facility: "DAV'S ANATOMY\n10101 harwin dr #320\nHOUSTON, TX 77036",
-      box33BillingProvider: "DAV'S ANATOMY\n10101 HARWIN DR\nHOUSTON, TX 77036",
+      box32Facility: "SHOCKWAVE\n10101 harwin dr #320\nHOUSTON, TX 77036",
+      box33BillingProvider: "SHOCKWAVE\n10101 HARWIN DR\nHOUSTON, TX 77036",
       box33Phone: '(832) 815 0959',
       carrierHeader: 'O.J LAWAL REMI ADESHOLA\n11711 BEDFORD ST. SUITE 01\nHOUSTON, TX 77031',
     },
@@ -311,7 +311,7 @@ export const CMS_REFERENCE_FIXTURES = {
       claimId: 'cms-davs-010826',
       billId: 'bill-davs-001',
       providerId: 'prov-davs',
-      providerName: "DAV'S ANATOMY",
+      providerName: "SHOCKWAVE",
       dos: '01/08/2026',
       dosDisplay: '01/08/2026',
       status: 'Generated - Demo',
@@ -359,8 +359,8 @@ export const CMS_REFERENCE_FIXTURES = {
       box30BalanceDue: '3340.00',
       box31ProviderSignature: 'Adeoye, Segun',
       box31Date: '04/13/2026',
-      box32Facility: "DAV'S ANATOMY\n10101 harwin dr #320\nHOUSTON, TX 77036",
-      box33BillingProvider: "DAV'S ANATOMY\n10101 HARWIN DR\nHOUSTON, TX 77036",
+      box32Facility: "SHOCKWAVE\n10101 harwin dr #320\nHOUSTON, TX 77036",
+      box33BillingProvider: "SHOCKWAVE\n10101 HARWIN DR\nHOUSTON, TX 77036",
       box33Phone: '(832) 815 0959',
       carrierHeader: 'O.J LAWAL REMI ADESHOLA\n11711 BEDFORD ST. SUITE 01\nHOUSTON, TX 77031',
     }

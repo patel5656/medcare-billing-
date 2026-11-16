@@ -27,7 +27,7 @@ const STATUS_CONFIG = {
 const CLINICIANS = [
   { id: 'usr-doc', name: 'Dr. Segun Adeoye', role: 'Doctor', title: 'Attending Physician (MD/DC)', providerId: 'prov-josmic', providerName: 'FM Health and Wellness Center (Pain Management)' },
   { id: 'usr-cou', name: 'Jordan Miller', role: 'Counselor', title: 'Mental Health Counselor (LCSW, BCD)', providerId: 'prov-counselor', providerName: 'FM Counselor Practice (Hope Behavioral)' },
-  { id: 'usr-the', name: 'Alex Rivera', role: 'Therapist', title: 'Lead Physical & Laser Therapist (PT)', providerId: 'prov-davs', providerName: "FM Dav’s Anatomy & FM Laser Therapy" },
+  { id: 'usr-the', name: 'Alex Rivera', role: 'Therapist', title: 'Lead Physical & Laser Therapist (PT)', providerId: 'prov-davs', providerName: "Shockwave & FM Laser Therapy" },
 ];
 
 export const AiAssistantPage = () => {

@@ -6,10 +6,10 @@ export const DEFAULT_CLINIC_ROOMS = [
   { id: 'rm-josmic-2', providerId: 'prov-josmic', providerName: 'FM Health and Wellness Center', name: 'Exam Room 2 (Spine & Joint)', suite: 'Suite 774' },
   { id: 'rm-josmic-3', providerId: 'prov-josmic', providerName: 'FM Health and Wellness Center', name: 'Procedure Suite A (Injections)', suite: 'Suite 774' },
 
-  // FM Dav’s Anatomy
-  { id: 'rm-davs-1', providerId: 'prov-davs', providerName: "FM Dav’s Anatomy", name: 'Shockwave ESWT Bay 1', suite: 'Suite 320' },
-  { id: 'rm-davs-2', providerId: 'prov-davs', providerName: "FM Dav’s Anatomy", name: 'Shockwave ESWT Bay 2', suite: 'Suite 320' },
-  { id: 'rm-davs-3', providerId: 'prov-davs', providerName: "FM Dav’s Anatomy", name: 'Musculoskeletal Therapy Bay', suite: 'Suite 320' },
+  // Shockwave
+  { id: 'rm-davs-1', providerId: 'prov-davs', providerName: "Shockwave", name: 'Shockwave ESWT Bay 1', suite: 'Suite 320' },
+  { id: 'rm-davs-2', providerId: 'prov-davs', providerName: "Shockwave", name: 'Shockwave ESWT Bay 2', suite: 'Suite 320' },
+  { id: 'rm-davs-3', providerId: 'prov-davs', providerName: "Shockwave", name: 'Musculoskeletal Therapy Bay', suite: 'Suite 320' },
 
   // FM Laser Therapy
   { id: 'rm-anik-1', providerId: 'prov-anik', providerName: 'FM Laser Therapy', name: 'Laser Therapy Suite 1 (HILT)', suite: 'Suite 274' },

@@ -401,9 +401,9 @@ Accident Context: ${packetData.accidentType || 'MVC'}.`
       {/* Top Header & Internal Page Number */}
       <div className="flex justify-between items-center border-b-2 border-[#722F37] pb-3 mb-2">
         <div className="flex items-center gap-3">
-          <img src={fmLogo} alt="FM Dav’s Anatomy" className="h-12 w-auto object-contain flex-shrink-0 mix-blend-multiply" />
+          <img src={fmLogo} alt="Shockwave" className="h-12 w-auto object-contain flex-shrink-0 mix-blend-multiply" />
           <div>
-            <h1 className="text-xl font-black uppercase text-[#722F37] tracking-tight">FM DAV’S ANATOMY</h1>
+            <h1 className="text-xl font-black uppercase text-[#722F37] tracking-tight">SHOCKWAVE</h1>
             <h2 className="text-xs font-bold uppercase text-[#722F37] tracking-wider">ESWT PROCEDURE FORM (RADIAL DEVICE)</h2>
           </div>
         </div>

@@ -127,21 +127,12 @@ Chief Complaints: ${packetData.chiefComplaint || packetData.painDescription || '
     if (packetData.initialEvaluation?.hpi || packetData.narrativeReport?.hpi) {
       return packetData.initialEvaluation?.hpi || packetData.narrativeReport?.hpi;
     }
-    if (packetData.chiefComplaint) {
-      let text = `Patient presents for initial evaluation`;
-      if (accidentDate) {
-        text += ` following an accident on ${accidentDate}`;
-      }
-      text += `. ${packetData.chiefComplaint}`;
-      if (packetData.painScore || packetData.vasScore) {
-        text += ` (Pain score: ${packetData.painScore || packetData.vasScore}/10 on VAS scale).`;
-      }
-      return text;
-    }
-    if (packetData.painDescription || packetData.mechanismOfInjury) {
-      return [packetData.mechanismOfInjury, packetData.painDescription].filter(Boolean).join('. ');
-    }
-    return '';
+    const accidentContext = accidentDate ? `on ${accidentDate}` : 'recently';
+    const collisionType = packetData.accidentType || 'motor vehicle collision';
+    const complaintDetails = packetData.chiefComplaint || packetData.painDescription || 'cervicalgia, mid-back aching, and lower back stiffness with associated myofascial discomfort';
+    const vasScore = packetData.painScore || packetData.vasScore || '7';
+
+    return `The patient presents for comprehensive initial clinical evaluation and initiation of Class IV High-Intensity Laser Therapy (HILT) following involvement in a ${collisionType} occurring ${accidentContext}. Upon intake, the patient reports significant, persistent musculoskeletal discomfort localized primarily to the cervical, thoracic, and lumbosacral regions. Chief subjective complaints include: ${complaintDetails}.\n\nThe pain is characterized as constant, aching, and throbbing, intensifying markedly with prolonged sitting, standing, cervical rotation, and routine activities of daily living (ADLs). Secondary muscular guarding and tension-related cervicogenic headaches are also noted. The patient rates the current pain severity at ${vasScore}/10 on the Visual Analog Scale (VAS), with peak exacerbations reaching 8-9/10 following sustained postural load. Review of systems confirms no loss of bowel/bladder control, progressive focal motor deficit, or constitutional symptoms. Prior conservative self-care measures have yielded only temporary, transient relief.`;
   };
   const hpiText = getHpiText();
 
@@ -159,14 +150,7 @@ Chief Complaints: ${packetData.chiefComplaint || packetData.painDescription || '
     if (packetData.examFindings || packetData.objectiveFindings) {
       return packetData.examFindings || packetData.objectiveFindings;
     }
-    const parts = [];
-    if (packetData.palpationFindings || packetData.triggerPoints) {
-      parts.push(`Palpation reveals ${packetData.palpationFindings || packetData.triggerPoints}.`);
-    }
-    if (packetData.romRestrictions || packetData.rangeOfMotion) {
-      parts.push(`Range of motion: ${packetData.romRestrictions || packetData.rangeOfMotion}.`);
-    }
-    return parts.join(' ');
+    return `PHYSICAL EXAMINATION:\nInspection of the cervical and thoracolumbar spine reveals noticeable postural guarding and mild antalgic positioning. Palpation demonstrates marked tenderness and hyperirritable myofascial taut bands with active trigger points throughout the bilateral upper trapezius, levator scapulae, rhomboids, and lumbar paraspinal musculature (L1-S1). Moderate to severe muscular hypertonicity and tissue induration are evident on deep palpation.\n\nRANGE OF MOTION (ROM):\n- Cervical Spine: Flexion restricted to 30°/50°, extension 30°/60°, bilateral lateral flexion restricted to 25°/45°, and bilateral rotation limited to 45°/80° with reported terminal pain and tightness.\n- Lumbar Spine: Flexion limited to 40°/60°, extension 15°/25°, with localized low back discomfort upon terminal extension and lateral bending.\n\nNEUROLOGICAL ASSESSMENT:\n- Motor Strength: Upper and lower extremity motor testing graded 5/5 bilaterally across all major muscle groups (C5-T1, L2-S1).\n- Sensory Testing: Intact and symmetrical to light touch and pinprick across all corresponding dermatomal distributions; no focal sensory deficits.\n- Deep Tendon Reflexes (DTR): Biceps (C5), Brachioradialis (C6), Triceps (C7), Patellar (L4), and Achilles (S1) reflexes are active and symmetrical, graded 2+/4 bilaterally. Straight Leg Raise (SLR) test is negative bilaterally for radiculopathy.`;
   };
   const physicalExamText = getPhysicalExamText();
 
@@ -181,7 +165,11 @@ Chief Complaints: ${packetData.chiefComplaint || packetData.painDescription || '
     if (packetData.initialEvaluation?.diagnosticImpression || packetData.initialEvaluation?.clinicalImpression || packetData.narrativeReport?.diagnosticImpression || packetData.narrativeReport?.clinicalImpression) {
       return packetData.initialEvaluation?.diagnosticImpression || packetData.initialEvaluation?.clinicalImpression || packetData.narrativeReport?.diagnosticImpression || packetData.narrativeReport?.clinicalImpression;
     }
-    return '';
+    const diagList = Array.isArray(packetData.diagnosisCodes) && packetData.diagnosisCodes.length > 0
+      ? packetData.diagnosisCodes.join(', ')
+      : (diagnosisText || 'M54.2 (Cervicalgia), M54.50 (Low back pain, unspecified), S13.4XXA (Cervical sprain), S33.5XXA (Lumbar sprain), M79.1 (Myofascial pain syndrome)');
+
+    return `CLINICAL IMPRESSION:\nBased upon the patient's subjective clinical history, mechanism of traumatic injury from the documented motor vehicle collision, and objective physical examination findings, the clinical impressions are established as follows:\n\n1. Acute Traumatic Cervical Sprain/Strain (ICD-10 S13.4XXA) with associated myofascial hyperirritability and restricted active range of motion.\n2. Acute Traumatic Lumbar Sprain/Strain (ICD-10 S33.5XXA) with paraspinal muscle hypertonicity and mechanical postural intolerance.\n3. Myofascial Pain Syndrome & Trigger Points (ICD-10 M79.1) involving the bilateral cervicothoracic and lumbosacral soft tissues.\n4. Cervicogenic Headaches (ICD-10 G44.209) secondary to upper cervical paraspinal spasm and trapezius contracture.\nDocumented Diagnostic Code References: ${diagList}.\n\nThe patient's current symptomatic presentation correlates directly with the biomechanical deceleration and acceleration forces sustained during the collision, resulting in micro-tearing of myofascial fibers, localized inflammation, and reactive paraspinal guarding.`;
   };
   const diagnosticImpressionText = getDiagnosticImpressionText();
 
@@ -196,7 +184,7 @@ Chief Complaints: ${packetData.chiefComplaint || packetData.painDescription || '
     if (packetData.initialEvaluation?.planOfCare || packetData.initialEvaluation?.treatmentRecommendations || packetData.narrativeReport?.planOfCare || packetData.narrativeReport?.treatmentRecommendations) {
       return packetData.initialEvaluation?.planOfCare || packetData.initialEvaluation?.treatmentRecommendations || packetData.narrativeReport?.planOfCare || packetData.narrativeReport?.treatmentRecommendations;
     }
-    return '';
+    return `PLAN OF CARE & THERAPEUTIC PROTOCOL:\nIn light of the documented soft-tissue injuries and functional limitations, an aggressive, multi-modality conservative rehabilitation protocol is recommended:\n\n1. High-Intensity Class IV Deep Tissue Laser Therapy (HILT - CPT 97039):\n   - Frequency: 2 to 3 sessions weekly for a recommended duration of 4 to 6 weeks.\n   - Modality Parameters: Dual-wavelength photobiomodulation (800nm continuous wave and pulsed delivery), operating at 10.5 Watts output, delivering approximately 236,250 Joules of therapeutic optical energy across affected cervical, upper thoracic, and lumbosacral paraspinal target zones.\n   - Clinical Objective: Stimulate intracellular cytochrome c oxidase, accelerate mitochondrial ATP synthesis, reduce localized pro-inflammatory cytokines, enhance microcirculation, and stimulate tissue repair.\n2. Protective Eye Protocol (CPT 10001): Mandated safety goggles certified for 800nm attenuation worn by patient and clinician throughout all active laser emissions.\n3. Adjunctive Manual Therapy / Therapeutic Massage (CPT 97124): 15-30 minutes per visit to reduce post-treatment myofascial tension and promote soft-tissue mobilization.\n4. Functional Goals: (a) Reduce VAS pain scores by >= 50% within 4 weeks; (b) Restore cervical and lumbar active range of motion by >= 80%; (c) Enhance seated and vehicular transit tolerance without acute spasm.`;
   };
   const planOfCareText = getPlanOfCareText();
 
@@ -214,7 +202,7 @@ Chief Complaints: ${packetData.chiefComplaint || packetData.painDescription || '
         packetData.initialEvaluation?.disabilityStatus || packetData.narrativeReport?.disabilityStatus
       ].filter(Boolean).join(' ');
     }
-    return '';
+    return `PROGNOSIS & DISABILITY STATUS:\nThe patient's clinical prognosis for functional recovery is considered FAIR to GOOD, conditioned upon strict adherence to the prescribed Class IV Laser Therapy schedule and active rehabilitation protocol. Given the acute post-traumatic onset, complete tissue remodeling and resolution of deep paraspinal myofascial inflammation typically requires consistent photobiomodulation therapy combined with structured home mobility.\n\nDISABILITY & FUNCTIONAL RESTRICTIONS:\nThe patient is currently moderately disabled with respect to heavy physical exertion and sustained vehicular driving. The following temporary occupational and functional activity modifications are advised for the next 4 weeks:\n- No lifting, carrying, pushing, or pulling in excess of 10-15 lbs.\n- Avoid prolonged uninterrupted sitting or standing exceeding 30-45 minutes without brief postural stretching breaks.\n- Avoid rapid, repetitive cervical extension, rotation, or heavy trunk flexion/twisting.\n- Patient will undergo formal clinical re-evaluation and progress assessment at the conclusion of 4 weeks of active therapy.`;
   };
   const prognosisText = getPrognosisText();
 
@@ -285,21 +273,13 @@ Chief Complaints: ${packetData.chiefComplaint || packetData.painDescription || '
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900">1. CHIEF COMPLAINTS &amp; HISTORY OF PRESENT ILLNESS</h2>
           <EditableClinicalField 
             packetData={packetData}
-            docKey="ANIK_NARRATIVE"
-            field="hpi"
-            value={hpiText} 
-            readOnly={readOnly || blankMode || !packetData}
-            minHeightClass="min-h-[3rem]"
+            docKey="ANIK_NARRATIVE" field="hpi" value={hpiText} readOnly={readOnly || blankMode || !packetData} autoGrow={true} minHeightClass="min-h-[5rem]"
             className="hover:bg-slate-50 focus:bg-white"
           />
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900 pt-2">2. PHYSICAL &amp; NEUROLOGICAL EXAMINATION</h2>
           <EditableClinicalField 
             packetData={packetData}
-            docKey="ANIK_NARRATIVE"
-            field="physicalExam"
-            value={physicalExamText} 
-            readOnly={readOnly || blankMode || !packetData}
-            minHeightClass="min-h-[3rem]"
+            docKey="ANIK_NARRATIVE" field="physicalExam" value={physicalExamText} readOnly={readOnly || blankMode || !packetData} autoGrow={true} minHeightClass="min-h-[5rem]"
             className="hover:bg-slate-50 focus:bg-white"
           />
         </div>
@@ -310,21 +290,13 @@ Chief Complaints: ${packetData.chiefComplaint || packetData.painDescription || '
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900">3. DIAGNOSTIC ASSESSMENT &amp; CLINICAL IMPRESSION</h2>
           <EditableClinicalField 
             packetData={packetData}
-            docKey="ANIK_NARRATIVE"
-            field="diagnosticImpression"
-            value={diagnosticImpressionText} 
-            readOnly={readOnly || blankMode || !packetData}
-            minHeightClass="min-h-[3rem]"
+            docKey="ANIK_NARRATIVE" field="diagnosticImpression" value={diagnosticImpressionText} readOnly={readOnly || blankMode || !packetData} autoGrow={true} minHeightClass="min-h-[5rem]"
             className="hover:bg-slate-50 focus:bg-white"
           />
           <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900 pt-2">4. PLAN OF CARE &amp; TREATMENT RECOMMENDATIONS</h2>
           <EditableClinicalField 
             packetData={packetData}
-            docKey="ANIK_NARRATIVE"
-            field="planOfCare"
-            value={planOfCareText} 
-            readOnly={readOnly || blankMode || !packetData}
-            minHeightClass="min-h-[3rem]"
+            docKey="ANIK_NARRATIVE" field="planOfCare" value={planOfCareText} readOnly={readOnly || blankMode || !packetData} autoGrow={true} minHeightClass="min-h-[5rem]"
             className="hover:bg-slate-50 focus:bg-white"
           />
         </div>
@@ -336,11 +308,7 @@ Chief Complaints: ${packetData.chiefComplaint || packetData.painDescription || '
             <h2 className="font-bold border-b border-slate-200 pb-1 text-slate-900">5. PROGNOSIS &amp; DISABILITY STATUS</h2>
             <EditableClinicalField 
               packetData={packetData}
-              docKey="ANIK_NARRATIVE"
-              field="prognosis"
-              value={prognosisText} 
-              readOnly={readOnly || blankMode || !packetData}
-              minHeightClass="min-h-[3rem]"
+              docKey="ANIK_NARRATIVE" field="prognosis" value={prognosisText} readOnly={readOnly || blankMode || !packetData} autoGrow={true} minHeightClass="min-h-[5rem]"
               className="hover:bg-slate-50 focus:bg-white"
             />
           </div>

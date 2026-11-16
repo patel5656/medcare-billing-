@@ -330,7 +330,7 @@ export const DocumentListPage = () => {
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500 focus:outline-none"
                 >
                   <option value="FM Health and Wellness Center">FM Health and Wellness Center (Pain Consult)</option>
-                  <option value="FM Dav’s Anatomy">FM Dav’s Anatomy (ESWT Shockwave)</option>
+                  <option value="Shockwave">Shockwave (ESWT Shockwave)</option>
                   <option value="FM Laser Therapy">FM Laser Therapy (Laser Therapy)</option>
                   <option value="FM Counselor Practice">FM Counselor Practice (Hope Behavioral)</option>
                   <option value="General Clinic Records">General Clinic Records</option>

@@ -150,7 +150,7 @@ export const UploadDocumentModal = ({ isOpen, onClose, patientId, patientName, o
               onChange={e => set('providerName', e.target.value)}
             >
               <option value="FM Health and Wellness Center">FM Health and Wellness Center (Pain Mgmt)</option>
-              <option value="FM Dav’s Anatomy">FM Dav’s Anatomy (Shockwave ESWT)</option>
+              <option value="Shockwave">Shockwave (Shockwave ESWT)</option>
               <option value="FM Laser Therapy">FM Laser Therapy (Class IV Laser)</option>
               <option value="FM Counselor Practice">FM Counselor Practice (Hope Behavioral Health)</option>
               <option value="External / Attorney">External / Attorney / Legal LOP</option>

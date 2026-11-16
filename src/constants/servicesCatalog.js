@@ -48,7 +48,7 @@ export const CORE_SERVICES = [
     cptConfirmationStatus: 'CONFIRMED',
     suggestedDuration: '30 min',
     durationConfirmationStatus: 'CONFIRMED',
-    clinicalTemplate: 'FM Dav’s ESWT Therapy Record',
+    clinicalTemplate: 'Shockwave ESWT Therapy Record',
     templateStatus: 'CONFIRMED',
     activeStatus: 'ACTIVE'
   },

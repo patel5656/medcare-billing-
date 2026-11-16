@@ -111,7 +111,7 @@ export const AgingSummaryPage = () => {
     try {
       const dataToExport = providerAgingList.length > 0 ? providerAgingList : [
         { providerName: 'FM Laser Therapy', statementNo: '120199', totalBalance: 18920, current: 18920, past30: 0, past60: 0, past90: 0, status: 'FINALIZED' },
-        { providerName: "FM Dav’s Anatomy Physical Therapy", statementNo: '120198', totalBalance: 9870, current: 9870, past30: 0, past60: 0, past90: 0, status: 'FINALIZED' },
+        { providerName: "Shockwave Physical Therapy", statementNo: '120198', totalBalance: 9870, current: 9870, past30: 0, past60: 0, past90: 0, status: 'FINALIZED' },
         { providerName: 'FM Health and Wellness Center', statementNo: '120197', totalBalance: 1214, current: 1214, past30: 0, past60: 0, past90: 0, status: 'FINALIZED' },
         { providerName: 'FM Counselor Practice (Hope & Harmony)', statementNo: '120200', totalBalance: 1140, current: 1140, past30: 0, past60: 0, past90: 0, status: 'ISSUED' },
       ];

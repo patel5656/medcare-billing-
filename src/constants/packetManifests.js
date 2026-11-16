@@ -34,7 +34,7 @@ export const PACKET_MANIFESTS = {
 
   'prov-davs': {
     providerId: 'prov-davs',
-    providerName: "FM Dav’s Anatomy",
+    providerName: "Shockwave",
     totalPages: 13,
     pages: [
       { pageNumber: 1, id: 'davs-cover', type: 'COVER', title: 'Patient & Case Cover Page', componentKey: 'DavCoverPage' },

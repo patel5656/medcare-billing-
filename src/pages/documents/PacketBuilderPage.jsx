@@ -17,7 +17,7 @@ export const PacketBuilderPage = () => {
   const DEFAULT_DOCS = [
     { id: 'doc-001', name: 'FM Health Pain Evaluation - Initial', providerName: 'FM Health and Wellness Center', type: 'Clinical Note', size: '2.4 MB' },
     { id: 'doc-002', name: 'FM Laser Therapy Procedure Form', providerName: 'FM Laser Therapy', type: 'Procedure Record', size: '1.1 MB' },
-    { id: 'doc-003', name: 'FM Dav’s Anatomy ESWT Therapy Record', providerName: 'FM Dav’s Anatomy', type: 'Treatment Note', size: '3.2 MB' },
+    { id: 'doc-003', name: 'Shockwave ESWT Therapy Record', providerName: 'Shockwave', type: 'Treatment Note', size: '3.2 MB' },
     { id: 'doc-004', name: 'Behavioral Health Progress Note', providerName: 'FM Counselor Practice (Hope Behavioral Health)', type: 'Therapy Note', size: '1.5 MB' },
   ];
 
@@ -323,7 +323,7 @@ export const PacketBuilderPage = () => {
             <div className="shrink-0 p-4 bg-white border-b border-slate-200 flex items-center gap-2 overflow-x-auto print:hidden">
               {[
                 { id: 'prov-anik', label: 'FM Laser Therapy' },
-                { id: 'prov-davs', label: 'FM Dav’s Anatomy ESWT' },
+                { id: 'prov-davs', label: 'Shockwave ESWT' },
                 { id: 'prov-josmic', label: 'FM Health Consult' },
                 { id: 'prov-counselor', label: 'Counselor' },
                 { id: 'prov-general', label: 'Final Treatment Report' }

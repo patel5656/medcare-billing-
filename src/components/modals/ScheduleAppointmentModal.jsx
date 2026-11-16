@@ -33,14 +33,21 @@ export const ScheduleAppointmentModal = ({
   const [dbProviders, setDbProviders] = useState([]);
   const [practiceSettings, setPracticeSettings] = useState(null);
 
-  const [serviceLines, setServiceLines] = useState([
-    createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
-    createDefaultServiceLine(2, '97039', 'High Intensity Laser Therapy (HILT)', 250.00)
-  ]);
-
   const { currentUser } = useAuthStore();
+  const isCounselorUser = currentUser?.providerId === 'prov-counselor' || currentUser?.role === 'Counselor';
+
+  const [serviceLines, setServiceLines] = useState(() => {
+    if (isCounselorUser) {
+      return [createDefaultServiceLine(1, '90834', 'Psychotherapy with patient, 45 minutes', 180.00)];
+    }
+    return [
+      createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
+      createDefaultServiceLine(2, '97039', 'High Intensity Laser Therapy (HILT)', 250.00)
+    ];
+  });
+
   const [formData, setFormData] = useState(() => {
-    const defaultProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
+    const defaultProviderId = isCounselorUser ? 'prov-counselor' : (currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`);
     return {
       patientId: prefillPatientId || '',
       patientName: prefillPatientName || '',
@@ -48,12 +55,12 @@ export const ScheduleAppointmentModal = ({
       caseId: prefillCaseId || '',
       providerId: defaultProviderId,
       visitType: 'INITIAL',
-      appointmentType: 'Pain Consult',
+      appointmentType: isCounselorUser ? 'Counseling Psychotherapy (45m)' : 'Pain Consult',
       date: getNextBusinessDay(),
       startTime: '09:00 AM',
       endTime: '10:00 AM',
       duration: '60',
-      reasonForVisit: 'Post-MVA pain management & clinical evaluation',
+      reasonForVisit: isCounselorUser ? 'Accident-related trauma & psychotherapy counseling' : 'Post-MVA pain management & clinical evaluation',
       reminderPreference: 'SMS',
       holidayOverride: false,
     };
@@ -274,17 +281,30 @@ export const ScheduleAppointmentModal = ({
               onChange={e => {
                 const pid = e.target.value;
                 let aptType = 'Pain Consult';
+                let reason = formData.reasonForVisit;
                 if (pid === 'prov-davs') { aptType = 'ESWT Shockwave Session 1'; }
                 if (pid === 'prov-anik') { aptType = 'Laser Therapy Session 1'; }
-                if (pid === 'prov-counselor') { aptType = 'Counseling Psychotherapy (45m)'; }
+                if (pid === 'prov-counselor') {
+                  aptType = 'Counseling Psychotherapy (45m)';
+                  reason = 'Accident-related trauma & psychotherapy counseling';
+                  setServiceLines([
+                    createDefaultServiceLine(1, '90834', 'Psychotherapy with patient, 45 minutes', 180.00)
+                  ]);
+                } else if (pid === 'prov-josmic') {
+                  reason = 'Post-MVA pain management & clinical evaluation';
+                  setServiceLines([
+                    createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
+                    createDefaultServiceLine(2, '97039', 'High Intensity Laser Therapy (HILT)', 250.00)
+                  ]);
+                }
                 if (pid === 'prov-tpi') { aptType = 'Trigger Point Injection'; }
                 if (pid === 'prov-tecar') { aptType = 'TECAR Therapy Session'; }
-                setFormData(p => ({ ...p, providerId: pid, appointmentType: aptType }));
+                setFormData(p => ({ ...p, providerId: pid, appointmentType: aptType, reasonForVisit: reason }));
               }}
               className={inputCls}
             >
               <option value="prov-josmic">FM Health and Wellness Center (Pain Management)</option>
-              <option value="prov-davs">FM Dav’s Anatomy (Shockwave ESWT)</option>
+              <option value="prov-davs">Shockwave (Shockwave ESWT)</option>
               <option value="prov-anik">FM Laser Therapy (Laser Session)</option>
               <option value="prov-counselor">FM Counselor Practice (Behavioral Health &amp; PTSD)</option>
               <option value="prov-tpi">FM Trigger Point Injection Clinic (Pain Management & Injections)</option>

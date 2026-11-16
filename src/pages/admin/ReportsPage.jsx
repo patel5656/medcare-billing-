@@ -489,7 +489,7 @@ export const ReportsPage = () => {
             {[
               { label: 'Total Claims Generated', value: 7, color: 'teal' },
               { label: 'FM Laser Claims', value: 3, color: 'violet' },
-              { label: 'FM Dav’s Claims', value: 3, color: 'blue' },
+              { label: 'Shockwave Claims', value: 3, color: 'blue' },
               { label: 'FM Health Claims', value: 1, color: 'emerald' },
             ].map(c => (
               <div key={c.label} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center">

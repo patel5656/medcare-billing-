@@ -4,10 +4,35 @@ import { apiClinicalNoteService as mockClinicalNoteService } from '../../service
 import { apiPatientService } from '../../services/api/apiPatientService';
 import { apiCaseService } from '../../services/api/apiCaseService';
 import { useUIStore } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Award, CheckCircle2, Activity } from 'lucide-react';
+import { ArrowLeft, Save, Award, CheckCircle2, Activity, ShieldAlert } from 'lucide-react';
 
 export const AnikLaserFormPage = () => {
+  const { currentUser } = useAuthStore();
+  const isDoctor = currentUser?.role === 'Doctor';
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isDoctor) {
+      navigate('/403', { replace: true });
+    }
+  }, [isDoctor, navigate]);
+
+  if (isDoctor) {
+    return (
+      <div className="bg-white border border-rose-200 rounded-2xl p-8 text-center space-y-3 shadow-sm max-w-md mx-auto my-12">
+        <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-6 h-6" />
+        </div>
+        <h2 className="text-base font-bold text-slate-900">403 - Access Forbidden</h2>
+        <p className="text-xs text-slate-500">
+          Doctor accounts are restricted from accessing FM Laser Therapy forms.
+        </p>
+      </div>
+    );
+  }
+
   const [patients, setPatients] = useState([]);
   const [activeCaseId, setActiveCaseId] = useState('');
   const [formData, setFormData] = useState({
@@ -25,7 +50,6 @@ export const AnikLaserFormPage = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useUIStore();
-  const navigate = useNavigate();
 
   const fetchPreviousVitals = async (id) => {
     try {

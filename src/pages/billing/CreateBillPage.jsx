@@ -279,7 +279,7 @@ export const CreateBillPage = () => {
                 }}
               >
                 <option value="prov-josmic">FM Health and Wellness Center (Pain Management)</option>
-                <option value="prov-davs">FM Dav’s Anatomy (Shockwave ESWT)</option>
+                <option value="prov-davs">Shockwave (Shockwave ESWT)</option>
                 <option value="prov-anik">FM Laser Therapy (Laser Therapy)</option>
                 <option value="prov-counselor">FM Counselor Practice (Hope Behavioral Health)</option>
               </select>
