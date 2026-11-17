@@ -20,12 +20,16 @@ export const CounselorDischargePlanForm = ({ blankMode = false, packetData = nul
   const dbProvider = packetData?.treatingProvider || bill?.renderingProvider?.name || 'Jordan Miller, LCSW, BCD';
   const dbSigDate = dbDischargeDate || '';
   const dbPainAreas = packetData?.injuryBodyParts || (Array.isArray(packetData?.patient?.selectedInjuryAreas) ? packetData.patient.selectedInjuryAreas.join(', ') : '') || 'reported musculoskeletal discomfort';
-  const totalEncounterCount = Math.max(
+  const completedAppointments = (packetData?.appointments || []).filter(a => (a.status || '').toUpperCase() === 'COMPLETED');
+  const dynamicCompletedVisits = Math.max(
+    completedAppointments.length,
     (packetData?.clinicalNotes || []).length,
     (bill?.serviceLines || bill?.lineItems || []).length,
-    (packetData?.appointments || []).length
+    typeof packetData?.totalCompletedVisits === 'number' ? packetData.totalCompletedVisits : 0
   );
-  const dbTotalEncounters = packetData?.totalVisits || (totalEncounterCount > 0 ? String(totalEncounterCount) : 'planned');
+  const dbTotalEncounters = dynamicCompletedVisits > 0 
+    ? String(dynamicCompletedVisits) 
+    : (packetData?.totalVisits ? String(packetData.totalVisits) : 'planned');
 
   // Form State
   const [formData, setFormData] = useState({

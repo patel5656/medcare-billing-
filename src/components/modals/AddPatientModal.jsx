@@ -563,7 +563,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls(errors.firstName)}
                     value={formData.firstName}
                     onChange={e => set('firstName', e.target.value.replace(/[^a-zA-Z\s'-]/g, ''))}
-                    placeholder="e.g. John"
+                    placeholder=""
                   />
                   {errors.firstName && <p className="text-[10px] text-rose-500 mt-0.5">{errors.firstName}</p>}
                 </div>
@@ -573,7 +573,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.middleName}
                     onChange={e => set('middleName', e.target.value.replace(/[^a-zA-Z\s'-]/g, ''))}
-                    placeholder="e.g. Robert"
+                    placeholder=""
                   />
                 </div>
                 <div>
@@ -583,7 +583,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls(errors.lastName)}
                     value={formData.lastName}
                     onChange={e => set('lastName', e.target.value.replace(/[^a-zA-Z\s'-]/g, ''))}
-                    placeholder="e.g. Smith"
+                    placeholder=""
                   />
                   {errors.lastName && <p className="text-[10px] text-rose-500 mt-0.5">{errors.lastName}</p>}
                 </div>
@@ -679,7 +679,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.driversLicense}
                     onChange={e => set('driversLicense', e.target.value)}
-                    placeholder="TX-8921820"
+                    placeholder=""
                   />
                 </div>
                 <div>
@@ -688,7 +688,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.driversLicenseState}
                     onChange={e => set('driversLicenseState', e.target.value)}
-                    placeholder="TX"
+                    placeholder=""
                   />
                 </div>
               </div>
@@ -748,7 +748,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.employerName}
                     onChange={e => set('employerName', e.target.value)}
-                    placeholder="e.g. ABC Logistics LLC"
+                    placeholder=""
                   />
                 </div>
               </div>
@@ -910,7 +910,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.primaryInsuranceCompany}
                     onChange={e => set('primaryInsuranceCompany', e.target.value)}
-                    placeholder="e.g. Geico Auto Insurance, Progressive"
+                    placeholder=""
                   />
                 </div>
                 <div>
@@ -919,7 +919,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.primaryPolicyNumber}
                     onChange={e => set('primaryPolicyNumber', e.target.value)}
-                    placeholder="e.g. POL-TX-9921"
+                    placeholder=""
                   />
                 </div>
               </div>
@@ -931,7 +931,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.primaryGroupNumber}
                     onChange={e => set('primaryGroupNumber', e.target.value)}
-                    placeholder="GRP-1002"
+                    placeholder=""
                   />
                 </div>
                 <div>
@@ -940,7 +940,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.primaryInsuranceMemberId}
                     onChange={e => set('primaryInsuranceMemberId', e.target.value)}
-                    placeholder="MBR-88219"
+                    placeholder=""
                   />
                 </div>
                 <div>
@@ -949,7 +949,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.insuranceAdjusterName}
                     onChange={e => set('insuranceAdjusterName', e.target.value.replace(/[^a-zA-Z\s'-]/g, ''))}
-                    placeholder="e.g. Robert Vance"
+                    placeholder=""
                   />
                 </div>
                 <div>
@@ -965,7 +965,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                       else if (digits.length > 3) formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
                       set('insuranceAdjusterPhone', formatted);
                     }}
-                    placeholder="(800) 555-0199"
+                    placeholder=""
                   />
                 </div>
               </div>
@@ -983,7 +983,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.secondaryInsuranceCompany}
                     onChange={e => set('secondaryInsuranceCompany', e.target.value)}
-                    placeholder="e.g. Blue Cross Blue Shield"
+                    placeholder=""
                   />
                 </div>
                 <div>
@@ -992,7 +992,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.secondaryPolicyNumber}
                     onChange={e => set('secondaryPolicyNumber', e.target.value)}
-                    placeholder="e.g. SEC-POL-8820"
+                    placeholder=""
                   />
                 </div>
               </div>
@@ -1004,7 +1004,7 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
                     className={inputCls()}
                     value={formData.emergencyContactName}
                     onChange={e => set('emergencyContactName', e.target.value.replace(/[^a-zA-Z\s'-]/g, ''))}
-                    placeholder="Jane Doe"
+                    placeholder=""
                   />
                 </div>
                 <div>

@@ -13,7 +13,16 @@ export const CounselorCourseOfCareForm = ({ blankMode = false, packetData = null
   
   const dbInitialDate = packetData?.initialAssessment || packetData?.initialDate || packetData?.dos || '';
   const dbDischargeDate = packetData?.dischargeDate || packetData?.finalTreatmentReview || '';
-  const dbTotalSessions = packetData?.totalVisits || (packetData?.clinicalNotes?.length ? String(packetData.clinicalNotes.length) : (packetData?.appointments?.length ? String(packetData.appointments.length) : ''));
+  const completedAppointments = (packetData?.appointments || []).filter(a => (a.status || '').toUpperCase() === 'COMPLETED');
+  const dynamicCompletedVisits = Math.max(
+    completedAppointments.length,
+    (packetData?.clinicalNotes || []).length,
+    (bill?.serviceLines || bill?.lineItems || []).length,
+    typeof packetData?.totalCompletedVisits === 'number' ? packetData.totalCompletedVisits : 0
+  );
+  const dbTotalSessions = dynamicCompletedVisits > 0 
+    ? String(dynamicCompletedVisits) 
+    : (packetData?.totalVisits ? String(packetData.totalVisits) : '');
 
   // Form State
   const [formData, setFormData] = useState({

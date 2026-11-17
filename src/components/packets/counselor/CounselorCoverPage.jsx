@@ -24,12 +24,27 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null, bill 
 
   const dbInitialAssessment = packetData?.initialAssessment || packetData?.initialDate || earliestDate || packetData?.dos || packetData?.assessmentDate || '';
   const dbFinalTreatmentReview = packetData?.finalTreatmentReview || packetData?.dischargeDate || latestDate || '';
-  const totalEncounterCount = Math.max(
-    (packetData?.clinicalNotes || []).length,
-    (bill?.serviceLines || bill?.lineItems || []).length,
-    (packetData?.appointments || []).length
+
+  // Only actual completed visits: strictly exclude cancelled, scheduled or incomplete appointments
+  const completedAppointments = (packetData?.appointments || []).filter(a => {
+    const s = (a.status || '').toUpperCase();
+    return s === 'COMPLETED';
+  });
+  const completedNotes = packetData?.clinicalNotes || [];
+  const billLines = bill?.serviceLines || bill?.lineItems || [];
+  const dynamicCompletedVisits = Math.max(
+    completedAppointments.length,
+    completedNotes.length,
+    billLines.length,
+    typeof packetData?.totalCompletedVisits === 'number' ? packetData.totalCompletedVisits : 0
   );
-  const dbTotalVisits = packetData?.totalVisits || (totalEncounterCount > 0 ? String(totalEncounterCount) : '');
+  const dbTotalVisits = dynamicCompletedVisits > 0 
+    ? String(dynamicCompletedVisits) 
+    : (packetData?.totalVisits ? String(packetData.totalVisits) : '');
+
+  const effectiveTotalVisits = (storage.totalVisitsManual && storage.totalVisits !== undefined)
+    ? storage.totalVisits
+    : (dbTotalVisits || storage.totalVisits || '');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -39,12 +54,16 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null, bill 
     accidentDate: storage.accidentDate !== undefined ? storage.accidentDate : dbAccidentDate,
     initialAssessment: storage.initialAssessment !== undefined ? storage.initialAssessment : dbInitialAssessment,
     finalTreatmentReview: storage.finalTreatmentReview !== undefined ? storage.finalTreatmentReview : dbFinalTreatmentReview,
-    totalVisits: storage.totalVisits !== undefined ? storage.totalVisits : dbTotalVisits,
+    totalVisits: effectiveTotalVisits,
   });
 
   useEffect(() => {
     if (!blankMode) {
       const s = packetData?.clinicalDocStorage?.[docKey] || {};
+      const currentTotalVisits = (s.totalVisitsManual && s.totalVisits !== undefined)
+        ? s.totalVisits
+        : (dbTotalVisits || s.totalVisits || '');
+
       setFormData({
         patientName: s.patientName !== undefined ? s.patientName : dbPatientName,
         dob: s.dob !== undefined ? s.dob : dbDob,
@@ -52,10 +71,10 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null, bill 
         accidentDate: s.accidentDate !== undefined ? s.accidentDate : dbAccidentDate,
         initialAssessment: s.initialAssessment !== undefined ? s.initialAssessment : dbInitialAssessment,
         finalTreatmentReview: s.finalTreatmentReview !== undefined ? s.finalTreatmentReview : dbFinalTreatmentReview,
-        totalVisits: s.totalVisits !== undefined ? s.totalVisits : dbTotalVisits,
+        totalVisits: currentTotalVisits,
       });
     }
-  }, [packetData?.id, packetData?.caseId, packetData?.patientName, blankMode]);
+  }, [packetData?.id, packetData?.caseId, packetData?.patientName, blankMode, dbTotalVisits]);
 
   const handleChange = async (field, value) => {
     if (readOnly || blankMode) return;
@@ -65,7 +84,11 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null, bill 
     if (packetData?.id) {
       try {
         const currentStorage = packetData.clinicalDocStorage || {};
-        const updatedDoc = { ...(currentStorage[docKey] || {}), [field]: value };
+        const updatedDoc = { 
+          ...(currentStorage[docKey] || {}), 
+          [field]: value,
+          ...(field === 'totalVisits' ? { totalVisitsManual: true } : {})
+        };
         const updatedStorage = { ...currentStorage, [docKey]: updatedDoc };
         await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
         packetData.clinicalDocStorage = updatedStorage;
@@ -229,7 +252,7 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null, bill 
                 type="text"
                 value={blankMode ? '' : formData.totalVisits}
                 onChange={(e) => handleChange('totalVisits', e.target.value)}
-                placeholder={blankMode ? '' : 'e.g. 17'}
+                placeholder=""
                 className="font-bold text-slate-950 bg-transparent outline-none focus:bg-amber-50/50 px-1 py-0.5 rounded border border-transparent focus:border-amber-300 text-center w-20"
               />
             )}

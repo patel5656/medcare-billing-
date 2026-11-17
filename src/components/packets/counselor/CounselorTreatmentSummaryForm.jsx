@@ -24,12 +24,25 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
   const earliestDate = allEncounterDates[0] || '';
   const latestDate = allEncounterDates[allEncounterDates.length - 1] || '';
 
-  const totalEncounterCount = Math.max(
-    (packetData?.clinicalNotes || []).length,
+  // Only actual completed visits: strictly exclude cancelled, scheduled or incomplete appointments
+  const completedAppointments = (packetData?.appointments || []).filter(a => {
+    const s = (a.status || '').toUpperCase();
+    return s === 'COMPLETED';
+  });
+  const clinicalNotes = packetData?.clinicalNotes || [];
+  const dynamicCompletedVisits = Math.max(
+    completedAppointments.length,
+    clinicalNotes.length,
     billLines.length,
-    (packetData?.appointments || []).length
+    typeof packetData?.totalCompletedVisits === 'number' ? packetData.totalCompletedVisits : 0
   );
-  const dbTotalVisits = packetData?.totalVisits || (totalEncounterCount > 0 ? String(totalEncounterCount) : '');
+  const dbTotalVisits = dynamicCompletedVisits > 0 
+    ? String(dynamicCompletedVisits) 
+    : (packetData?.totalVisits ? String(packetData.totalVisits) : '');
+
+  const effectiveTotalVisits = (storage.totalVisitsManual && storage.totalVisits !== undefined)
+    ? storage.totalVisits
+    : (dbTotalVisits || storage.totalVisits || '');
 
   const dbNpi = packetData?.providerNpi || bill?.identifiers?.npi || bill?.renderingProvider?.npi || '1487965213';
   const dbTaxId = packetData?.taxId || bill?.identifiers?.taxId || bill?.billingProvider?.taxId || '84-7891234';
@@ -63,7 +76,7 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
     accidentDate: storage.accidentDate !== undefined ? storage.accidentDate : dbAccidentDate,
     accidentType: storage.accidentType !== undefined ? storage.accidentType : dbAccidentType,
     treatingProvider: storage.treatingProvider !== undefined ? storage.treatingProvider : dbTreatingProvider,
-    totalVisits: storage.totalVisits !== undefined ? storage.totalVisits : dbTotalVisits,
+    totalVisits: effectiveTotalVisits,
     npi: storage.npi !== undefined ? storage.npi : dbNpi,
     taxId: storage.taxId !== undefined ? storage.taxId : dbTaxId,
     treatmentPeriod: storage.treatmentPeriod !== undefined ? storage.treatmentPeriod : dbTreatmentPeriod,
@@ -71,7 +84,7 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
     
     // Overview details
     initialEvaluationDetail: storage.initialEvaluationDetail !== undefined ? storage.initialEvaluationDetail : (dbInitialDate ? `Psychiatric diagnostic evaluation - ${dbInitialDate}` : 'Psychiatric diagnostic evaluation'),
-    psychotherapyDetail: storage.psychotherapyDetail !== undefined ? storage.psychotherapyDetail : (dbDischargeDate ? `${dbTotalVisits || ''} Psychotherapy visits through ${dbDischargeDate}` : 'Psychotherapy visits associated with course of care'),
+    psychotherapyDetail: storage.psychotherapyDetail !== undefined ? storage.psychotherapyDetail : (dbDischargeDate ? `${effectiveTotalVisits || ''} Psychotherapy visits through ${dbDischargeDate}` : 'Psychotherapy visits associated with course of care'),
     progressNotesDetail: storage.progressNotesDetail !== undefined ? storage.progressNotesDetail : 'Progress notes associated with the documented treatment visits',
     finalTreatmentReviewDetail: storage.finalTreatmentReviewDetail !== undefined ? storage.finalTreatmentReviewDetail : dbDischargeDate,
     
@@ -88,20 +101,24 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
   useEffect(() => {
     if (!blankMode) {
       const s = packetData?.clinicalDocStorage?.[docKey] || {};
+      const currentTotalVisits = (s.totalVisitsManual && s.totalVisits !== undefined)
+        ? s.totalVisits
+        : (dbTotalVisits || s.totalVisits || '');
+
       setFormData({
         patientName: s.patientName !== undefined ? s.patientName : dbPatientName,
         dob: s.dob !== undefined ? s.dob : dbDob,
         accidentDate: s.accidentDate !== undefined ? s.accidentDate : dbAccidentDate,
         accidentType: s.accidentType !== undefined ? s.accidentType : dbAccidentType,
         treatingProvider: s.treatingProvider !== undefined ? s.treatingProvider : dbTreatingProvider,
-        totalVisits: s.totalVisits !== undefined ? s.totalVisits : dbTotalVisits,
+        totalVisits: currentTotalVisits,
         npi: s.npi !== undefined ? s.npi : dbNpi,
         taxId: s.taxId !== undefined ? s.taxId : dbTaxId,
         treatmentPeriod: s.treatmentPeriod !== undefined ? s.treatmentPeriod : dbTreatmentPeriod,
         totalCharges: s.totalCharges !== undefined ? s.totalCharges : dbTotalCharges,
         
         initialEvaluationDetail: s.initialEvaluationDetail !== undefined ? s.initialEvaluationDetail : (dbInitialDate ? `Psychiatric diagnostic evaluation - ${dbInitialDate}` : 'Psychiatric diagnostic evaluation'),
-        psychotherapyDetail: s.psychotherapyDetail !== undefined ? s.psychotherapyDetail : (dbDischargeDate ? `${dbTotalVisits || ''} Psychotherapy visits through ${dbDischargeDate}` : 'Psychotherapy visits associated with course of care'),
+        psychotherapyDetail: s.psychotherapyDetail !== undefined ? s.psychotherapyDetail : (dbDischargeDate ? `${currentTotalVisits || ''} Psychotherapy visits through ${dbDischargeDate}` : 'Psychotherapy visits associated with course of care'),
         progressNotesDetail: s.progressNotesDetail !== undefined ? s.progressNotesDetail : 'Progress notes associated with the documented treatment visits',
         finalTreatmentReviewDetail: s.finalTreatmentReviewDetail !== undefined ? s.finalTreatmentReviewDetail : dbDischargeDate,
         
@@ -114,7 +131,7 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
         therapyTotal: s.therapyTotal !== undefined ? s.therapyTotal : defaultTherapyTotal,
       });
     }
-  }, [packetData?.id, packetData?.caseId, packetData?.patientName, bill?.id, blankMode]);
+  }, [packetData?.id, packetData?.caseId, packetData?.patientName, bill?.id, blankMode, dbTotalVisits]);
 
   const handleChange = async (field, value) => {
     if (readOnly || blankMode) return;
@@ -124,7 +141,11 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
     if (packetData?.id) {
       try {
         const currentStorage = packetData.clinicalDocStorage || {};
-        const updatedDoc = { ...(currentStorage[docKey] || {}), [field]: value };
+        const updatedDoc = { 
+          ...(currentStorage[docKey] || {}), 
+          [field]: value,
+          ...(field === 'totalVisits' ? { totalVisitsManual: true } : {})
+        };
         const updatedStorage = { ...currentStorage, [docKey]: updatedDoc };
         await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });
         packetData.clinicalDocStorage = updatedStorage;
@@ -241,7 +262,7 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
                 type="text"
                 value={blankMode ? '' : formData.totalVisits}
                 onChange={(e) => handleChange('totalVisits', e.target.value)}
-                placeholder={blankMode ? '' : 'e.g. 17'}
+                placeholder=""
                 className="w-full text-slate-900 bg-transparent outline-none"
               />
             )}

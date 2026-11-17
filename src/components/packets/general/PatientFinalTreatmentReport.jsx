@@ -63,8 +63,9 @@ export const PatientFinalTreatmentReport = ({
   
   const signOffDate = blankMode || !packetData ? '' : (latestNote?.signedAt ? new Date(latestNote.signedAt).toLocaleDateString() : (packetData.signatureDate || new Date().toLocaleDateString()));
 
-  // Treatment Overview
-  const totalSessions = packetData?.appointments?.length || packetData?.totalSessionsCompleted || 0;
+  // Treatment Overview (Count only completed encounters)
+  const completedAppointments = (packetData?.appointments || []).filter(a => (a.status || '').toUpperCase() === 'COMPLETED');
+  const totalSessions = completedAppointments.length || packetData?.totalCompletedVisits || packetData?.totalSessionsCompleted || 0;
   const cptCode = packetData?.appointments?.[0]?.cptCode || serviceLines?.[0]?.cptCode || 'Not documented';
   const treatmentSummary = latestNote?.content?.treatmentSummary || latestNote?.soapAssessment || 'Treatment summary has not been documented.';
   const treatmentAreas = latestNote?.content?.treatmentAreas || packetData?.injuryBodyParts || patient.selectedInjuryAreas?.join(', ') || 'Not documented';

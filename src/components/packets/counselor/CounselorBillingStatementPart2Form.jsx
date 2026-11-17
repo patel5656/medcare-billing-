@@ -20,9 +20,10 @@ export const CounselorBillingStatementPart2Form = ({ blankMode = false, packetDa
     ? `$${parseFloat(bill.totals.balanceDue).toFixed(2)}` 
     : (bill?.totals?.totalCharges !== undefined ? `$${parseFloat(bill.totals.totalCharges).toFixed(2)}` : '$0.00');
 
-  // Continuation lines for sessions 14 through 17
+  // Continuation lines for sessions 14 onwards (supports unlimited visits)
   const billLines = (bill?.serviceLines || bill?.lineItems || bill?.items || []).slice(13);
-  const mergedRows = Array.from({ length: 4 }).map((_, idx) => {
+  const rowCount = Math.max(4, billLines.length);
+  const mergedRows = Array.from({ length: rowCount }).map((_, idx) => {
     if (billLines[idx]) {
       return {
         dos: billLines[idx].dos || billLines[idx].dateOfService || '',
