@@ -754,7 +754,7 @@ const Page4 = ({ blankMode, packetData, readOnly = false }) => {
       </div>
       <div className="flex items-center gap-2 mt-1.5 text-[11px] pl-2">
         <span className="font-bold">Other:</span>
-        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="medicationsOther" value={storage.medicationsOther || packetData?.medicationsOther || packetData?.otherMedications || packetData?.plan?.otherMedications || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
+        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="medicationsOther" value={storage.medicationsOther || packetData?.medicationsOther || packetData?.otherMedications || packetData?.plan?.otherMedications || ''} readOnly={readOnly || blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
       </div>
     </div>
 
@@ -767,7 +767,7 @@ const Page4 = ({ blankMode, packetData, readOnly = false }) => {
       </div>
       <div className="flex items-center gap-2 mt-1.5 text-[11px] pl-2">
         <span className="font-bold">Specialist referral:</span>
-        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="specialistReferral" value={storage.specialistReferral || packetData?.specialistReferral || packetData?.referral || packetData?.plan?.specialistReferral || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
+        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="specialistReferral" value={storage.specialistReferral || packetData?.specialistReferral || packetData?.referral || packetData?.plan?.specialistReferral || ''} readOnly={readOnly || blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
       </div>
     </div>
 
@@ -780,11 +780,11 @@ const Page4 = ({ blankMode, packetData, readOnly = false }) => {
       </div>
       <div className="flex items-center gap-2 mt-1.5 pl-2">
         <CB checked={getRestrictionsChecked('Off work', packetData)} label="Off work/school until:" blankMode={blankMode} readOnly={readOnly} packetData={packetData} fieldKey="restr_OffWork" />
-        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="offWorkUntil" value={storage.offWorkUntil || packetData?.offWorkUntil || packetData?.restrictionsOffWorkUntil || packetData?.plan?.offWorkUntil || ''} readOnly={blankMode} inputType="input" className="w-28 border-b border-dashed border-slate-400" />
+        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="offWorkUntil" value={storage.offWorkUntil || packetData?.offWorkUntil || packetData?.restrictionsOffWorkUntil || packetData?.plan?.offWorkUntil || ''} readOnly={readOnly || blankMode} inputType="input" className="w-28 border-b border-dashed border-slate-400" />
       </div>
     </div>
 
-    <div className="mb-6 text-[11px]">
+    <div className="mb-4 text-[11px]">
       <p className="font-bold mb-1.5">Follow-Up:</p>
       <div className="flex flex-wrap gap-y-1.5 pl-2">
         {['1 week', '2 weeks', 'PRN (as needed)'].map(label => (
@@ -793,12 +793,33 @@ const Page4 = ({ blankMode, packetData, readOnly = false }) => {
       </div>
       <div className="flex items-center gap-2 mt-1.5 pl-2">
         <span className="font-bold">Referred to:</span>
-        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="referredTo" value={storage.referredTo || packetData?.referredTo || packetData?.plan?.referredTo || ''} readOnly={blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
+        <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="referredTo" value={storage.referredTo || packetData?.referredTo || packetData?.plan?.referredTo || ''} readOnly={readOnly || blankMode} inputType="input" className="flex-1 border-b border-dashed border-slate-400" />
+      </div>
+
+      {/* Conclusion Field directly below Referred to */}
+      <div className="mt-2.5 pl-2">
+        <div className="flex items-start gap-2">
+          <span className="font-bold whitespace-nowrap mt-2">Conclusion -:</span>
+          <div className="flex-1">
+            <EditableClinicalField
+              packetData={packetData}
+              docKey="JOSMIC_PAIN_REPORT"
+              field="conclusion"
+              value={blankMode ? '' : (storage.conclusion !== undefined ? storage.conclusion : (packetData?.conclusion || packetData?.plan?.conclusion || ''))}
+              placeholder="Enter clinical conclusion, assessment summary, and prognosis..."
+              readOnly={readOnly || blankMode}
+              inputType="textarea"
+              autoGrow={true}
+              minHeightClass="min-h-[3.5rem]"
+              className="w-full border border-slate-300 rounded p-1.5 text-xs text-slate-800 bg-white/70 focus:bg-white focus:ring-1 focus:ring-slate-400 outline-none leading-relaxed print:border-none print:p-0 print:bg-transparent print:text-black"
+            />
+          </div>
+        </div>
       </div>
     </div>
 
     {/* Signature Block */}
-    <div className="border-t-2 border-slate-700 pt-5 mt-4">
+    <div className="border-t-2 border-slate-700 pt-4 mt-3">
       <div className="grid grid-cols-2 gap-8 text-[11px] font-mono">
         <div>
           <div className="border-b border-slate-500 pb-1 mb-1 min-h-[50px] flex flex-col justify-end">
@@ -984,6 +1005,7 @@ export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, 
         otherDiagnosis: (packetData.diagnosisCodes && Array.isArray(packetData.diagnosisCodes)) ? packetData.diagnosisCodes.join(', ') : 'Cervicalgia, Lumbar sprain',
         medicationsOther: 'Flexeril 10mg QHS PRN muscle spasm',
         specialistReferral: 'Physical Therapy / Chiropractic Care',
+        conclusion: parsed.conclusion || storage.conclusion || 'Patient demonstrates positive response to multimodal conservative care. Continuation of prescribed physical therapy and therapeutic modalities recommended for complete functional restoration.',
         checkboxOverrides: cb
       };
 

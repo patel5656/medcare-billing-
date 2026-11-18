@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { apiCaseService } from '../../../services/api/apiCaseService';
 import fmCounselingLogo from '../../../assets/fm_counseling_logo.png';
 
-export const CounselorCourseOfCareForm = ({ blankMode = false, packetData = null, bill = null, readOnly = false }) => {
+export const CounselorCourseOfCareForm = ({ blankMode = false, packetData = null, bill = null, readOnly = false, counselingVisits = null }) => {
   const docKey = 'FM_COUNSELING_FORM_5';
   const storage = packetData?.clinicalDocStorage?.[docKey] || {};
 
@@ -11,18 +11,23 @@ export const CounselorCourseOfCareForm = ({ blankMode = false, packetData = null
   const dbAccidentType = packetData?.accidentType || 'motor-vehicle accident';
   const dbPainAreas = packetData?.injuryBodyParts || (Array.isArray(packetData?.patient?.selectedInjuryAreas) ? packetData.patient.selectedInjuryAreas.join(', ') : '') || 'reported musculoskeletal discomfort';
   
-  const dbInitialDate = packetData?.initialAssessment || packetData?.initialDate || packetData?.dos || '';
-  const dbDischargeDate = packetData?.dischargeDate || packetData?.finalTreatmentReview || '';
+  const realVisits = counselingVisits && Array.isArray(counselingVisits) ? counselingVisits : null;
+  const realEarliestDate = realVisits && realVisits.length > 0 ? realVisits[0]?.date : '';
+  const realLatestDate = realVisits && realVisits.length > 0 ? realVisits[realVisits.length - 1]?.date : '';
+
+  const dbInitialDate = realEarliestDate || packetData?.initialAssessment || packetData?.initialDate || packetData?.dos || '';
+  const dbDischargeDate = realLatestDate || packetData?.dischargeDate || packetData?.finalTreatmentReview || '';
+  
   const completedAppointments = (packetData?.appointments || []).filter(a => (a.status || '').toUpperCase() === 'COMPLETED');
-  const dynamicCompletedVisits = Math.max(
-    completedAppointments.length,
-    (packetData?.clinicalNotes || []).length,
-    (bill?.serviceLines || bill?.lineItems || []).length,
-    typeof packetData?.totalCompletedVisits === 'number' ? packetData.totalCompletedVisits : 0
-  );
-  const dbTotalSessions = dynamicCompletedVisits > 0 
-    ? String(dynamicCompletedVisits) 
-    : (packetData?.totalVisits ? String(packetData.totalVisits) : '');
+  const dynamicCompletedVisits = realVisits 
+    ? realVisits.length 
+    : Math.max(
+        completedAppointments.length,
+        (packetData?.clinicalNotes || []).length,
+        (bill?.serviceLines || bill?.lineItems || []).length,
+        typeof packetData?.totalCompletedVisits === 'number' ? packetData.totalCompletedVisits : 0
+      );
+  const dbTotalSessions = String(dynamicCompletedVisits);
 
   // Form State
   const [formData, setFormData] = useState({

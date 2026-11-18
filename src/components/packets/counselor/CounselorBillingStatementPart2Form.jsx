@@ -1,66 +1,104 @@
 // src/components/packets/counselor/CounselorBillingStatementPart2Form.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiCaseService } from '../../../services/api/apiCaseService';
+import { apiAppointmentService } from '../../../services/api/apiAppointmentService';
+import { 
+  filterAndSortCounselingVisits, 
+  buildPart2StatementRows, 
+  calculateReconciledStatementTotals 
+} from '../../../utils/counselingBillingHelper';
 import fmCounselingLogo from '../../../assets/fm_counseling_logo.png';
 
-export const CounselorBillingStatementPart2Form = ({ blankMode = false, packetData = null, bill = null, readOnly = false }) => {
+export const CounselorBillingStatementPart2Form = ({ 
+  blankMode = false, 
+  packetData = null, 
+  bill = null, 
+  readOnly = false,
+  counselingVisits: propCounselingVisits = null 
+}) => {
   const docKey = 'FM_COUNSELING_FORM_10';
   const storage = packetData?.clinicalDocStorage?.[docKey] || {};
 
-  // Database defaults & dynamic financial fallbacks from DB
-  const dbTotalCharges = bill?.totals?.totalCharges !== undefined 
-    ? `$${parseFloat(bill.totals.totalCharges).toFixed(2)}` 
-    : (packetData?.caseTotalBilling !== undefined ? `$${parseFloat(packetData.caseTotalBilling).toFixed(2)}` : '$0.00');
-
-  const dbPaymentsCredits = (bill?.totals?.totalPayments !== undefined || bill?.totals?.payments !== undefined)
-    ? `$${parseFloat(bill.totals.totalPayments || bill.totals.payments || 0).toFixed(2)}` 
-    : (packetData?.paymentsCredits || '$0.00');
-
-  const dbBalanceDue = bill?.totals?.balanceDue !== undefined 
-    ? `$${parseFloat(bill.totals.balanceDue).toFixed(2)}` 
-    : (bill?.totals?.totalCharges !== undefined ? `$${parseFloat(bill.totals.totalCharges).toFixed(2)}` : '$0.00');
-
-  // Continuation lines for sessions 14 onwards (supports unlimited visits)
-  const billLines = (bill?.serviceLines || bill?.lineItems || bill?.items || []).slice(13);
-  const rowCount = Math.max(4, billLines.length);
-  const mergedRows = Array.from({ length: rowCount }).map((_, idx) => {
-    if (billLines[idx]) {
-      return {
-        dos: billLines[idx].dos || billLines[idx].dateOfService || '',
-        cpt: billLines[idx].cptCode || billLines[idx].cpt || '',
-        desc: billLines[idx].description || '',
-        charge: billLines[idx].charge !== undefined ? `$${parseFloat(billLines[idx].charge).toFixed(2)}` : '',
-      };
+  // Real patient-specific counseling visits state
+  const [counselingVisits, setCounselingVisits] = useState(() => {
+    if (propCounselingVisits && Array.isArray(propCounselingVisits)) {
+      return filterAndSortCounselingVisits(propCounselingVisits, packetData?.id, packetData?.caseId);
     }
-    return { dos: '', cpt: '', desc: '', charge: '' };
+    if (packetData?.appointments && Array.isArray(packetData.appointments)) {
+      return filterAndSortCounselingVisits(packetData.appointments, packetData?.id, packetData?.caseId);
+    }
+    return [];
   });
 
-  const activeRows = (billLines && billLines.length > 0)
-    ? mergedRows
-    : (storage.rows !== undefined ? storage.rows : mergedRows);
+  const loadVisitsFromApi = useCallback(() => {
+    const patientId = packetData?.patientId || packetData?.patient?.id;
+    if (!patientId) return;
+
+    apiAppointmentService.getAllAppointments({ patientId })
+      .then(res => {
+        const list = Array.isArray(res) ? res : (res?.appointments || []);
+        const filtered = filterAndSortCounselingVisits(list, packetData?.id, packetData?.caseId);
+        setCounselingVisits(filtered);
+      })
+      .catch(err => {
+        console.error('Failed to load counseling visits in billing statement Part 2:', err);
+      });
+  }, [packetData?.patientId, packetData?.patient?.id, packetData?.id, packetData?.caseId]);
+
+  useEffect(() => {
+    if (propCounselingVisits && Array.isArray(propCounselingVisits)) {
+      setCounselingVisits(filterAndSortCounselingVisits(propCounselingVisits, packetData?.id, packetData?.caseId));
+    } else {
+      loadVisitsFromApi();
+    }
+
+    window.addEventListener('focus', loadVisitsFromApi);
+    return () => {
+      window.removeEventListener('focus', loadVisitsFromApi);
+    };
+  }, [propCounselingVisits, loadVisitsFromApi]);
+
+  // Continuation lines for sessions 14 onwards (supports unlimited visits)
+  const part2Rows = buildPart2StatementRows(counselingVisits, bill);
+
+  // Dynamic reconciled totals
+  const reconciledTotals = calculateReconciledStatementTotals(counselingVisits, bill);
 
   // Form State
   const [formData, setFormData] = useState({
-    rows: activeRows,
-    totalCharges: (bill?.totals?.totalCharges !== undefined) ? dbTotalCharges : (storage.totalCharges !== undefined ? storage.totalCharges : dbTotalCharges),
-    paymentsCredits: (bill?.totals?.totalPayments !== undefined) ? dbPaymentsCredits : (storage.paymentsCredits !== undefined ? storage.paymentsCredits : dbPaymentsCredits),
-    balanceDue: (bill?.totals?.balanceDue !== undefined) ? dbBalanceDue : (storage.balanceDue !== undefined ? storage.balanceDue : dbBalanceDue),
+    rows: part2Rows,
+    totalCharges: (reconciledTotals.totalChargesNum > 0 || (counselingVisits && counselingVisits.length > 0)) 
+      ? reconciledTotals.totalCharges 
+      : (storage.totalCharges !== undefined ? storage.totalCharges : reconciledTotals.totalCharges),
+    paymentsCredits: (bill?.totals?.totalPayments !== undefined) 
+      ? reconciledTotals.paymentsCredits 
+      : (storage.paymentsCredits !== undefined ? storage.paymentsCredits : reconciledTotals.paymentsCredits),
+    balanceDue: (reconciledTotals.totalChargesNum > 0 || (counselingVisits && counselingVisits.length > 0)) 
+      ? reconciledTotals.balanceDue 
+      : (storage.balanceDue !== undefined ? storage.balanceDue : reconciledTotals.balanceDue),
   });
 
   useEffect(() => {
     if (!blankMode) {
-      const s = packetData?.clinicalDocStorage?.[docKey] || {};
-      const currentActiveRows = (billLines && billLines.length > 0)
-        ? mergedRows
-        : (s.rows !== undefined ? s.rows : mergedRows);
+      const currentRows = buildPart2StatementRows(counselingVisits, bill);
+      const totals = calculateReconciledStatementTotals(counselingVisits, bill);
       setFormData({
-        rows: currentActiveRows,
-        totalCharges: (bill?.totals?.totalCharges !== undefined) ? dbTotalCharges : (s.totalCharges !== undefined ? s.totalCharges : dbTotalCharges),
-        paymentsCredits: (bill?.totals?.totalPayments !== undefined) ? dbPaymentsCredits : (s.paymentsCredits !== undefined ? s.paymentsCredits : dbPaymentsCredits),
-        balanceDue: (bill?.totals?.balanceDue !== undefined) ? dbBalanceDue : (s.balanceDue !== undefined ? s.balanceDue : dbBalanceDue),
+        rows: currentRows,
+        totalCharges: totals.totalCharges,
+        paymentsCredits: totals.paymentsCredits,
+        balanceDue: totals.balanceDue,
       });
     }
-  }, [packetData?.id, packetData?._id, packetData?.patientName, bill?.id, bill?.totals?.totalCharges, bill?.totals?.balanceDue, billLines.length, blankMode]);
+  }, [
+    packetData?.id, 
+    packetData?._id, 
+    packetData?.patientName, 
+    bill?.id, 
+    bill?.totals?.totalPayments, 
+    bill?.totals?.payments, 
+    counselingVisits, 
+    blankMode
+  ]);
 
   const handleChange = async (field, value) => {
     if (readOnly || blankMode) return;

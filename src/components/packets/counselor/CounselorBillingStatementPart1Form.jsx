@@ -1,9 +1,20 @@
 // src/components/packets/counselor/CounselorBillingStatementPart1Form.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiCaseService } from '../../../services/api/apiCaseService';
+import { apiAppointmentService } from '../../../services/api/apiAppointmentService';
+import { 
+  filterAndSortCounselingVisits, 
+  buildPart1StatementRows 
+} from '../../../utils/counselingBillingHelper';
 import fmCounselingLogo from '../../../assets/fm_counseling_logo.png';
 
-export const CounselorBillingStatementPart1Form = ({ blankMode = false, packetData = null, bill = null, readOnly = false }) => {
+export const CounselorBillingStatementPart1Form = ({ 
+  blankMode = false, 
+  packetData = null, 
+  bill = null, 
+  readOnly = false,
+  counselingVisits: propCounselingVisits = null 
+}) => {
   const docKey = 'FM_COUNSELING_FORM_9';
   const storage = packetData?.clinicalDocStorage?.[docKey] || {};
 
@@ -38,23 +49,47 @@ export const CounselorBillingStatementPart1Form = ({ blankMode = false, packetDa
   const dbAttorneyName = packetData?.attorneyName || packetData?.lawFirm || '';
   const dbAttorneyAddress = packetData?.attorneyAddress || packetData?.lawFirmAddress || '';
 
-  // Dynamic lines from DB bill if available
-  const billLines = bill?.serviceLines || bill?.lineItems || bill?.items || [];
-  const mergedRows = Array.from({ length: 13 }).map((_, idx) => {
-    if (billLines[idx]) {
-      return {
-        dos: billLines[idx].dos || billLines[idx].dateOfService || '',
-        cpt: billLines[idx].cptCode || billLines[idx].cpt || '',
-        desc: billLines[idx].description || '',
-        charge: billLines[idx].charge !== undefined ? `$${parseFloat(billLines[idx].charge).toFixed(2)}` : '',
-      };
+  // Real patient-specific counseling visits state
+  const [counselingVisits, setCounselingVisits] = useState(() => {
+    if (propCounselingVisits && Array.isArray(propCounselingVisits)) {
+      return filterAndSortCounselingVisits(propCounselingVisits, packetData?.id, packetData?.caseId);
     }
-    return { dos: '', cpt: '', desc: '', charge: '' };
+    if (packetData?.appointments && Array.isArray(packetData.appointments)) {
+      return filterAndSortCounselingVisits(packetData.appointments, packetData?.id, packetData?.caseId);
+    }
+    return [];
   });
 
-  const activeRows = (billLines && billLines.length > 0)
-    ? mergedRows
-    : (storage.rows !== undefined ? storage.rows : mergedRows);
+  const loadVisitsFromApi = useCallback(() => {
+    const patientId = packetData?.patientId || packetData?.patient?.id;
+    if (!patientId) return;
+
+    apiAppointmentService.getAllAppointments({ patientId })
+      .then(res => {
+        const list = Array.isArray(res) ? res : (res?.appointments || []);
+        const filtered = filterAndSortCounselingVisits(list, packetData?.id, packetData?.caseId);
+        setCounselingVisits(filtered);
+      })
+      .catch(err => {
+        console.error('Failed to load counseling visits in billing statement Part 1:', err);
+      });
+  }, [packetData?.patientId, packetData?.patient?.id, packetData?.id, packetData?.caseId]);
+
+  useEffect(() => {
+    if (propCounselingVisits && Array.isArray(propCounselingVisits)) {
+      setCounselingVisits(filterAndSortCounselingVisits(propCounselingVisits, packetData?.id, packetData?.caseId));
+    } else {
+      loadVisitsFromApi();
+    }
+
+    window.addEventListener('focus', loadVisitsFromApi);
+    return () => {
+      window.removeEventListener('focus', loadVisitsFromApi);
+    };
+  }, [propCounselingVisits, loadVisitsFromApi]);
+
+  // Dynamic real visit lines (fixed 13-row layout)
+  const realVisitRows = buildPart1StatementRows(counselingVisits, bill);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -69,15 +104,13 @@ export const CounselorBillingStatementPart1Form = ({ blankMode = false, packetDa
     taxId: storage.taxId !== undefined ? storage.taxId : dbTaxId,
     attorneyName: storage.attorneyName !== undefined ? storage.attorneyName : dbAttorneyName,
     attorneyAddress: storage.attorneyAddress !== undefined ? storage.attorneyAddress : dbAttorneyAddress,
-    rows: activeRows,
+    rows: realVisitRows,
   });
 
   useEffect(() => {
     if (!blankMode) {
       const s = packetData?.clinicalDocStorage?.[docKey] || {};
-      const currentActiveRows = (billLines && billLines.length > 0)
-        ? mergedRows
-        : (s.rows !== undefined ? s.rows : mergedRows);
+      const currentRows = buildPart1StatementRows(counselingVisits, bill);
       setFormData({
         patientName: s.patientName !== undefined ? s.patientName : dbPatientName,
         dob: s.dob !== undefined ? s.dob : dbDob,
@@ -90,10 +123,17 @@ export const CounselorBillingStatementPart1Form = ({ blankMode = false, packetDa
         taxId: s.taxId !== undefined ? s.taxId : dbTaxId,
         attorneyName: s.attorneyName !== undefined ? s.attorneyName : dbAttorneyName,
         attorneyAddress: s.attorneyAddress !== undefined ? s.attorneyAddress : dbAttorneyAddress,
-        rows: currentActiveRows,
+        rows: currentRows,
       });
     }
-  }, [packetData?.id, packetData?._id, packetData?.patientName, bill?.id, billLines.length, blankMode]);
+  }, [
+    packetData?.id, 
+    packetData?._id, 
+    packetData?.patientName, 
+    bill?.id, 
+    counselingVisits, 
+    blankMode
+  ]);
 
   const handleChange = async (field, value) => {
     if (readOnly || blankMode) return;

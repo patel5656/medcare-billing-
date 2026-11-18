@@ -1,9 +1,19 @@
 // src/components/packets/counselor/CounselorTreatmentSummaryForm.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiCaseService } from '../../../services/api/apiCaseService';
+import { apiAppointmentService } from '../../../services/api/apiAppointmentService';
 import fmCounselingLogo from '../../../assets/fm_counseling_logo.png';
 
-export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = null, bill = null, readOnly = false }) => {
+export { filterAndSortCounselingVisits } from '../../../utils/counselingBillingHelper';
+import { filterAndSortCounselingVisits } from '../../../utils/counselingBillingHelper';
+
+export const CounselorTreatmentSummaryForm = ({ 
+  blankMode = false, 
+  packetData = null, 
+  bill = null, 
+  readOnly = false,
+  counselingVisits: propCounselingVisits = null 
+}) => {
   const docKey = 'FM_COUNSELING_FORM_2';
   const storage = packetData?.clinicalDocStorage?.[docKey] || {};
 
@@ -17,45 +27,98 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
   const dbAccidentType = packetData?.accidentType || 'Motor-Vehicle Accident';
   const dbTreatingProvider = packetData?.treatingProvider || bill?.renderingProvider?.name || 'Jordan Miller, LCSW, BCD';
   
-  const notesDates = (packetData?.clinicalNotes || []).map(n => n.date || n.sessionDate).filter(Boolean);
-  const billLines = bill?.serviceLines || bill?.lineItems || bill?.items || [];
-  const billDates = billLines.map(l => l.dos || l.dateOfService).filter(Boolean);
-  const allEncounterDates = [...notesDates, ...billDates].sort();
-  const earliestDate = allEncounterDates[0] || '';
-  const latestDate = allEncounterDates[allEncounterDates.length - 1] || '';
-
-  // Only actual completed visits: strictly exclude cancelled, scheduled or incomplete appointments
-  const completedAppointments = (packetData?.appointments || []).filter(a => {
-    const s = (a.status || '').toUpperCase();
-    return s === 'COMPLETED';
+  // Real patient-specific counseling visits state
+  const [counselingVisits, setCounselingVisits] = useState(() => {
+    if (propCounselingVisits && Array.isArray(propCounselingVisits)) {
+      return filterAndSortCounselingVisits(propCounselingVisits, packetData?.id, packetData?.caseId);
+    }
+    if (packetData?.appointments && Array.isArray(packetData.appointments)) {
+      return filterAndSortCounselingVisits(packetData.appointments, packetData?.id, packetData?.caseId);
+    }
+    return [];
   });
-  const clinicalNotes = packetData?.clinicalNotes || [];
-  const dynamicCompletedVisits = Math.max(
-    completedAppointments.length,
-    clinicalNotes.length,
-    billLines.length,
-    typeof packetData?.totalCompletedVisits === 'number' ? packetData.totalCompletedVisits : 0
+
+  // Fetch real patient appointments from API on mount, patient change, or window focus
+  const loadVisitsFromApi = useCallback(() => {
+    const patientId = packetData?.patientId || packetData?.patient?.id;
+    if (!patientId) return;
+
+    apiAppointmentService.getAllAppointments({ patientId })
+      .then(res => {
+        const list = Array.isArray(res) ? res : (res?.appointments || []);
+        const filtered = filterAndSortCounselingVisits(list, packetData?.id, packetData?.caseId);
+        setCounselingVisits(filtered);
+      })
+      .catch(err => {
+        console.error('Failed to load patient counseling appointments:', err);
+      });
+  }, [packetData?.patientId, packetData?.patient?.id, packetData?.id, packetData?.caseId]);
+
+  useEffect(() => {
+    if (propCounselingVisits && Array.isArray(propCounselingVisits)) {
+      setCounselingVisits(filterAndSortCounselingVisits(propCounselingVisits, packetData?.id, packetData?.caseId));
+    } else {
+      loadVisitsFromApi();
+    }
+
+    // Refetch when returning to tab/window to immediately pick up appointment changes
+    window.addEventListener('focus', loadVisitsFromApi);
+    return () => {
+      window.removeEventListener('focus', loadVisitsFromApi);
+    };
+  }, [propCounselingVisits, loadVisitsFromApi]);
+
+  // Dynamic calculations based strictly on real counseling visits
+  const visitCount = counselingVisits.length;
+  const earliestDate = counselingVisits[0]?.date || '';
+  const latestDate = counselingVisits[counselingVisits.length - 1]?.date || '';
+
+  // Determine chronological treatment period
+  let dynamicTreatmentPeriod = '';
+  if (visitCount === 1) {
+    dynamicTreatmentPeriod = earliestDate;
+  } else if (visitCount > 1) {
+    dynamicTreatmentPeriod = (earliestDate === latestDate) ? earliestDate : `${earliestDate} - ${latestDate}`;
+  } else {
+    dynamicTreatmentPeriod = '';
+  }
+
+  // Determine initial evaluation date
+  const evalVisit = counselingVisits.find(v => 
+    (v.cptCode || '').includes('90791') || 
+    (v.appointmentType || '').toLowerCase().includes('evaluation') ||
+    (v.appointmentType || '').toLowerCase().includes('initial')
   );
-  const dbTotalVisits = dynamicCompletedVisits > 0 
-    ? String(dynamicCompletedVisits) 
-    : (packetData?.totalVisits ? String(packetData.totalVisits) : '');
+  const evalDate = evalVisit?.date || earliestDate || '';
+
+  const dynamicEvalDetail = evalDate 
+    ? `Psychiatric diagnostic evaluation - ${evalDate}` 
+    : 'Psychiatric diagnostic evaluation';
+
+  const dynamicPsychotherapyDetail = visitCount > 0 
+    ? `${visitCount} Psychotherapy ${visitCount === 1 ? 'visit' : 'visits'} through ${latestDate}` 
+    : '0 Psychotherapy visits';
+
+  const dynamicFinalReview = latestDate || (visitCount === 0 ? '' : '');
+  const dynamicTotalVisitsStr = String(visitCount);
 
   const effectiveTotalVisits = (storage.totalVisitsManual && storage.totalVisits !== undefined)
     ? storage.totalVisits
-    : (dbTotalVisits || storage.totalVisits || '');
+    : dynamicTotalVisitsStr;
 
   const dbNpi = packetData?.providerNpi || bill?.identifiers?.npi || bill?.renderingProvider?.npi || '1487965213';
   const dbTaxId = packetData?.taxId || bill?.identifiers?.taxId || bill?.billingProvider?.taxId || '84-7891234';
   
-  const dbInitialDate = packetData?.initialAssessment || packetData?.initialDate || earliestDate || packetData?.dos || '';
-  const dbDischargeDate = packetData?.dischargeDate || packetData?.finalTreatmentReview || latestDate || '';
-  const dbTreatmentPeriod = (dbInitialDate && dbDischargeDate) ? `${dbInitialDate} - ${dbDischargeDate}` : (dbInitialDate || dbDischargeDate || '');
+  const effectiveTreatmentPeriod = (storage.treatmentPeriodManual && storage.treatmentPeriod !== undefined)
+    ? storage.treatmentPeriod
+    : (dynamicTreatmentPeriod || storage.treatmentPeriod || '');
   
   const dbTotalCharges = bill?.totals?.totalCharges !== undefined
     ? `$${parseFloat(bill.totals.totalCharges).toFixed(2)}` 
     : (packetData?.caseTotalBilling !== undefined ? `$${parseFloat(packetData.caseTotalBilling).toFixed(2)}` : '$0.00');
 
   // Dynamic lines from DB bill
+  const billLines = bill?.serviceLines || bill?.lineItems || bill?.items || [];
   const evalLine = billLines.find(l => (l.cptCode || l.cpt || '').includes('90791') || (l.cptCode || l.cpt || '').includes('9920')) || (billLines.length === 1 ? billLines[0] : null);
   const therapyLines = billLines.filter(l => (l.cptCode || l.cpt || '').includes('9083') || (l.cptCode || l.cpt || '').includes('9084') || (l.cptCode || l.cpt || '').includes('97'));
 
@@ -79,14 +142,14 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
     totalVisits: effectiveTotalVisits,
     npi: storage.npi !== undefined ? storage.npi : dbNpi,
     taxId: storage.taxId !== undefined ? storage.taxId : dbTaxId,
-    treatmentPeriod: storage.treatmentPeriod !== undefined ? storage.treatmentPeriod : dbTreatmentPeriod,
+    treatmentPeriod: effectiveTreatmentPeriod,
     totalCharges: storage.totalCharges !== undefined ? storage.totalCharges : dbTotalCharges,
     
     // Overview details
-    initialEvaluationDetail: storage.initialEvaluationDetail !== undefined ? storage.initialEvaluationDetail : (dbInitialDate ? `Psychiatric diagnostic evaluation - ${dbInitialDate}` : 'Psychiatric diagnostic evaluation'),
-    psychotherapyDetail: storage.psychotherapyDetail !== undefined ? storage.psychotherapyDetail : (dbDischargeDate ? `${effectiveTotalVisits || ''} Psychotherapy visits through ${dbDischargeDate}` : 'Psychotherapy visits associated with course of care'),
+    initialEvaluationDetail: storage.initialEvaluationDetail !== undefined ? storage.initialEvaluationDetail : dynamicEvalDetail,
+    psychotherapyDetail: storage.psychotherapyDetail !== undefined ? storage.psychotherapyDetail : dynamicPsychotherapyDetail,
     progressNotesDetail: storage.progressNotesDetail !== undefined ? storage.progressNotesDetail : 'Progress notes associated with the documented treatment visits',
-    finalTreatmentReviewDetail: storage.finalTreatmentReviewDetail !== undefined ? storage.finalTreatmentReviewDetail : dbDischargeDate,
+    finalTreatmentReviewDetail: storage.finalTreatmentReviewDetail !== undefined ? storage.finalTreatmentReviewDetail : dynamicFinalReview,
     
     // Billing Lines
     evalUnits: storage.evalUnits !== undefined ? storage.evalUnits : defaultEvalUnits,
@@ -103,9 +166,10 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
       const s = packetData?.clinicalDocStorage?.[docKey] || {};
       const currentTotalVisits = (s.totalVisitsManual && s.totalVisits !== undefined)
         ? s.totalVisits
-        : (dbTotalVisits || s.totalVisits || '');
+        : dynamicTotalVisitsStr;
 
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         patientName: s.patientName !== undefined ? s.patientName : dbPatientName,
         dob: s.dob !== undefined ? s.dob : dbDob,
         accidentDate: s.accidentDate !== undefined ? s.accidentDate : dbAccidentDate,
@@ -114,13 +178,13 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
         totalVisits: currentTotalVisits,
         npi: s.npi !== undefined ? s.npi : dbNpi,
         taxId: s.taxId !== undefined ? s.taxId : dbTaxId,
-        treatmentPeriod: s.treatmentPeriod !== undefined ? s.treatmentPeriod : dbTreatmentPeriod,
+        treatmentPeriod: (s.treatmentPeriodManual && s.treatmentPeriod !== undefined) ? s.treatmentPeriod : (dynamicTreatmentPeriod || s.treatmentPeriod || ''),
         totalCharges: s.totalCharges !== undefined ? s.totalCharges : dbTotalCharges,
         
-        initialEvaluationDetail: s.initialEvaluationDetail !== undefined ? s.initialEvaluationDetail : (dbInitialDate ? `Psychiatric diagnostic evaluation - ${dbInitialDate}` : 'Psychiatric diagnostic evaluation'),
-        psychotherapyDetail: s.psychotherapyDetail !== undefined ? s.psychotherapyDetail : (dbDischargeDate ? `${currentTotalVisits || ''} Psychotherapy visits through ${dbDischargeDate}` : 'Psychotherapy visits associated with course of care'),
+        initialEvaluationDetail: s.initialEvaluationDetail !== undefined ? s.initialEvaluationDetail : dynamicEvalDetail,
+        psychotherapyDetail: s.psychotherapyDetail !== undefined ? s.psychotherapyDetail : dynamicPsychotherapyDetail,
         progressNotesDetail: s.progressNotesDetail !== undefined ? s.progressNotesDetail : 'Progress notes associated with the documented treatment visits',
-        finalTreatmentReviewDetail: s.finalTreatmentReviewDetail !== undefined ? s.finalTreatmentReviewDetail : dbDischargeDate,
+        finalTreatmentReviewDetail: s.finalTreatmentReviewDetail !== undefined ? s.finalTreatmentReviewDetail : dynamicFinalReview,
         
         evalUnits: s.evalUnits !== undefined ? s.evalUnits : defaultEvalUnits,
         evalRate: s.evalRate !== undefined ? s.evalRate : defaultEvalRate,
@@ -129,9 +193,20 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
         therapyUnits: s.therapyUnits !== undefined ? s.therapyUnits : defaultTherapyUnits,
         therapyRate: s.therapyRate !== undefined ? s.therapyRate : defaultTherapyRate,
         therapyTotal: s.therapyTotal !== undefined ? s.therapyTotal : defaultTherapyTotal,
-      });
+      }));
     }
-  }, [packetData?.id, packetData?.caseId, packetData?.patientName, bill?.id, blankMode, dbTotalVisits]);
+  }, [
+    packetData?.id, 
+    packetData?.caseId, 
+    packetData?.patientName, 
+    bill?.id, 
+    blankMode, 
+    dynamicTotalVisitsStr,
+    dynamicTreatmentPeriod,
+    dynamicEvalDetail,
+    dynamicPsychotherapyDetail,
+    dynamicFinalReview
+  ]);
 
   const handleChange = async (field, value) => {
     if (readOnly || blankMode) return;
@@ -144,7 +219,8 @@ export const CounselorTreatmentSummaryForm = ({ blankMode = false, packetData = 
         const updatedDoc = { 
           ...(currentStorage[docKey] || {}), 
           [field]: value,
-          ...(field === 'totalVisits' ? { totalVisitsManual: true } : {})
+          ...(field === 'totalVisits' ? { totalVisitsManual: true } : {}),
+          ...(field === 'treatmentPeriod' ? { treatmentPeriodManual: true } : {})
         };
         const updatedStorage = { ...currentStorage, [docKey]: updatedDoc };
         await apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage });

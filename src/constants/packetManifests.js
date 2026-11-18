@@ -59,7 +59,7 @@ export const PACKET_MANIFESTS = {
     totalPages: 7,
     pages: [
       { pageNumber: 1, id: 'josmic-cover', type: 'COVER', title: 'Patient & Case Cover Page', componentKey: 'JosmicCoverPage' },
-      { pageNumber: 2, id: 'josmic-bill-1', type: 'BILLING', title: 'Provider Billing Statement', componentKey: 'PrintableBillingStatement', pageIndex: 0 },
+      { pageNumber: 2, id: 'josmic-bill-1', type: 'BILLING', title: 'Billing Statement', componentKey: 'JosmicBillingStatement', pageIndex: 0 },
       { pageNumber: 3, id: 'josmic-cms-1', type: 'CMS-1500', title: 'CMS-1500 Claim (12/30/2025)', componentKey: 'CmsRedGridForm', claimIndex: 0 },
       { pageNumber: 4, id: 'josmic-pain-1', type: 'NARRATIVE', title: 'Pain Management Report (Page 1)', componentKey: 'JosmicPainManagementReport', reportPage: 1 },
       { pageNumber: 5, id: 'josmic-pain-2', type: 'NARRATIVE', title: 'Pain Management Report (Page 2)', componentKey: 'JosmicPainManagementReport', reportPage: 2 },

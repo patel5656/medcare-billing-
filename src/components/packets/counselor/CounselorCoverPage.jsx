@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { apiCaseService } from '../../../services/api/apiCaseService';
 import fmCounselingLogo from '../../../assets/fm_counseling_logo.png';
 
-export const CounselorCoverPage = ({ blankMode = false, packetData = null, bill = null, readOnly = false }) => {
+export const CounselorCoverPage = ({ blankMode = false, packetData = null, bill = null, readOnly = false, counselingVisits = null }) => {
   const docKey = 'FM_COUNSELING_EVAL_PAGE_1';
   const storage = packetData?.clinicalDocStorage?.[docKey] || {};
 
@@ -16,14 +16,19 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null, bill 
   const dbGender = packetData?.patient?.gender || packetData?.patient?.sex || packetData?.gender || packetData?.sex || '';
   const dbAccidentDate = packetData?.accidentDate || packetData?.doa || packetData?.dateOfAccident || '';
 
+  const realVisits = counselingVisits && Array.isArray(counselingVisits) ? counselingVisits : null;
+  const visitCount = realVisits ? realVisits.length : null;
+  const realEarliestDate = realVisits && realVisits.length > 0 ? realVisits[0]?.date : '';
+  const realLatestDate = realVisits && realVisits.length > 0 ? realVisits[realVisits.length - 1]?.date : '';
+
   const notesDates = (packetData?.clinicalNotes || []).map(n => n.date || n.sessionDate).filter(Boolean);
   const billDates = (bill?.serviceLines || bill?.lineItems || []).map(l => l.dos || l.dateOfService).filter(Boolean);
   const allEncounterDates = [...notesDates, ...billDates].sort();
-  const earliestDate = allEncounterDates[0] || '';
-  const latestDate = allEncounterDates[allEncounterDates.length - 1] || '';
+  const earliestDate = realEarliestDate || allEncounterDates[0] || '';
+  const latestDate = realLatestDate || allEncounterDates[allEncounterDates.length - 1] || '';
 
-  const dbInitialAssessment = packetData?.initialAssessment || packetData?.initialDate || earliestDate || packetData?.dos || packetData?.assessmentDate || '';
-  const dbFinalTreatmentReview = packetData?.finalTreatmentReview || packetData?.dischargeDate || latestDate || '';
+  const dbInitialAssessment = realEarliestDate || packetData?.initialAssessment || packetData?.initialDate || earliestDate || packetData?.dos || packetData?.assessmentDate || '';
+  const dbFinalTreatmentReview = realLatestDate || packetData?.finalTreatmentReview || packetData?.dischargeDate || latestDate || '';
 
   // Only actual completed visits: strictly exclude cancelled, scheduled or incomplete appointments
   const completedAppointments = (packetData?.appointments || []).filter(a => {
@@ -32,15 +37,15 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null, bill 
   });
   const completedNotes = packetData?.clinicalNotes || [];
   const billLines = bill?.serviceLines || bill?.lineItems || [];
-  const dynamicCompletedVisits = Math.max(
-    completedAppointments.length,
-    completedNotes.length,
-    billLines.length,
-    typeof packetData?.totalCompletedVisits === 'number' ? packetData.totalCompletedVisits : 0
-  );
-  const dbTotalVisits = dynamicCompletedVisits > 0 
-    ? String(dynamicCompletedVisits) 
-    : (packetData?.totalVisits ? String(packetData.totalVisits) : '');
+  const dynamicCompletedVisits = visitCount !== null 
+    ? visitCount 
+    : Math.max(
+        completedAppointments.length,
+        completedNotes.length,
+        billLines.length,
+        typeof packetData?.totalCompletedVisits === 'number' ? packetData.totalCompletedVisits : 0
+      );
+  const dbTotalVisits = String(dynamicCompletedVisits);
 
   const effectiveTotalVisits = (storage.totalVisitsManual && storage.totalVisits !== undefined)
     ? storage.totalVisits
