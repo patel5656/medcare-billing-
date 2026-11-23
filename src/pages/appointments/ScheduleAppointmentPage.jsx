@@ -82,12 +82,16 @@ export const ScheduleAppointmentPage = () => {
     });
   };
 
-  const [serviceLines, setServiceLines] = useState(getInitialServiceLinesForProvider('josmic', 'INITIAL'));
+  const { currentUser } = useAuthStore();
+
+  const [serviceLines, setServiceLines] = useState(() => {
+    const defaultProvKey = (currentUser?.providerId || 'prov-josmic').replace('prov-', '');
+    return getInitialServiceLinesForProvider(defaultProvKey, 'INITIAL');
+  });
 
   const initialProvConfig = INITIAL_PROVIDER_CONFIGS.josmic;
   const initialAddress = initialProvConfig ? `${initialProvConfig.address.street}, ${initialProvConfig.address.suite}, ${initialProvConfig.address.city} ${initialProvConfig.address.state} ${initialProvConfig.address.zipCode}` : '';
 
-  const { currentUser } = useAuthStore();
   const [formData, setFormData] = useState(() => {
     const defaultProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
     return {
@@ -185,21 +189,23 @@ export const ScheduleAppointmentPage = () => {
     setIsLoading(true);
     try {
       const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === formData.providerId);
-      const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseInt(l.units, 10) || 1) * cleanNumericFee(l.charge)), 0);
+      const filteredLines = serviceLines.filter(l => l.cptCode && l.cptCode.trim() !== '');
+      const validLines = filteredLines.length > 0 ? filteredLines : getInitialServiceLinesForProvider(formData.providerId.replace('prov-', ''), formData.visitType);
+      const totalEstimatedCharge = validLines.reduce((sum, l) => sum + ((parseInt(l.units, 10) || 1) * cleanNumericFee(l.charge)), 0);
       const cleanReason = (formData.reasonForVisit || '').replace(/<!-- APPT_METADATA:[\s\S]*?-->/, '').trim();
-      const metaPayload = JSON.stringify({ serviceLines, totalEstimatedCharge });
+      const metaPayload = JSON.stringify({ serviceLines: validLines, totalEstimatedCharge });
       const combinedReason = cleanReason ? `${cleanReason}\n<!-- APPT_METADATA:${metaPayload} -->` : `<!-- APPT_METADATA:${metaPayload} -->`;
 
       const created = await mockAppointmentService.createAppointment({
         ...formData,
         reasonForVisit: combinedReason,
-        serviceLines,
+        serviceLines: validLines,
         totalEstimatedCharge,
-        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(','),
-        modifiers: serviceLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
+        cptCode: validLines.map(l => l.cptCode).filter(Boolean).join(','),
+        modifiers: validLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
         providerName: selectedProv?.name || 'FM Health and Wellness Center'
       });
-      addToast(`Appointment scheduled for ${created.patientName}! ${serviceLines.length} CPT codes linked.`, 'success');
+      addToast(`Appointment scheduled for ${created.patientName}! ${validLines.length} CPT codes linked.`, 'success');
       navigate('/appointments/calendar');
     } catch {
       addToast('Failed to schedule appointment', 'error');
@@ -260,7 +266,6 @@ export const ScheduleAppointmentPage = () => {
                     location: provConfig?.address?.suite || '',
                     locationAddress: provAddress
                   }));
-
                   setServiceLines(getInitialServiceLinesForProvider(provKey, formData.visitType));
                 }}
               >
@@ -285,8 +290,7 @@ export const ScheduleAppointmentPage = () => {
                 onChange={e => {
                   const val = e.target.value;
                   set('visitType', val);
-                  const provKey = formData.providerId.replace('prov-', '');
-                  setServiceLines(getInitialServiceLinesForProvider(provKey, val));
+                  setServiceLines(getInitialServiceLinesForProvider(formData.providerId.replace('prov-', ''), val));
                 }}
               >
                 <option value="INITIAL">Initial Visit (New Patient)</option>

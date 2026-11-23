@@ -241,13 +241,11 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
 
   const handleAddLine = () => {
     const nextLineNum = lines.length + 1;
-    const defaultCpt = availableCptList[(nextLineNum - 1) % (availableCptList.length || 1)]?.code || '99204';
-    const resolved = resolveCptFeeAndDescription(defaultCpt, providerId, cptCodes);
     const newLine = createDefaultServiceLine(
       nextLineNum,
-      defaultCpt,
-      resolved.description || 'Therapeutic Modality Session',
-      resolved.fee
+      '',
+      '',
+      0
     );
     const pointerLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
     newLine.diagnosisPointer = pointerLetters[(nextLineNum - 1) % pointerLetters.length] || 'A';
@@ -267,10 +265,16 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
       
       // Auto-fill description & standard fee from existing fee schedule if CPT code changes
       if (field === 'cptCode') {
-        const resolved = resolveCptFeeAndDescription(val, providerId, cptCodes);
-        if (resolved) {
-          if (resolved.description) updatedLine.description = resolved.description;
-          updatedLine.charge = resolved.fee;
+        if (val) {
+          const resolved = resolveCptFeeAndDescription(val, providerId, cptCodes);
+          if (resolved) {
+            if (resolved.description) updatedLine.description = resolved.description;
+            updatedLine.charge = resolved.fee;
+            updatedLine.isOverridden = false;
+          }
+        } else {
+          updatedLine.description = '';
+          updatedLine.charge = 0;
           updatedLine.isOverridden = false;
         }
       } else if (field === 'charge') {
@@ -359,17 +363,17 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
                     {/* CPT Code Picker */}
                     <td className="py-2 px-2">
                       <select
-                        value={line.cptCode}
+                        value={line.cptCode || ''}
                         onChange={(e) => handleUpdateLine(idx, 'cptCode', e.target.value)}
                         className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-teal-800 bg-teal-50/70 border border-teal-200 rounded-xl focus:bg-white focus:border-teal-600 outline-none cursor-pointer"
                       >
-                        {!line.cptCode && <option value="">-- Select CPT Code --</option>}
+                        <option value="">-- Select CPT Code --</option>
                         {availableCptList.map(c => (
                           <option key={c.code} value={c.code}>
                             {c.code} - {c.description}
                           </option>
                         ))}
-                        {!availableCptList.some(c => c.code === line.cptCode) && line.cptCode && (
+                        {line.cptCode && !availableCptList.some(c => c.code === line.cptCode) && (
                           <option value={line.cptCode}>
                             {line.cptCode}{line.description ? ` - ${line.description}` : ''}
                           </option>

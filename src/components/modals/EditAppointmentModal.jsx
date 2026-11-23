@@ -1,5 +1,5 @@
 // src/components/modals/EditAppointmentModal.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from './Modal';
 import { apiAppointmentService as mockAppointmentService } from '../../services/api/apiAppointmentService';
 import { INITIAL_PROVIDER_CONFIGS } from '../../constants/providerConfigs';
@@ -19,15 +19,23 @@ const labelCls = 'block text-xs font-bold text-slate-800 mb-1';
  * Preserves manually overridden fees and units
  */
 const parseServiceLinesFromAppointment = (appointment, cptCodes = [], providerId = null) => {
-  let existingLines = appointment?.serviceLines;
+  if (!appointment) return [];
+
+  const masterList = (Array.isArray(cptCodes) && cptCodes.length > 0)
+    ? cptCodes
+    : (typeof useSettingsStore !== 'undefined' && useSettingsStore.getState ? useSettingsStore.getState().cptCodes : []);
+
+  const effProviderId = providerId || appointment?.providerId || 'prov-josmic';
+
+  let existingLines = appointment.serviceLines;
 
   // If not directly on appointment, check if embedded in reasonForVisit
-  if ((!existingLines || !Array.isArray(existingLines) || existingLines.length === 0) && appointment?.reasonForVisit) {
-    const match = appointment.reasonForVisit.match(/<!-- APPT_METADATA:(.*?) -->/);
+  if ((!existingLines || !Array.isArray(existingLines) || existingLines.length === 0) && appointment.reasonForVisit) {
+    const match = appointment.reasonForVisit.match(/<!-- APPT_METADATA:([\s\S]*?)-->/);
     if (match) {
       try {
         const meta = JSON.parse(match[1]);
-        if (meta.serviceLines && Array.isArray(meta.serviceLines)) {
+        if (meta.serviceLines && Array.isArray(meta.serviceLines) && meta.serviceLines.length > 0) {
           existingLines = meta.serviceLines;
         }
       } catch (e) {}
@@ -35,35 +43,58 @@ const parseServiceLinesFromAppointment = (appointment, cptCodes = [], providerId
   }
 
   if (existingLines && Array.isArray(existingLines) && existingLines.length > 0) {
-    return existingLines.map((line, idx) => ({
-      ...line,
-      units: parseInt(line.units, 10) || 1,
-      charge: cleanNumericFee(line.charge !== undefined ? line.charge : line.fee),
-      modifier1: line.modifier1 || (idx === 0 ? '25' : '59'),
-      modifier2: line.modifier2 || (idx === 0 ? '59' : 'RT'),
-      modifier3: line.modifier3 || (idx === 0 ? 'RT' : 'GP'),
-      modifier4: line.modifier4 || (idx === 0 ? 'GP' : ''),
-      isOverridden: line.isOverridden !== undefined ? line.isOverridden : true
-    }));
+    return existingLines.map((line, idx) => {
+      const lineCode = line.cptCode || (idx === 0 ? '99204' : '97039');
+      const resolved = resolveCptFeeAndDescription(lineCode, effProviderId, masterList);
+      const units = parseInt(line.units, 10) || 1;
+      const rawFee = line.charge !== undefined ? line.charge : (line.fee !== undefined ? line.fee : resolved.fee);
+      const charge = cleanNumericFee(rawFee);
+
+      return {
+        id: line.id || `line-${Date.now()}-${idx + 1}`,
+        cptCode: lineCode,
+        description: line.description || resolved.description || (idx === 0 ? (appointment?.appointmentType || 'Comprehensive Evaluation') : 'Therapeutic Modality Session'),
+        modifier1: line.modifier1 || (idx === 0 ? '25' : '59'),
+        modifier2: line.modifier2 || (idx === 0 ? '59' : 'RT'),
+        modifier3: line.modifier3 || (idx === 0 ? 'RT' : 'GP'),
+        modifier4: line.modifier4 || (idx === 0 ? 'GP' : ''),
+        diagnosisPointer: line.diagnosisPointer || ['A', 'B', 'C', 'D'][idx % 4] || 'A',
+        units,
+        charge,
+        isOverridden: line.isOverridden !== undefined ? line.isOverridden : (charge !== resolved.fee)
+      };
+    });
   }
 
   // Parse if cptCode has multiple codes separated by commas (e.g. "99204, 97039")
-  const rawCodes = appointment?.cptCode
+  const rawCodes = appointment.cptCode
     ? String(appointment.cptCode).split(',').map(s => s.trim()).filter(Boolean)
-    : ['99204', '97039'];
+    : [];
 
-  const rawModifiers = appointment?.modifiers
+  const rawModifiers = appointment.modifiers
     ? String(appointment.modifiers).split(',').map(s => s.trim()).filter(Boolean)
     : [];
 
   if (rawCodes.length === 0) {
-    rawCodes.push('99204');
+    if (effProviderId === 'prov-counselor' || appointment.appointmentType?.toLowerCase().includes('counsel')) {
+      rawCodes.push('90834');
+    } else if (effProviderId === 'prov-anik') {
+      rawCodes.push('97039');
+    } else if (effProviderId === 'prov-davs') {
+      rawCodes.push('99204', '0101T');
+    } else if (effProviderId === 'prov-tpi') {
+      rawCodes.push('20552');
+    } else if (effProviderId === 'prov-tecar') {
+      rawCodes.push('97024');
+    } else {
+      rawCodes.push('99204', '97039');
+    }
   }
 
   const pointerLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   return rawCodes.map((code, idx) => {
-    const resolved = resolveCptFeeAndDescription(code, providerId || appointment?.providerId, cptCodes);
+    const resolved = resolveCptFeeAndDescription(code, effProviderId, masterList);
     const modParts = rawModifiers[idx] ? rawModifiers[idx].split('-').filter(Boolean) : [];
 
     return {
@@ -112,10 +143,17 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
     holidayOverride: false
   });
 
-  const [serviceLines, setServiceLines] = useState([]);
+  const [serviceLines, setServiceLines] = useState(() =>
+    appointment ? parseServiceLinesFromAppointment(appointment, useSettingsStore.getState().cptCodes, appointment.providerId) : []
+  );
+
+  const prevAptIdRef = useRef(appointment?.id);
 
   useEffect(() => {
     if (appointment) {
+      const isNewApt = prevAptIdRef.current !== appointment.id;
+      prevAptIdRef.current = appointment.id;
+
       const rawReason = appointment.reasonForVisit || appointment.visitNotes || 'Post-MVA pain management & clinical evaluation';
       const cleanReason = rawReason.replace(/<!-- APPT_METADATA:[\s\S]*?-->/, '').trim();
 
@@ -138,8 +176,13 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
         holidayOverride: !!appointment.holidayOverride
       });
 
-      // Intelligently parse and restore all service lines with their active modifiers and charges
-      setServiceLines(parseServiceLinesFromAppointment(appointment, cptCodes, appointment.providerId));
+      // Hydrate service lines if opening a new appointment OR if currently empty
+      if (isNewApt || serviceLines.length === 0) {
+        const parsed = parseServiceLinesFromAppointment(appointment, cptCodes, appointment.providerId);
+        if (parsed && parsed.length > 0) {
+          setServiceLines(parsed);
+        }
+      }
     }
   }, [appointment, cptCodes]);
 
@@ -162,19 +205,21 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
     setIsLoading(true);
     try {
       const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === formData.providerId);
-      const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseInt(l.units, 10) || 1) * cleanNumericFee(l.charge)), 0);
+      const validLines = serviceLines.filter(l => l.cptCode && l.cptCode.trim() !== '');
+      const linesToSave = validLines.length > 0 ? validLines : serviceLines;
+      const totalEstimatedCharge = linesToSave.reduce((sum, l) => sum + ((parseInt(l.units, 10) || 1) * cleanNumericFee(l.charge)), 0);
 
       const cleanReason = (formData.reasonForVisit || '').replace(/<!-- APPT_METADATA:[\s\S]*?-->/, '').trim();
-      const metaPayload = JSON.stringify({ serviceLines, totalEstimatedCharge });
+      const metaPayload = JSON.stringify({ serviceLines: linesToSave, totalEstimatedCharge });
       const combinedReason = cleanReason ? `${cleanReason}\n<!-- APPT_METADATA:${metaPayload} -->` : `<!-- APPT_METADATA:${metaPayload} -->`;
 
       const updated = await mockAppointmentService.updateAppointment(appointment.id, {
         ...formData,
         reasonForVisit: combinedReason,
-        serviceLines,
+        serviceLines: linesToSave,
         totalEstimatedCharge,
-        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(','),
-        modifiers: serviceLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
+        cptCode: linesToSave.map(l => l.cptCode).filter(Boolean).join(','),
+        modifiers: linesToSave.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
         providerName: selectedProv?.name || appointment.providerName || 'FM Health and Wellness Center'
       });
 
