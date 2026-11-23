@@ -2,6 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '../../../utils/billingCalculations';
 import { apiCaseService } from '../../../services/api/apiCaseService';
+import { apiAppointmentService } from '../../../services/api/apiAppointmentService';
+import { 
+  filterAndSortMdConsultationVisits, 
+  buildMdConsultationStatementRows 
+} from '../../../utils/mdConsultationBillingHelper';
+import fmLogo from '../../../assets/fm-logo.jpeg';
 
 /**
  * Format date string safely to MM/DD/YYYY
@@ -23,15 +29,16 @@ export const JosmicBillingStatement = ({
   selectedCase = null,
   readOnly = false,
   blankMode = false,
-  providerId = 'prov-josmic'
+  providerId = 'prov-josmic',
+  appointments: propAppointments = null
 }) => {
   const docKey = 'JOSMIC_BILLING';
   const storage = selectedCase?.clinicalDocStorage?.[docKey] || {};
 
   // Extract patient info from DB bill or selectedCase
   const pt = selectedCase?.patient || bill?.patient || {};
-  const dbPatientName = bill?.patientName || selectedCase?.patientName || 
-    (pt.firstName ? `${pt.firstName || ''} ${pt.lastName || ''}`.trim() : '') || 
+  const dbPatientName = bill?.patientName || selectedCase?.patientName ||
+    (pt.firstName ? `${pt.firstName || ''} ${pt.lastName || ''}`.trim() : '') ||
     pt.name || '';
 
   const ptStreet = pt.street || pt.addressLine1 || pt.address || '';
@@ -41,74 +48,90 @@ export const JosmicBillingStatement = ({
   const casePtAddress = [ptStreet, ptCity, ptState, ptZip].filter(Boolean).join(', ');
   const dbPatientAddress = bill?.patientAddress || casePtAddress || '9950 Westpark Dr, Houston TE 77063';
 
-  const dbPatientId = bill?.patientSystemId || pt.patientId || 
+  const dbPatientId = bill?.patientSystemId || pt.patientId ||
     selectedCase?.patient?.patientId || selectedCase?.patientId || selectedCase?.id || '';
 
   // Extract Billed To info (Attorney / Payer) directly from DB
-  const dbBillToName = bill?.billToName || selectedCase?.attorneyName || selectedCase?.lawFirm || selectedCase?.attorney || 'Personal Injury Settlement';
+  const dbBillToName = bill?.billToName || 
+    (selectedCase?.lawFirm ? (selectedCase?.attorneyName ? `${selectedCase.attorneyName} (${selectedCase.lawFirm})` : selectedCase.lawFirm) : selectedCase?.attorneyName) || 
+    selectedCase?.attorney || 'Personal Injury Settlement';
   const dbBillToAddress = bill?.billToAddress || selectedCase?.attorneyAddress || selectedCase?.lawFirmAddress || '';
 
-  // Extract Statement Number & Date directly from DB
-  const dbStatementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || selectedCase?.statementNumber || '125639';
-  const dbStatementDate = formatDateStr(bill?.statementDate || bill?.date || selectedCase?.incidentDate || selectedCase?.dateOfService || selectedCase?.initialDate || '09/21/2026');
+  // Real patient-specific MD consultation visits state from Appointments Calendar
+  const [appointments, setAppointments] = useState(() => {
+    if (propAppointments && Array.isArray(propAppointments)) return propAppointments;
+    if (selectedCase?.appointments && Array.isArray(selectedCase.appointments)) return selectedCase.appointments;
+    return [];
+  });
 
-  // Extract raw service lines from DB
-  const rawLines = bill?.serviceLines || bill?.lineItems || bill?.items || selectedCase?.serviceLines || selectedCase?.items || [];
-  
+  const loadAppointmentsFromApi = () => {
+    const patientId = selectedCase?.patientId || selectedCase?.patient?.id;
+    if (!patientId) return;
+
+    apiAppointmentService.getAllAppointments({ patientId })
+      .then(res => {
+        const list = Array.isArray(res) ? res : (res?.appointments || []);
+        setAppointments(list);
+      })
+      .catch(err => {
+        console.error('Failed to load appointments for MD Consultation statement:', err);
+      });
+  };
+
+  useEffect(() => {
+    if (propAppointments && Array.isArray(propAppointments)) {
+      setAppointments(propAppointments);
+    } else {
+      loadAppointmentsFromApi();
+    }
+
+    window.addEventListener('focus', loadAppointmentsFromApi);
+    return () => {
+      window.removeEventListener('focus', loadAppointmentsFromApi);
+    };
+  }, [propAppointments, selectedCase?.id, selectedCase?.patientId]);
+
+  const effectiveCaseId = selectedCase?.id || selectedCase?._id;
+  const effectiveCaseNum = selectedCase?.caseId;
+  const effectivePatientId = selectedCase?.patientId || selectedCase?.patient?.id;
+
+  const mdVisits = filterAndSortMdConsultationVisits(
+    appointments, 
+    effectiveCaseId, 
+    effectiveCaseNum, 
+    effectivePatientId
+  );
+
+  // Dynamic real visit lines with CPT master, excluding unwanted dummy lines
+  const displayItems = buildMdConsultationStatementRows(mdVisits, bill);
+
+  // Extract Statement Number & Date directly from DB or earliest DOS
+  const dbStatementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || selectedCase?.statementNumber || '125639';
+  const fallbackDate = displayItems.length > 0 ? displayItems[0].dos : (bill?.statementDate || bill?.date || selectedCase?.incidentDate || selectedCase?.dateOfService || selectedCase?.initialDate || '09/21/2026');
+  const dbStatementDate = formatDateStr(fallbackDate);
+
   let calcCharges = 0;
   let calcInsPay = 0;
   let calcPatPay = 0;
   let calcAdj = 0;
 
-  const displayItems = rawLines.map(item => {
-    const units = Number(item.units) || 1;
-    const unitCharge = Number(item.charge) || 0;
-    const lineBal = Number(item.lineBalance !== undefined && item.lineBalance !== null ? item.lineBalance : item.balance) || 0;
-    
-    const lineCharge = (lineBal > unitCharge && units > 1)
-      ? (units * unitCharge)
-      : (item.totalCharge !== undefined ? Number(item.totalCharge) : (units > 1 ? units * unitCharge : unitCharge));
-
-    const insPay = Number(item.payments?.insurance || item.insurancePayment || item.insPay) || 0;
-    const patPay = Number(item.payments?.patient || item.patientPayment || item.patPay) || 0;
-    const adj = Number(item.adjustments || item.adjustment || item.adj) || 0;
-
-    calcCharges += lineCharge;
-    calcInsPay += insPay;
-    calcPatPay += patPay;
-    calcAdj += adj;
-
-    return {
-      ...item,
-      dos: formatDateStr(item.dos || item.dateOfService || item.date || ''),
-      cptCode: item.cptCode || item.cpt || '',
-      description: item.description || item.serviceDescription || '',
-      units,
-      charge: lineCharge,
-      insPay,
-      patPay,
-      adj,
-      lineBal: lineBal || Math.max(0, lineCharge - (insPay + patPay + adj))
-    };
+  displayItems.forEach(item => {
+    calcCharges += (Number(item.charge) || 0);
+    calcInsPay += (Number(item.insPay) || 0);
+    calcPatPay += (Number(item.patPay) || 0);
+    calcAdj += (Number(item.adj) || 0);
   });
 
-  // DB Totals
-  const dbTotals = bill?.totals || {};
-  const totalCharges = Number(dbTotals.totalCharges !== undefined && Number(dbTotals.totalCharges) > 0 ? dbTotals.totalCharges : calcCharges) || 0;
-  const totalInsPay = Number(dbTotals.totalInsurancePayments !== undefined ? dbTotals.totalInsurancePayments : (dbTotals.insurancePayment || calcInsPay)) || 0;
-  const totalPatPay = Number(dbTotals.totalPatientPayments !== undefined ? dbTotals.totalPatientPayments : (dbTotals.patientPayment || calcPatPay)) || 0;
-  const totalAdj = Number(dbTotals.totalAdjustments !== undefined ? dbTotals.totalAdjustments : calcAdj) || 0;
-  
-  const rawBalance = Number(dbTotals.balanceDue !== undefined && Number(dbTotals.balanceDue) > 0
-    ? dbTotals.balanceDue
-    : (bill?.balanceDue !== undefined && Number(bill.balanceDue) > 0
-        ? bill.balanceDue
-        : Math.max(0, totalCharges - (totalInsPay + totalPatPay + totalAdj)))) || 0;
-
+  // DB Totals reconciled with real treatments
+  const totalCharges = calcCharges;
+  const totalInsPay = calcInsPay;
+  const totalPatPay = calcPatPay;
+  const totalAdj = calcAdj;
+  const rawBalance = Math.max(0, totalCharges - (totalInsPay + totalPatPay + totalAdj));
   const dbTotalBalance = formatCurrency(rawBalance);
 
-  // Aging Summary from DB
-  const agingCurrent = Number(bill?.aging?.current !== undefined ? bill.aging.current : rawBalance) || 0;
+  // Aging Summary reconciled with dynamic balance
+  const agingCurrent = rawBalance;
   const aging30 = Number(bill?.aging?.past30) || 0;
   const aging60 = Number(bill?.aging?.past60) || 0;
   const aging90 = Number(bill?.aging?.past90) || 0;
@@ -154,13 +177,16 @@ export const JosmicBillingStatement = ({
       });
     }
   }, [
-    selectedCase?.id, 
-    selectedCase?._id, 
-    selectedCase?.patientName, 
-    bill?.id, 
-    bill?.statementNumber, 
-    bill?.totals?.balanceDue,
-    bill?.totals?.totalCharges,
+    selectedCase?.id,
+    selectedCase?._id,
+    selectedCase?.patientName,
+    selectedCase?.attorneyName,
+    selectedCase?.lawFirm,
+    selectedCase?.attorneyAddress,
+    bill?.id,
+    bill?.statementNumber,
+    rawBalance,
+    displayItems.length,
     blankMode
   ]);
 
@@ -191,16 +217,21 @@ export const JosmicBillingStatement = ({
       <div className="flex-1 flex flex-col">
         {/* Top Header Banner: Dark Burgundy Background matching reference design */}
         <div className="bg-[#722F37] text-white p-6 sm:p-7 flex justify-between items-start">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-wide uppercase">
-              FM HEALTH &amp; WELLNESS CENTER
-            </h1>
-            <p className="text-xs text-white/90 font-medium mt-1">
-              Pain Management | 9900 Westpark Drive, Suite 354
-            </p>
-            <p className="text-xs text-white/90 font-medium mt-0.5">
-              Houston, TX 77063 | 346-338-7020
-            </p>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-white p-1 shadow-sm flex items-center justify-center flex-shrink-0">
+              <img src={fmLogo} alt="FM Logo" className="w-full h-full object-contain" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-wide uppercase">
+                FM HEALTH &amp; WELLNESS CENTER
+              </h1>
+              <p className="text-xs text-white/90 font-medium mt-1">
+                MD Consultation | 9900 Westpark Drive, Suite 354
+              </p>
+              <p className="text-xs text-white/90 font-medium mt-0.5">
+                Houston, TX 77063 | 346-338-7020
+              </p>
+            </div>
           </div>
           <div className="text-right">
             <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider leading-none">
@@ -386,7 +417,7 @@ export const JosmicBillingStatement = ({
 
       {/* Footer */}
       <div className="px-8 pb-4 flex justify-between items-center text-[10px] text-slate-400 font-mono border-t border-slate-100 pt-2">
-        <span>FM Health &amp; Wellness Center | Pain Management Billing Statement {formData.statementNumber || dbStatementNumber}</span>
+        <span>FM Health &amp; Wellness Center | MD Consultation Billing Statement {formData.statementNumber || dbStatementNumber}</span>
         <span>Page 1</span>
       </div>
     </div>

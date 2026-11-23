@@ -11,14 +11,7 @@ import { apiProviderService } from '../../services/api/apiProviderService';
 import { apiBillingService } from '../../services/api/apiBillingService';
 import { useUIStore } from '../../store/uiStore';
 import { formatCurrency } from '../../utils/billingCalculations';
-
-const KNOWN_LAW_FIRMS = [
-  { name: 'OJ Lawal, Esq.', firm: 'OJ Law Firm & Associates LLC', phone: '713-555-0188', email: 'attorney@ojlawfirm.com', address: '11711 Bedford St. Suite 01, Houston TX 77031' },
-  { name: 'Sope Lawson, Esq.', firm: 'Law Office of Sope Lawson', phone: '713-555-0725', email: 'info@sopelawsonlaw.com', address: '8303 Southwest Fwy #725, Houston, TX 77074' },
-  { name: 'Marcus Vance, Esq.', firm: 'Law Offices of Marcus Vance', phone: '713-555-0219', email: 'mvance@vancelaw.com', address: '2400 Richmond Ave Suite 300, Houston TX 77098' },
-  { name: 'Robert Cole, Attorney', firm: 'Cole & Partners Injury Law', phone: '713-555-0442', email: 'rcole@colelaw.com', address: '5000 Westheimer Rd Suite 450, Houston TX 77056' },
-  { name: 'Sarah Jenkins, Esq.', firm: 'Davis & Associates Injury Law Group', phone: '713-555-0300', email: 'sjenkins@davisinjury.com', address: '1001 Fannin St Suite 1200, Houston TX 77002' },
-];
+import { SearchableLawyerSelect } from '../common/SearchableLawyerSelect';
 
 export const CaseDetailsModal = ({ isOpen, onClose, caseItem, onCaseUpdated }) => {
   const navigate = useNavigate();
@@ -75,16 +68,6 @@ export const CaseDetailsModal = ({ isOpen, onClose, caseItem, onCaseUpdated }) =
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleSelectPreset = (preset) => {
-    setLegalData({
-      attorneyName: preset.name,
-      lawFirm: preset.firm,
-      attorneyPhone: preset.phone,
-      attorneyEmail: preset.email,
-      lawFirmAddress: preset.address || '8303 Southwest Fwy #725, Houston, TX 77074'
-    });
   };
 
   return (
@@ -275,19 +258,32 @@ export const CaseDetailsModal = ({ isOpen, onClose, caseItem, onCaseUpdated }) =
                 ) : (
                   <div className="space-y-3 pt-1">
                     <div>
-                      <span className="text-[10px] font-bold text-slate-500 block mb-1">Quick Select Law Firm Preset:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {KNOWN_LAW_FIRMS.map(preset => (
-                          <button
-                            key={preset.name}
-                            type="button"
-                            onClick={() => handleSelectPreset(preset)}
-                            className="px-2 py-0.5 bg-white hover:bg-teal-50 hover:border-teal-300 text-slate-800 border border-slate-200 rounded text-[10px] font-semibold transition cursor-pointer"
-                          >
-                            + {preset.firm}
-                          </button>
-                        ))}
-                      </div>
+                      <label className="block text-[11px] font-bold text-slate-800 mb-1">Select Lawyer / Law Firm</label>
+                      <SearchableLawyerSelect
+                        value={legalData.attorneyName}
+                        currentFirm={legalData.lawFirm}
+                        onSelect={(selected) => {
+                          if (selected) {
+                            setLegalData({
+                              ...legalData,
+                              attorneyName: selected.name,
+                              lawFirm: selected.firm,
+                              attorneyPhone: selected.phone || '',
+                              attorneyEmail: selected.email || '',
+                              lawFirmAddress: selected.address || ''
+                            });
+                          } else {
+                            setLegalData({
+                              ...legalData,
+                              attorneyName: '',
+                              lawFirm: '',
+                              attorneyPhone: '',
+                              attorneyEmail: '',
+                              lawFirmAddress: ''
+                            });
+                          }
+                        }}
+                      />
                     </div>
 
                     <div>

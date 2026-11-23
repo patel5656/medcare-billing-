@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { apiCaseService as mockCaseService } from '../../services/api/apiCaseService';
 import { apiPatientService as mockPatientService } from '../../services/api/apiPatientService';
 import { DynamicDiagnosisPicker } from '../../components/common/DynamicDiagnosisPicker';
+import { SearchableLawyerSelect } from '../../components/common/SearchableLawyerSelect';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -403,6 +404,34 @@ export const AddCasePage = () => {
         {/* Legal & Lien Representation */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
           {sectionHead(Scale, 'Attorney Lien & Legal Representation')}
+          <div>
+            <label className={labelCls}>Select Lawyer / Law Firm</label>
+            <SearchableLawyerSelect
+              value={formData.attorneyName}
+              currentFirm={formData.lawFirm}
+              onSelect={(selected) => {
+                if (selected) {
+                  setFormData(p => ({
+                    ...p,
+                    attorneyName: selected.name,
+                    lawFirm: selected.firm,
+                    attorneyPhone: selected.phone || '',
+                    attorneyEmail: selected.email || '',
+                    lawFirmAddress: selected.address || ''
+                  }));
+                } else {
+                  setFormData(p => ({
+                    ...p,
+                    attorneyName: '',
+                    lawFirm: '',
+                    attorneyPhone: '',
+                    attorneyEmail: '',
+                    lawFirmAddress: ''
+                  }));
+                }
+              }}
+            />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Attorney Full Name</label>

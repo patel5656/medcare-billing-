@@ -5,6 +5,7 @@ import { apiCaseService } from '../../services/api/apiCaseService';
 import { apiPatientService } from '../../services/api/apiPatientService';
 import { mockAttorneyService } from '../../services/mock/mockAttorneyService';
 import { DynamicDiagnosisPicker } from '../common/DynamicDiagnosisPicker';
+import { SearchableLawyerSelect } from '../common/SearchableLawyerSelect';
 import { AddAttorneyModal } from './AddAttorneyModal';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
@@ -812,37 +813,34 @@ export const AddCaseModal = ({ isOpen, onClose, onCaseAdded, initialPatient = nu
                 </button>
               </div>
 
-              {/* Dynamic Law Firm Quick Selector */}
+              {/* Dynamic Searchable Lawyer & Law Firm Dropdown */}
               <div>
-                <label className={labelCls}>Select from Registered Law Firms</label>
-                <select
-                  className={inputCls()}
-                  onChange={(e) => {
-                    if (e.target.value === '__NEW__') {
-                      setShowAddAttorneyModal(true);
-                      return;
-                    }
-                    const selected = attorneys.find(a => a.id === e.target.value);
+                <label className={labelCls}>Select Lawyer / Law Firm *</label>
+                <SearchableLawyerSelect
+                  value={formData.attorneyName}
+                  currentFirm={formData.lawFirm}
+                  onSelect={(selected) => {
                     if (selected) {
                       setFormData(p => ({
                         ...p,
                         attorneyName: selected.name,
                         lawFirm: selected.firm,
-                        attorneyPhone: selected.phone,
-                        attorneyEmail: selected.email,
-                        lawFirmAddress: selected.address
+                        attorneyPhone: selected.phone || '',
+                        attorneyEmail: selected.email || '',
+                        lawFirmAddress: selected.address || ''
+                      }));
+                    } else {
+                      setFormData(p => ({
+                        ...p,
+                        attorneyName: '',
+                        lawFirm: '',
+                        attorneyPhone: '',
+                        attorneyEmail: '',
+                        lawFirmAddress: ''
                       }));
                     }
                   }}
-                >
-                  <option value="">-- Choose Registered Law Firm or Type Below --</option>
-                  {attorneys.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.firm} ({a.name}) — {a.phone}
-                    </option>
-                  ))}
-                  <option value="__NEW__">➕ Register New Law Firm...</option>
-                </select>
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

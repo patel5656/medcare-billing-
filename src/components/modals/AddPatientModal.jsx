@@ -5,6 +5,7 @@ import { apiPatientService } from '../../services/api/apiPatientService';
 import { apiProviderService } from '../../services/api/apiProviderService';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
+import { SearchableLawyerSelect } from '../common/SearchableLawyerSelect';
 import {
   User,
   Phone,
@@ -1153,6 +1154,21 @@ export const AddPatientModal = ({ isOpen, onClose, onPatientAdded, patientToEdit
               <h3 className={sectionHeaderCls}>
                 <Scale className="w-4 h-4 text-teal-600" /> Referring Attorney Lien &amp; External Providers
               </h3>
+              <div>
+                <label className={labelCls}>Select Lawyer / Law Firm</label>
+                <SearchableLawyerSelect
+                  value={formData.referringAttorney}
+                  onSelect={(selected) => {
+                    if (selected) {
+                      set('referringAttorney', selected.firm ? `${selected.firm} (${selected.name})` : selected.name);
+                      set('attorneyCaseManager', selected.caseManager || selected.phone || '');
+                    } else {
+                      set('referringAttorney', '');
+                      set('attorneyCaseManager', '');
+                    }
+                  }}
+                />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>Referring Attorney / Law Firm</label>

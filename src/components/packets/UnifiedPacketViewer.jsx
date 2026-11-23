@@ -6,6 +6,10 @@ import { apiClinicalNoteService } from '../../services/api/apiClinicalNoteServic
 import { apiCaseService } from '../../services/api/apiCaseService';
 import { apiAppointmentService } from '../../services/api/apiAppointmentService';
 import { filterAndSortCounselingVisits } from './counselor/CounselorTreatmentSummaryForm';
+import { 
+  filterAndSortMdConsultationVisits, 
+  buildMdConsultationStatementRows 
+} from '../../utils/mdConsultationBillingHelper';
 import { mapBillToCms1500Claims } from '../../utils/cmsMapper';
 import { useUIStore } from '../../store/uiStore';
 
@@ -84,6 +88,7 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   const [cmsClaims, setCmsClaims] = useState([]);
   const [latestNote, setLatestNote] = useState(null);
   const [counselingVisits, setCounselingVisits] = useState([]);
+  const [mdConsultVisits, setMdConsultVisits] = useState([]);
   
   const [activeTabFilter, setActiveTabFilter] = useState('ALL');
   const [zoomLevel, setZoomLevel] = useState(getInitialZoom);
@@ -204,6 +209,29 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     }
   }, [providerId, effectiveCase?.id, effectiveCase?.caseId, effectiveCase?.patientId, effectiveCase?.patient?.id]);
 
+  // Fetch real-time MD consultation visits for provider prov-josmic
+  useEffect(() => {
+    if (providerId === 'prov-josmic' && effectiveCase) {
+      const patientId = effectiveCase.patientId || effectiveCase.patient?.id;
+      if (patientId) {
+        apiAppointmentService.getAllAppointments({ patientId })
+          .then(res => {
+            const list = Array.isArray(res) ? res : (res?.appointments || []);
+            const filtered = filterAndSortMdConsultationVisits(
+              list, 
+              effectiveCase.id, 
+              effectiveCase.caseId, 
+              patientId
+            );
+            setMdConsultVisits(filtered);
+          })
+          .catch(err => {
+            console.error('Failed to load MD consultation visits in UnifiedPacketViewer:', err);
+          });
+      }
+    }
+  }, [providerId, effectiveCase?.id, effectiveCase?.caseId, effectiveCase?.patientId, effectiveCase?.patient?.id]);
+
   // Adjust zoom on screen resize
   useEffect(() => {
     const handleResize = () => {
@@ -303,8 +331,13 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     if (key === 'DavFinalNarrative') return <DavFinalNarrative reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={effectiveCase} />;
 
     // JOSMIC Components
-    if (key === 'JosmicCoverPage') return <JosmicCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'JosmicBillingStatement') return <JosmicBillingStatement bill={blankPracticeMode ? null : bill} selectedCase={effectiveCase} readOnly={isLocked} blankMode={blankPracticeMode} providerId={providerId} />;
+    if (key === 'JosmicCoverPage') {
+      const activeLines = mdConsultVisits.length > 0 
+        ? buildMdConsultationStatementRows(mdConsultVisits, bill)
+        : (bill ? bill.serviceLines : []);
+      return <JosmicCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={activeLines} />;
+    }
+    if (key === 'JosmicBillingStatement') return <JosmicBillingStatement bill={blankPracticeMode ? null : bill} selectedCase={effectiveCase} readOnly={isLocked} blankMode={blankPracticeMode} providerId={providerId} appointments={mdConsultVisits} />;
     if (key === 'JosmicPainManagementReport') return <JosmicPainManagementReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} />;
 
     // Counselor Components

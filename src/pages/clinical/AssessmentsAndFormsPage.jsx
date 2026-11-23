@@ -36,7 +36,7 @@ export const AssessmentsAndFormsPage = () => {
   const allTabs = [
     {
       id: 'JOSMIC',
-      label: 'FM Pain Management (Pain Report)',
+      label: 'FM MD Consultation (MD Report)',
       activeCls: 'bg-teal-600 text-white shadow-sm',
       allowedForDoctor: true,
     },

@@ -177,7 +177,7 @@ const PageHeader = ({ page, blankMode, packetData }) => {
         <img src={fmLogo} alt="FM Health and Wellness Center" className="h-12 w-auto object-contain flex-shrink-0 mix-blend-multiply" />
         <div>
           <h1 className="text-lg font-black text-[#722F37] uppercase tracking-tight" style={{ fontFamily: 'serif' }}>FM HEALTH AND WELLNESS CENTER</h1>
-          <p className="text-[10px] font-bold text-slate-600">PAIN MANAGEMENT CONSULTATION &amp; EVALUATION REPORT</p>
+          <p className="text-[10px] font-bold text-slate-600">MD CONSULTATION &amp; EVALUATION REPORT</p>
           <p className="text-[9px] text-slate-500">9900 WESTPARK DR, HOUSTON, TX 77063 &nbsp;|&nbsp; OFFICE: 346-338-7020</p>
         </div>
       </div>
@@ -1035,7 +1035,7 @@ export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, 
       {/* Universal AI Auto-Draft Toolbar (Hidden on print) */}
       {!readOnly && !blankMode && packetData && (
         <AiAutoDraftToolbar
-          title="AI Pain Management Scribe"
+          title="AI MD Consultation Scribe"
           badge="4-Page Comprehensive"
           subtitle="Auto-synthesize HPI, ROS, physical exam findings, diagnoses & treatment recommendations from case context"
           hasExistingContent={Boolean(storage.chiefComplaint || storage.otherDiagnosis || storage.checkboxOverrides)}
@@ -1050,7 +1050,7 @@ export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, 
 
       {/* Footer */}
       <div className="absolute bottom-4 left-0 right-0 px-14 flex justify-between text-[9px] text-slate-400 font-mono border-t border-slate-100 pt-2">
-        <span>FM Health and Wellness Center - Pain Management Consultation &amp; Evaluation Report - Confidential</span>
+        <span>FM Health and Wellness Center - MD Consultation &amp; Evaluation Report - Confidential</span>
         <span>Page {reportPage + 3} of 7</span>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '../../../utils/billingCalculations';
 import { apiCaseService } from '../../../services/api/apiCaseService';
+import fmLogo from '../../../assets/fm-logo.jpeg';
 
 /**
  * Format date string safely to MM/DD/YYYY
@@ -38,7 +39,9 @@ export const JosmicCoverPage = ({
     packetData?.patient?.patientId || packetData?.patientId || packetData?.id || '161143192';
 
   // Extract Billed To info
-  const dbBillToName = bill?.billToName || packetData?.attorneyName || packetData?.lawFirm || packetData?.attorney || 'OJ Lawal and Associates';
+  const dbBillToName = bill?.billToName ||
+    (packetData?.lawFirm ? (packetData?.attorneyName ? `${packetData.attorneyName} (${packetData.lawFirm})` : packetData.lawFirm) : packetData?.attorneyName) ||
+    packetData?.attorney || 'OJ Lawal and Associates';
   const dbBillToAddress = bill?.billToAddress || packetData?.attorneyAddress || packetData?.lawFirmAddress || 'Houston, Texas 77031';
 
   // Extract Statement Number
@@ -66,13 +69,14 @@ export const JosmicCoverPage = ({
   const dbServiceDates = computeDosRange();
 
   // Compute Total Balance
+  const computedLineCharges = (serviceLines && serviceLines.length > 0 ? serviceLines : (bill?.serviceLines || bill?.items || [])).reduce((acc, l) => acc + ((Number(l.charge) || 0) * (Number(l.units) || 1)), 0);
   const dbTotals = bill?.totals || {};
   const rawBalance = Number(dbTotals.balanceDue !== undefined && Number(dbTotals.balanceDue) > 0
     ? dbTotals.balanceDue
     : (bill?.balanceDue !== undefined && Number(bill.balanceDue) > 0
-        ? bill.balanceDue
-        : (dbTotals.totalCharges || 0))) || 0;
-  const dbTotalBalance = formatCurrency(rawBalance > 0 ? rawBalance : 17100);
+      ? bill.balanceDue
+      : (computedLineCharges || dbTotals.totalCharges || 0))) || 0;
+  const dbTotalBalance = formatCurrency(rawBalance);
 
   // Local state for editable fields
   const [formData, setFormData] = useState({
@@ -112,6 +116,9 @@ export const JosmicCoverPage = ({
     packetData?.id,
     packetData?._id,
     packetData?.patientName,
+    packetData?.attorneyName,
+    packetData?.lawFirm,
+    packetData?.attorneyAddress,
     bill?.id,
     bill?.statementNumber,
     bill?.totals?.balanceDue,
@@ -143,27 +150,29 @@ export const JosmicCoverPage = ({
       style={{ width: '850px', minHeight: '1100px' }}
     >
       <div className="flex-1 flex flex-col">
-        {/* Top Header Banner: Dark Burgundy Background matching reference design 1 & 2 */}
-        <div className="bg-[#722F37] text-white p-6 sm:p-7 flex justify-between items-start">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-wide uppercase">
-              FM HEALTH &amp; WELLNESS CENTER
-            </h1>
-            <p className="text-xs text-white/90 font-medium mt-1">
-              9900 Westpark Drive, Suite 354 | Houston, TX 77063
-            </p>
-            <p className="text-xs text-white/90 font-medium mt-0.5">
-              346-338-7020
-            </p>
+        {/* Top Header with FM Health & Wellness Center Logo */}
+        <div className="text-center pt-8 pb-3 px-8">
+          <div className="flex justify-center mb-2">
+            <img
+              src={fmLogo}
+              alt="FM Health & Wellness Center Logo"
+              className="h-28 w-auto object-contain mx-auto mix-blend-multiply"
+            />
           </div>
+          <h1 className="text-2xl font-black text-slate-950 tracking-tight">FM HEALTH &amp; WELLNESS CENTER</h1>
+          <p className="text-[11px] text-slate-600 mt-1 font-medium">9900 WESTPARK DRIVE, SUITE 354, HOUSTON, TX 77063</p>
+          <p className="text-[11px] text-slate-600 mt-0.5 underline font-medium">OFFICE: 346-338-7020</p>
         </div>
+
+        {/* Horizontal divider */}
+        <div className="border-t border-slate-300 mx-8"></div>
 
         {/* Main Content Area */}
         <div className="px-8 sm:px-12 py-10 flex-1 flex flex-col items-center justify-start">
           {/* Centered Document Titles matching Reference Design 1 */}
           <div className="text-center my-6">
             <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-wider uppercase">
-              PAIN MANAGEMENT
+              MD CONSULTATION
             </h2>
             <h2 className="text-2xl sm:text-3xl font-black text-[#722F37] tracking-wider uppercase mt-1">
               BILLING STATEMENT
@@ -280,10 +289,10 @@ export const JosmicCoverPage = ({
           {/* Bottom Notification Card matching Reference Design 1 */}
           <div className="w-full max-w-2xl border border-[#722F37] bg-[#fce8ed] rounded-xl p-5 text-center my-10 shadow-sm">
             <div className="font-extrabold text-[#722F37] text-xs sm:text-sm tracking-wide uppercase">
-              PAIN MANAGEMENT SERVICES
+              MD CONSULTATION SERVICES
             </div>
             <p className="text-xs text-slate-700 mt-1 font-medium">
-              The following page contains the itemized billing statement for pain management services.
+              The following page contains the itemized billing statement for MD consultation services.
             </p>
           </div>
         </div>
@@ -291,7 +300,7 @@ export const JosmicCoverPage = ({
 
       {/* Footer matching Reference Design 1 */}
       <div className="px-8 pb-4 flex justify-center items-center text-[10px] text-slate-400 font-mono border-t border-slate-100 pt-2">
-        <span>FM Health &amp; Wellness Center | Pain Management Billing Statement</span>
+        <span>FM Health &amp; Wellness Center | MD Consultation Billing Statement</span>
       </div>
     </div>
   );

@@ -4,6 +4,10 @@ const API_URL = API_BASE_URL;
 
 
 export const apiAppointmentService = {
+  getAppointments: async (params = {}) => {
+    return apiAppointmentService.getAllAppointments(params);
+  },
+
   getAllAppointments: async (params = {}) => {
     try {
       const query = new URLSearchParams(params).toString();
