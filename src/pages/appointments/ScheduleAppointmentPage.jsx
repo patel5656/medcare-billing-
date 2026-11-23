@@ -10,6 +10,7 @@ import { MultiLineCptTable } from '../../components/common/MultiLineCptTable';
 import { useUIStore } from '../../store/uiStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, Save, Bell, User, MapPin, FileText, Tag } from 'lucide-react';
+import { cleanNumericFee } from '../../utils/cptFeeSchedule';
 
 import { isClinicClosed, getTodayDateStr, getNextBusinessDay } from '../../constants/usHolidays';
 import { useAuthStore } from '../../store/authStore';
@@ -184,12 +185,17 @@ export const ScheduleAppointmentPage = () => {
     setIsLoading(true);
     try {
       const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === formData.providerId);
-      const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseFloat(l.units) || 1) * (parseFloat(l.charge) || 0)), 0);
+      const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseInt(l.units, 10) || 1) * cleanNumericFee(l.charge)), 0);
+      const cleanReason = (formData.reasonForVisit || '').replace(/<!-- APPT_METADATA:[\s\S]*?-->/, '').trim();
+      const metaPayload = JSON.stringify({ serviceLines, totalEstimatedCharge });
+      const combinedReason = cleanReason ? `${cleanReason}\n<!-- APPT_METADATA:${metaPayload} -->` : `<!-- APPT_METADATA:${metaPayload} -->`;
+
       const created = await mockAppointmentService.createAppointment({
         ...formData,
+        reasonForVisit: combinedReason,
         serviceLines,
         totalEstimatedCharge,
-        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(', '),
+        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(','),
         modifiers: serviceLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
         providerName: selectedProv?.name || 'FM Health and Wellness Center'
       });
@@ -349,6 +355,7 @@ export const ScheduleAppointmentPage = () => {
             <MultiLineCptTable
               lines={serviceLines}
               onChange={setServiceLines}
+              providerId={formData.providerId}
               title="Appointment Billing Codes & Modifiers (Multi-Line Line 1, 2, 3...)"
             />
           </div>

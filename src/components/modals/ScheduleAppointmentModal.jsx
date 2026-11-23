@@ -9,6 +9,7 @@ import { getGeneralSettings } from '../../services/api/apiSettingsService';
 import { INITIAL_PROVIDER_CONFIGS } from '../../constants/providerConfigs';
 import { createDefaultServiceLine } from '../../constants/servicesCatalog';
 import { MultiLineCptTable } from '../common/MultiLineCptTable';
+import { resolveCptFeeAndDescription, cleanNumericFee } from '../../utils/cptFeeSchedule';
 import { isClinicClosed, getTodayDateStr, getNextBusinessDay } from '../../constants/usHolidays';
 import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
@@ -38,11 +39,14 @@ export const ScheduleAppointmentModal = ({
 
   const [serviceLines, setServiceLines] = useState(() => {
     if (isCounselorUser) {
-      return [createDefaultServiceLine(1, '90834', 'Psychotherapy with patient, 45 minutes', 180.00)];
+      const counselorCpt = resolveCptFeeAndDescription('90834', 'prov-counselor');
+      return [createDefaultServiceLine(1, '90834', counselorCpt.description || 'Psychotherapy with patient, 45 minutes', counselorCpt.fee || 180.00)];
     }
+    const painCpt1 = resolveCptFeeAndDescription('99204', 'prov-josmic');
+    const painCpt2 = resolveCptFeeAndDescription('97039', 'prov-josmic');
     return [
-      createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
-      createDefaultServiceLine(2, '97039', 'High Intensity Laser Therapy (HILT)', 250.00)
+      createDefaultServiceLine(1, '99204', painCpt1.description || 'Initial Comprehensive Pain Management Consultation', painCpt1.fee || 1214.00),
+      createDefaultServiceLine(2, '97039', painCpt2.description || 'High Intensity Laser Therapy (HILT)', painCpt2.fee || 2000.00)
     ];
   });
 
@@ -143,13 +147,19 @@ export const ScheduleAppointmentModal = ({
     setIsLoading(true);
     try {
       const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === formData.providerId);
-      const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseFloat(l.units) || 1) * (parseFloat(l.charge) || 0)), 0);
+      const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseInt(l.units, 10) || 1) * cleanNumericFee(l.charge)), 0);
+
+      const cleanReason = (formData.reasonForVisit || '').replace(/<!-- APPT_METADATA:[\s\S]*?-->/, '').trim();
+      const metaPayload = JSON.stringify({ serviceLines, totalEstimatedCharge });
+      const combinedReason = cleanReason ? `${cleanReason}\n<!-- APPT_METADATA:${metaPayload} -->` : `<!-- APPT_METADATA:${metaPayload} -->`;
+
       const created = await apiAppointmentService.createAppointment({
         ...formData,
+        reasonForVisit: combinedReason,
         status: practiceSettings?.autoConfirmAppointments ? 'CONFIRMED' : 'SCHEDULED',
         serviceLines,
         totalEstimatedCharge,
-        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(',').substring(0, 10),
+        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(','),
         modifiers: serviceLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
         providerName: selectedProv?.name || 'FM Health and Wellness Center'
       });
@@ -292,9 +302,11 @@ export const ScheduleAppointmentModal = ({
                   ]);
                 } else if (pid === 'prov-josmic') {
                   reason = 'Post-MVA pain management & clinical evaluation';
+                  const c1 = resolveCptFeeAndDescription('99204', 'prov-josmic');
+                  const c2 = resolveCptFeeAndDescription('97039', 'prov-josmic');
                   setServiceLines([
-                    createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
-                    createDefaultServiceLine(2, '97039', 'High Intensity Laser Therapy (HILT)', 250.00)
+                    createDefaultServiceLine(1, '99204', c1.description || 'Initial Comprehensive Pain Management Consultation', c1.fee || 1214.00),
+                    createDefaultServiceLine(2, '97039', c2.description || 'High Intensity Laser Therapy (HILT)', c2.fee || 2000.00)
                   ]);
                 }
                 if (pid === 'prov-tpi') { aptType = 'Trigger Point Injection'; }
@@ -379,6 +391,7 @@ export const ScheduleAppointmentModal = ({
           <MultiLineCptTable
             lines={serviceLines}
             onChange={setServiceLines}
+            providerId={formData.providerId}
             title="Service CPT Billing Lines (Line 1, 2, 3... & Modifiers)"
           />
         </div>

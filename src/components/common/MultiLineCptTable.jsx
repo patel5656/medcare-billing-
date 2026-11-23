@@ -1,9 +1,10 @@
 // src/components/common/MultiLineCptTable.jsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, Trash2, Tag, Info, Sparkles, ChevronDown, Check, Search, X } from 'lucide-react';
 import { createDefaultServiceLine } from '../../constants/servicesCatalog';
 import { useSettingsStore } from '../../store/settingsStore';
+import { resolveCptFeeAndDescription, cleanNumericFee } from '../../utils/cptFeeSchedule';
 
 /**
  * High-End Portal Modifier Dropdown:
@@ -217,21 +218,40 @@ const ModifierPortalDropdown = ({ value, onChange, placeholder = "--", title = "
   );
 };
 
-export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment CPT Billing Lines & Modifiers" }) => {
-  const { cptCodes } = useSettingsStore();
+export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment CPT Billing Lines & Modifiers", providerId = null }) => {
+  const { cptCodes, modifiers, fetchSettings } = useSettingsStore();
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  // Master CPT list for the dropdown sourced exclusively from System Settings (useSettingsStore)
+  const availableCptList = useMemo(() => {
+    if (!Array.isArray(cptCodes)) return [];
+    const seen = new Set();
+    const unique = [];
+    for (const c of cptCodes) {
+      if (c && c.code && !seen.has(c.code)) {
+        seen.add(c.code);
+        unique.push(c);
+      }
+    }
+    return unique;
+  }, [cptCodes]);
 
   const handleAddLine = () => {
     const nextLineNum = lines.length + 1;
-    const defaultCpt = nextLineNum === 1 ? '99204' : nextLineNum === 2 ? '97039' : nextLineNum === 3 ? '0101T' : '97110';
-    const matched = cptCodes.find(c => c.code === defaultCpt) || { description: 'Therapeutic Modality Session', defaultFee: 150.00 };
+    const defaultCpt = availableCptList[(nextLineNum - 1) % (availableCptList.length || 1)]?.code || '99204';
+    const resolved = resolveCptFeeAndDescription(defaultCpt, providerId, cptCodes);
     const newLine = createDefaultServiceLine(
       nextLineNum,
       defaultCpt,
-      matched.description,
-      matched.defaultFee || matched.fee
+      resolved.description || 'Therapeutic Modality Session',
+      resolved.fee
     );
     const pointerLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
     newLine.diagnosisPointer = pointerLetters[(nextLineNum - 1) % pointerLetters.length] || 'A';
+    newLine.isOverridden = false;
     onChange([...lines, newLine]);
   };
 
@@ -245,13 +265,16 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
       if (i !== idx) return line;
       const updatedLine = { ...line, [field]: val };
       
-      // Auto-fill description & standard fee if CPT code changes
+      // Auto-fill description & standard fee from existing fee schedule if CPT code changes
       if (field === 'cptCode') {
-        const matched = cptCodes.find(c => c.code === val);
-        if (matched) {
-          updatedLine.description = matched.description;
-          updatedLine.charge = matched.defaultFee || matched.fee;
+        const resolved = resolveCptFeeAndDescription(val, providerId, cptCodes);
+        if (resolved) {
+          if (resolved.description) updatedLine.description = resolved.description;
+          updatedLine.charge = resolved.fee;
+          updatedLine.isOverridden = false;
         }
+      } else if (field === 'charge') {
+        updatedLine.isOverridden = true;
       }
       return updatedLine;
     });
@@ -259,8 +282,8 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
   };
 
   const totalCharges = lines.reduce((acc, line) => {
-    const units = parseFloat(line.units) || 1;
-    const charge = parseFloat(line.charge) || 0;
+    const units = parseInt(line.units, 10) || 1;
+    const charge = cleanNumericFee(line.charge);
     return acc + (units * charge);
   }, 0);
 
@@ -321,7 +344,9 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
               </tr>
             ) : (
               lines.map((line, idx) => {
-                const lineTotal = ((parseFloat(line.units) || 1) * (parseFloat(line.charge) || 0)).toFixed(2);
+                const lineUnits = parseInt(line.units, 10) || 1;
+                const lineCharge = cleanNumericFee(line.charge);
+                const lineTotal = (lineUnits * lineCharge).toFixed(2);
                 return (
                   <tr key={line.id || idx} className="hover:bg-slate-50 transition">
                     {/* Line Number */}
@@ -338,13 +363,16 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
                         onChange={(e) => handleUpdateLine(idx, 'cptCode', e.target.value)}
                         className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-teal-800 bg-teal-50/70 border border-teal-200 rounded-xl focus:bg-white focus:border-teal-600 outline-none cursor-pointer"
                       >
-                        {cptCodes.map(c => (
+                        {!line.cptCode && <option value="">-- Select CPT Code --</option>}
+                        {availableCptList.map(c => (
                           <option key={c.code} value={c.code}>
-                            {c.code} - {(c.description || '').substring(0, 22)}...
+                            {c.code} - {c.description}
                           </option>
                         ))}
-                        {!cptCodes.some(c => c.code === line.cptCode) && (
-                          <option value={line.cptCode}>{line.cptCode}</option>
+                        {!availableCptList.some(c => c.code === line.cptCode) && line.cptCode && (
+                          <option value={line.cptCode}>
+                            {line.cptCode}{line.description ? ` - ${line.description}` : ''}
+                          </option>
                         )}
                       </select>
                     </td>
@@ -353,7 +381,7 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
                     <td className="py-2 px-2">
                       <input
                         type="text"
-                        value={line.description}
+                        value={line.description || ''}
                         onChange={(e) => handleUpdateLine(idx, 'description', e.target.value)}
                         placeholder="Clinical description"
                         className="w-full px-2.5 py-1.5 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 outline-none"
@@ -397,8 +425,11 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
                         type="number"
                         min="1"
                         max="99"
-                        value={line.units || 1}
-                        onChange={(e) => handleUpdateLine(idx, 'units', parseInt(e.target.value) || 1)}
+                        value={line.units !== undefined ? line.units : 1}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          handleUpdateLine(idx, 'units', isNaN(val) ? 1 : val);
+                        }}
                         className="w-full px-1 py-1.5 text-xs text-center font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 outline-none"
                       />
                     </td>
@@ -408,10 +439,16 @@ export const MultiLineCptTable = ({ lines = [], onChange, title = "Appointment C
                       <input
                         type="number"
                         step="0.01"
-                        value={line.charge || ''}
-                        onChange={(e) => handleUpdateLine(idx, 'charge', parseFloat(e.target.value) || 0)}
+                        value={line.charge !== undefined && line.charge !== null ? line.charge : ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleUpdateLine(idx, 'charge', val === '' ? '' : (isNaN(parseFloat(val)) ? 0 : parseFloat(val)));
+                        }}
                         placeholder="0.00"
-                        className="w-full px-2 py-1.5 text-xs text-right font-mono font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-teal-600 outline-none"
+                        className={`w-full px-2 py-1.5 text-xs text-right font-mono font-bold text-slate-800 bg-slate-50 border rounded-xl focus:bg-white focus:border-teal-600 outline-none ${
+                          line.isOverridden ? 'border-amber-400 bg-amber-50/60' : 'border-slate-200'
+                        }`}
+                        title={line.isOverridden ? 'Fee manually edited' : 'Standard fee from fee schedule'}
                       />
                     </td>
 

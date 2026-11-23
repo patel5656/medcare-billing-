@@ -7,6 +7,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { MultiLineCptTable } from '../common/MultiLineCptTable';
 import { isClinicClosed, getTodayDateStr } from '../../constants/usHolidays';
 import { useUIStore } from '../../store/uiStore';
+import { resolveCptFeeAndDescription, cleanNumericFee } from '../../utils/cptFeeSchedule';
 import { Edit3, Calendar, Clock, Save, User, FileText, CheckCircle2, Stethoscope, Shield, DollarSign } from 'lucide-react';
 
 const inputCls = 'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none transition';
@@ -15,15 +16,34 @@ const labelCls = 'block text-xs font-bold text-slate-800 mb-1';
 /**
  * Intelligent helper to reconstruct complete service lines from appointment object
  * Pre-populates standard clinical modifiers (25, 59, RT, GP) so boxes are never blank '--'
+ * Preserves manually overridden fees and units
  */
-const parseServiceLinesFromAppointment = (appointment, cptCodes = []) => {
-  if (appointment?.serviceLines && Array.isArray(appointment.serviceLines) && appointment.serviceLines.length > 0) {
-    return appointment.serviceLines.map((line, idx) => ({
+const parseServiceLinesFromAppointment = (appointment, cptCodes = [], providerId = null) => {
+  let existingLines = appointment?.serviceLines;
+
+  // If not directly on appointment, check if embedded in reasonForVisit
+  if ((!existingLines || !Array.isArray(existingLines) || existingLines.length === 0) && appointment?.reasonForVisit) {
+    const match = appointment.reasonForVisit.match(/<!-- APPT_METADATA:(.*?) -->/);
+    if (match) {
+      try {
+        const meta = JSON.parse(match[1]);
+        if (meta.serviceLines && Array.isArray(meta.serviceLines)) {
+          existingLines = meta.serviceLines;
+        }
+      } catch (e) {}
+    }
+  }
+
+  if (existingLines && Array.isArray(existingLines) && existingLines.length > 0) {
+    return existingLines.map((line, idx) => ({
       ...line,
+      units: parseInt(line.units, 10) || 1,
+      charge: cleanNumericFee(line.charge !== undefined ? line.charge : line.fee),
       modifier1: line.modifier1 || (idx === 0 ? '25' : '59'),
       modifier2: line.modifier2 || (idx === 0 ? '59' : 'RT'),
       modifier3: line.modifier3 || (idx === 0 ? 'RT' : 'GP'),
-      modifier4: line.modifier4 || (idx === 0 ? 'GP' : '')
+      modifier4: line.modifier4 || (idx === 0 ? 'GP' : ''),
+      isOverridden: line.isOverridden !== undefined ? line.isOverridden : true
     }));
   }
 
@@ -43,27 +63,21 @@ const parseServiceLinesFromAppointment = (appointment, cptCodes = []) => {
   const pointerLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   return rawCodes.map((code, idx) => {
-    const matched = cptCodes.find(c => c.code === code);
-    const desc = matched
-      ? matched.description
-      : (idx === 0 ? (appointment?.appointmentType || 'Comprehensive Pain Evaluation') : 'High Intensity Laser Therapy (HILT)');
-    const defaultFee = matched
-      ? (matched.defaultFee || matched.fee)
-      : (code === '99204' ? 450.00 : code === '97039' ? 250.00 : code === '99214' ? 275.00 : 110.00);
-
+    const resolved = resolveCptFeeAndDescription(code, providerId || appointment?.providerId, cptCodes);
     const modParts = rawModifiers[idx] ? rawModifiers[idx].split('-').filter(Boolean) : [];
 
     return {
       id: `line-${Date.now()}-${idx + 1}`,
       cptCode: code,
-      description: desc,
+      description: resolved.description || (idx === 0 ? (appointment?.appointmentType || 'Comprehensive Evaluation') : 'Therapeutic Modality Session'),
       modifier1: modParts[0] || (idx === 0 ? '25' : '59'),
       modifier2: modParts[1] || (idx === 0 ? '59' : 'RT'),
       modifier3: modParts[2] || (idx === 0 ? 'RT' : 'GP'),
       modifier4: modParts[3] || (idx === 0 ? 'GP' : ''),
       diagnosisPointer: pointerLetters[idx % pointerLetters.length] || 'A',
       units: 1,
-      charge: defaultFee
+      charge: resolved.fee,
+      isOverridden: false
     };
   });
 };
@@ -102,6 +116,9 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
 
   useEffect(() => {
     if (appointment) {
+      const rawReason = appointment.reasonForVisit || appointment.visitNotes || 'Post-MVA pain management & clinical evaluation';
+      const cleanReason = rawReason.replace(/<!-- APPT_METADATA:[\s\S]*?-->/, '').trim();
+
       setFormData({
         patientName: appointment.patientName || '',
         patientPhone: appointment.patientPhone || '',
@@ -115,14 +132,14 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
         startTime: appointment.startTime || '09:00 AM',
         endTime: appointment.endTime || '10:00 AM',
         duration: appointment.duration || '60',
-        reasonForVisit: appointment.reasonForVisit || appointment.visitNotes || 'Post-MVA pain management & clinical evaluation',
+        reasonForVisit: cleanReason,
         location: appointment.location || 'Suite 774 Main Clinic',
         visitNotes: appointment.visitNotes || '',
         holidayOverride: !!appointment.holidayOverride
       });
 
-      // Intelligently parse and restore all service lines with their active modifiers
-      setServiceLines(parseServiceLinesFromAppointment(appointment, cptCodes));
+      // Intelligently parse and restore all service lines with their active modifiers and charges
+      setServiceLines(parseServiceLinesFromAppointment(appointment, cptCodes, appointment.providerId));
     }
   }, [appointment, cptCodes]);
 
@@ -145,13 +162,18 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
     setIsLoading(true);
     try {
       const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === formData.providerId);
-      const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseFloat(l.units) || 1) * (parseFloat(l.charge) || 0)), 0);
+      const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseInt(l.units, 10) || 1) * cleanNumericFee(l.charge)), 0);
+
+      const cleanReason = (formData.reasonForVisit || '').replace(/<!-- APPT_METADATA:[\s\S]*?-->/, '').trim();
+      const metaPayload = JSON.stringify({ serviceLines, totalEstimatedCharge });
+      const combinedReason = cleanReason ? `${cleanReason}\n<!-- APPT_METADATA:${metaPayload} -->` : `<!-- APPT_METADATA:${metaPayload} -->`;
 
       const updated = await mockAppointmentService.updateAppointment(appointment.id, {
         ...formData,
+        reasonForVisit: combinedReason,
         serviceLines,
         totalEstimatedCharge,
-        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(', '),
+        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(','),
         modifiers: serviceLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
         providerName: selectedProv?.name || appointment.providerName || 'FM Health and Wellness Center'
       });
@@ -170,58 +192,62 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
     set('visitType', newType);
     if (newType === 'SUBSEQUENT') {
       set('appointmentType', 'Follow-Up Visit (Established Patient)');
+      const c1 = resolveCptFeeAndDescription('99214', formData.providerId, cptCodes);
+      const c2 = resolveCptFeeAndDescription('97039', formData.providerId, cptCodes);
       setServiceLines([
         {
           id: `line-${Date.now()}-1`,
           cptCode: '99214',
-          description: 'Office/Outpatient Visit Established Moderate (30-39 min)',
+          description: c1.description || 'Office/Outpatient Visit Established (Moderate)',
           modifier1: '25',
           modifier2: '59',
           modifier3: 'RT',
           modifier4: 'GP',
           diagnosisPointer: 'A',
           units: 1,
-          charge: 275.00
-        },
-        {
-          id: `line-${Date.now()}-2`,
-          cptCode: '97110',
-          description: 'Therapeutic Exercise (15 min)',
-          modifier1: '59',
-          modifier2: 'RT',
-          modifier3: 'GP',
-          modifier4: '',
-          diagnosisPointer: 'A',
-          units: 1,
-          charge: 110.00
-        }
-      ]);
-    } else {
-      set('appointmentType', 'Initial Visit (New Patient)');
-      setServiceLines([
-        {
-          id: `line-${Date.now()}-1`,
-          cptCode: '99204',
-          description: 'Office/Outpatient Visit New Complex (45-59 min)',
-          modifier1: '25',
-          modifier2: '59',
-          modifier3: 'RT',
-          modifier4: 'GP',
-          diagnosisPointer: 'A',
-          units: 1,
-          charge: 450.00
+          charge: c1.fee || 275.00
         },
         {
           id: `line-${Date.now()}-2`,
           cptCode: '97039',
-          description: 'Unlisted Modality - High Intensity Laser Therapy (HILT)',
+          description: c2.description || 'Unlisted Physical Medicine (HILT Laser)',
           modifier1: '59',
           modifier2: 'RT',
           modifier3: 'GP',
           modifier4: '',
           diagnosisPointer: 'A',
           units: 1,
-          charge: 250.00
+          charge: c2.fee || 2000.00
+        }
+      ]);
+    } else {
+      set('appointmentType', 'Initial Visit (New Patient)');
+      const c1 = resolveCptFeeAndDescription('99204', formData.providerId, cptCodes);
+      const c2 = resolveCptFeeAndDescription('97039', formData.providerId, cptCodes);
+      setServiceLines([
+        {
+          id: `line-${Date.now()}-1`,
+          cptCode: '99204',
+          description: c1.description || 'Office/Outpatient Visit New (Complex) / Pain Consult',
+          modifier1: '25',
+          modifier2: '59',
+          modifier3: 'RT',
+          modifier4: 'GP',
+          diagnosisPointer: 'A',
+          units: 1,
+          charge: c1.fee || 1214.00
+        },
+        {
+          id: `line-${Date.now()}-2`,
+          cptCode: '97039',
+          description: c2.description || 'Unlisted Physical Medicine (HILT Laser)',
+          modifier1: '59',
+          modifier2: 'RT',
+          modifier3: 'GP',
+          modifier4: '',
+          diagnosisPointer: 'A',
+          units: 1,
+          charge: c2.fee || 2000.00
         }
       ]);
     }
@@ -402,6 +428,7 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
           <MultiLineCptTable
             lines={serviceLines}
             onChange={setServiceLines}
+            providerId={formData.providerId}
             title="Service CPT Billing Lines (Line 1, 2, 3... & Modifiers)"
           />
         </div>
