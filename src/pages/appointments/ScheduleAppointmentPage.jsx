@@ -10,6 +10,7 @@ import { MultiLineCptTable } from '../../components/common/MultiLineCptTable';
 import { useUIStore } from '../../store/uiStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, Save, Bell, User, MapPin, FileText, Tag } from 'lucide-react';
+import { cleanNumericFee } from '../../utils/cptFeeSchedule';
 
 import { isClinicClosed, getTodayDateStr, getNextBusinessDay } from '../../constants/usHolidays';
 import { useAuthStore } from '../../store/authStore';
@@ -81,12 +82,16 @@ export const ScheduleAppointmentPage = () => {
     });
   };
 
-  const [serviceLines, setServiceLines] = useState([]);
+  const { currentUser } = useAuthStore();
+
+  const [serviceLines, setServiceLines] = useState(() => {
+    const defaultProvKey = (currentUser?.providerId || 'prov-josmic').replace('prov-', '');
+    return getInitialServiceLinesForProvider(defaultProvKey, 'INITIAL');
+  });
 
   const initialProvConfig = INITIAL_PROVIDER_CONFIGS.josmic;
   const initialAddress = initialProvConfig ? `${initialProvConfig.address.street}, ${initialProvConfig.address.suite}, ${initialProvConfig.address.city} ${initialProvConfig.address.state} ${initialProvConfig.address.zipCode}` : '';
 
-  const { currentUser } = useAuthStore();
   const [formData, setFormData] = useState(() => {
     const defaultProviderId = currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`;
     return {
@@ -184,13 +189,19 @@ export const ScheduleAppointmentPage = () => {
     setIsLoading(true);
     try {
       const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === formData.providerId);
-      const validLines = serviceLines.filter(l => l.cptCode && l.cptCode.trim() !== '');
-      const totalEstimatedCharge = validLines.reduce((sum, l) => sum + ((parseFloat(l.units) || 1) * (parseFloat(l.charge) || 0)), 0);
+      const filteredLines = serviceLines.filter(l => l.cptCode && l.cptCode.trim() !== '');
+      const validLines = filteredLines.length > 0 ? filteredLines : getInitialServiceLinesForProvider(formData.providerId.replace('prov-', ''), formData.visitType);
+      const totalEstimatedCharge = validLines.reduce((sum, l) => sum + ((parseInt(l.units, 10) || 1) * cleanNumericFee(l.charge)), 0);
+      const cleanReason = (formData.reasonForVisit || '').replace(/<!-- APPT_METADATA:[\s\S]*?-->/, '').trim();
+      const metaPayload = JSON.stringify({ serviceLines: validLines, totalEstimatedCharge });
+      const combinedReason = cleanReason ? `${cleanReason}\n<!-- APPT_METADATA:${metaPayload} -->` : `<!-- APPT_METADATA:${metaPayload} -->`;
+
       const created = await mockAppointmentService.createAppointment({
         ...formData,
+        reasonForVisit: combinedReason,
         serviceLines: validLines,
         totalEstimatedCharge,
-        cptCode: validLines.map(l => l.cptCode).filter(Boolean).join(', '),
+        cptCode: validLines.map(l => l.cptCode).filter(Boolean).join(','),
         modifiers: validLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
         providerName: selectedProv?.name || 'FM Health and Wellness Center'
       });
@@ -255,6 +266,7 @@ export const ScheduleAppointmentPage = () => {
                     location: provConfig?.address?.suite || '',
                     locationAddress: provAddress
                   }));
+                  setServiceLines(getInitialServiceLinesForProvider(provKey, formData.visitType));
                 }}
               >
                 <option value="prov-josmic">FM Health and Wellness Center (Pain Management)</option>
@@ -278,6 +290,7 @@ export const ScheduleAppointmentPage = () => {
                 onChange={e => {
                   const val = e.target.value;
                   set('visitType', val);
+                  setServiceLines(getInitialServiceLinesForProvider(formData.providerId.replace('prov-', ''), val));
                 }}
               >
                 <option value="INITIAL">Initial Visit (New Patient)</option>
@@ -346,6 +359,7 @@ export const ScheduleAppointmentPage = () => {
             <MultiLineCptTable
               lines={serviceLines}
               onChange={setServiceLines}
+              providerId={formData.providerId}
               title="Appointment Billing Codes & Modifiers (Multi-Line Line 1, 2, 3...)"
             />
           </div>

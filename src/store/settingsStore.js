@@ -76,7 +76,18 @@ export const useSettingsStore = create((set, get) => ({
         ...getFallbackUiProps(m.name)
       })) : [];
 
-      const cptCodes = cptData.status === 'fulfilled' ? cptData.value : [];
+      const cptCodes = cptData.status === 'fulfilled' ? cptData.value.map(c => {
+        const rawFee = c.defaultFee !== undefined ? c.defaultFee : c.fee;
+        const numFee = typeof rawFee === 'number'
+          ? rawFee
+          : parseFloat(String(rawFee || '0').replace(/[^0-9.]/g, ''));
+        return {
+          ...c,
+          defaultFee: !isNaN(numFee) ? numFee : 0,
+          fee: !isNaN(numFee) ? numFee : 0,
+          rawFee: c.fee
+        };
+      }) : [];
       const icdCodes = icdData.status === 'fulfilled' ? icdData.value : [];
       const modifiers = modifierData.status === 'fulfilled' ? modifierData.value : [];
 
