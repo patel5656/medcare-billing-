@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiBillingService } from '../../services/api/apiBillingService';
+import { apiCaseService } from '../../services/api/apiCaseService';
 import { formatCurrency } from '../../utils/billingCalculations';
 import { formatStatus } from '../../utils/formatters';
 import { PrintableStatementModal } from '../../components/billing/PrintableStatementModal';
@@ -59,6 +60,28 @@ export const BillDetailsPage = () => {
         patientId: bill.patientId,
         selectedVisitIds
       });
+
+      // Also sync case clinicalDocStorage so Counselor Statement Form 9 & 10 pick up selection
+      if (bill.caseId) {
+        try {
+          const caseData = await apiCaseService.getCaseById(bill.caseId).catch(() => null);
+          if (caseData) {
+            const currentStorage = caseData.clinicalDocStorage || {};
+            const form9Doc = { ...(currentStorage['FM_COUNSELING_FORM_9'] || {}), selectedVisitIds };
+            const form10Doc = { ...(currentStorage['FM_COUNSELING_FORM_10'] || {}), selectedVisitIds };
+            await apiCaseService.updateCase(bill.caseId, {
+              clinicalDocStorage: {
+                ...currentStorage,
+                FM_COUNSELING_FORM_9: form9Doc,
+                FM_COUNSELING_FORM_10: form10Doc
+              }
+            });
+          }
+        } catch (storageErr) {
+          console.warn('Failed to sync case storage:', storageErr);
+        }
+      }
+
       addToast(`Synchronized ${selectedVisitIds.length} verified visit(s) to billing statement!`, 'success');
       setShowCounselingVisitsModal(false);
       loadBill();

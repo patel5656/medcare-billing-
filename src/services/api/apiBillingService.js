@@ -179,5 +179,50 @@ export const apiBillingService = {
       throw new Error(err.error || 'Failed to remove service line');
     }
     return res.json();
+  },
+
+  async getPerformedServices(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const url = query ? `${API_BASE}/billing/performed-services?${query}` : `${API_BASE}/billing/performed-services`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to retrieve performed services');
+    return res.json();
+  },
+
+  async recordPerformedService(payload) {
+    const res = await fetch(`${API_BASE}/billing/performed-services`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to record service');
+    }
+    return res.json();
+  },
+
+  async updatePerformedService(id, payload) {
+    const res = await fetch(`${API_BASE}/billing/performed-services/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to update service');
+    }
+    return res.json();
+  },
+
+  async deletePerformedService(id) {
+    const res = await fetch(`${API_BASE}/billing/performed-services/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete service');
+    }
+    return res.json();
   }
 };

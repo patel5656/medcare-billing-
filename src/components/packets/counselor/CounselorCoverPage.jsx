@@ -37,14 +37,18 @@ export const CounselorCoverPage = ({ blankMode = false, packetData = null, bill 
   });
   const completedNotes = packetData?.clinicalNotes || [];
   const billLines = bill?.serviceLines || bill?.lineItems || [];
-  const dynamicCompletedVisits = visitCount !== null 
-    ? visitCount 
-    : Math.max(
-        completedAppointments.length,
-        completedNotes.length,
-        billLines.length,
-        typeof packetData?.totalCompletedVisits === 'number' ? packetData.totalCompletedVisits : 0
-      );
+  const selectedSessionIds = packetData?.clinicalDocStorage?.['FM_COUNSELING_FORM_9']?.selectedVisitIds;
+
+  const dynamicCompletedVisits = Array.isArray(selectedSessionIds) && selectedSessionIds.length > 0
+    ? selectedSessionIds.length
+    : (visitCount !== null 
+        ? visitCount 
+        : Math.max(
+            completedAppointments.length,
+            completedNotes.length,
+            billLines.length,
+            typeof packetData?.totalCompletedVisits === 'number' ? packetData.totalCompletedVisits : 0
+          ));
   const dbTotalVisits = String(dynamicCompletedVisits);
 
   const effectiveTotalVisits = (storage.totalVisitsManual && storage.totalVisits !== undefined)

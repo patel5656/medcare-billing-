@@ -68,10 +68,19 @@ export const CounselorTreatmentSummaryForm = ({
     };
   }, [propCounselingVisits, loadVisitsFromApi]);
 
+  // Check for selected sessions from Statement Form 9 or local storage
+  const selectedSessionIds = storage.selectedVisitIds || 
+    packetData?.clinicalDocStorage?.['FM_COUNSELING_FORM_9']?.selectedVisitIds || 
+    null;
+
+  const effectiveCounselingVisits = Array.isArray(selectedSessionIds) && selectedSessionIds.length > 0
+    ? counselingVisits.filter(v => selectedSessionIds.includes(v.id))
+    : counselingVisits;
+
   // Dynamic calculations based strictly on real counseling visits
-  const visitCount = counselingVisits.length;
-  const earliestDate = counselingVisits[0]?.date || '';
-  const latestDate = counselingVisits[counselingVisits.length - 1]?.date || '';
+  const visitCount = effectiveCounselingVisits.length;
+  const earliestDate = effectiveCounselingVisits[0]?.date || '';
+  const latestDate = effectiveCounselingVisits[effectiveCounselingVisits.length - 1]?.date || '';
 
   // Determine chronological treatment period
   let dynamicTreatmentPeriod = '';

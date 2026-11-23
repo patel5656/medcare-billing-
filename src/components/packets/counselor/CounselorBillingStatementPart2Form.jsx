@@ -58,11 +58,16 @@ export const CounselorBillingStatementPart2Form = ({
     };
   }, [propCounselingVisits, loadVisitsFromApi]);
 
+  // Selected visit IDs from Form 9 or local storage
+  const selectedVisitIds = storage.selectedVisitIds || 
+    packetData?.clinicalDocStorage?.['FM_COUNSELING_FORM_9']?.selectedVisitIds || 
+    null;
+
   // Continuation lines for sessions 14 onwards (supports unlimited visits)
-  const part2Rows = buildPart2StatementRows(counselingVisits, bill);
+  const part2Rows = buildPart2StatementRows(counselingVisits, bill, selectedVisitIds);
 
   // Dynamic reconciled totals
-  const reconciledTotals = calculateReconciledStatementTotals(counselingVisits, bill);
+  const reconciledTotals = calculateReconciledStatementTotals(counselingVisits, bill, selectedVisitIds);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -80,8 +85,11 @@ export const CounselorBillingStatementPart2Form = ({
 
   useEffect(() => {
     if (!blankMode) {
-      const currentRows = buildPart2StatementRows(counselingVisits, bill);
-      const totals = calculateReconciledStatementTotals(counselingVisits, bill);
+      const activeIds = storage.selectedVisitIds || 
+        packetData?.clinicalDocStorage?.['FM_COUNSELING_FORM_9']?.selectedVisitIds || 
+        null;
+      const currentRows = buildPart2StatementRows(counselingVisits, bill, activeIds);
+      const totals = calculateReconciledStatementTotals(counselingVisits, bill, activeIds);
       setFormData({
         rows: currentRows,
         totalCharges: totals.totalCharges,
@@ -97,6 +105,8 @@ export const CounselorBillingStatementPart2Form = ({
     bill?.totals?.totalPayments, 
     bill?.totals?.payments, 
     counselingVisits, 
+    storage.selectedVisitIds,
+    packetData?.clinicalDocStorage?.['FM_COUNSELING_FORM_9']?.selectedVisitIds,
     blankMode
   ]);
 

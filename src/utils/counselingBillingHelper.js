@@ -142,10 +142,14 @@ export const resolveVisitBillingRow = (visit, bill = null) => {
 
 /**
  * Generate Part 1 statement rows (fixed 13-row layout).
+ * Supports optional selectedVisitIds to allow users to select the number of sessions.
  */
-export const buildPart1StatementRows = (counselingVisits, bill = null) => {
+export const buildPart1StatementRows = (counselingVisits, bill = null, selectedVisitIds = null) => {
   const eligible = getEligibleCounselingVisits(counselingVisits);
-  const generated = eligible.map(v => resolveVisitBillingRow(v, bill));
+  const activeVisits = Array.isArray(selectedVisitIds)
+    ? eligible.filter(v => selectedVisitIds.includes(v.id))
+    : eligible;
+  const generated = activeVisits.map(v => resolveVisitBillingRow(v, bill));
   
   return Array.from({ length: 13 }).map((_, idx) => {
     if (generated[idx]) {
@@ -157,10 +161,14 @@ export const buildPart1StatementRows = (counselingVisits, bill = null) => {
 
 /**
  * Generate Part 2 statement rows (continuation rows, min 4 rows).
+ * Supports optional selectedVisitIds to allow users to select the number of sessions.
  */
-export const buildPart2StatementRows = (counselingVisits, bill = null) => {
+export const buildPart2StatementRows = (counselingVisits, bill = null, selectedVisitIds = null) => {
   const eligible = getEligibleCounselingVisits(counselingVisits);
-  const generated = eligible.map(v => resolveVisitBillingRow(v, bill));
+  const activeVisits = Array.isArray(selectedVisitIds)
+    ? eligible.filter(v => selectedVisitIds.includes(v.id))
+    : eligible;
+  const generated = activeVisits.map(v => resolveVisitBillingRow(v, bill));
   const continuation = generated.slice(13);
   const rowCount = Math.max(4, continuation.length);
 
@@ -174,10 +182,14 @@ export const buildPart2StatementRows = (counselingVisits, bill = null) => {
 
 /**
  * Calculate reconciled financial totals for Counseling Billing Statement.
+ * Supports optional selectedVisitIds to allow users to select the number of sessions.
  */
-export const calculateReconciledStatementTotals = (counselingVisits, bill = null) => {
+export const calculateReconciledStatementTotals = (counselingVisits, bill = null, selectedVisitIds = null) => {
   const eligible = getEligibleCounselingVisits(counselingVisits);
-  const generated = eligible.map(v => resolveVisitBillingRow(v, bill));
+  const activeVisits = Array.isArray(selectedVisitIds)
+    ? eligible.filter(v => selectedVisitIds.includes(v.id))
+    : eligible;
+  const generated = activeVisits.map(v => resolveVisitBillingRow(v, bill));
   
   const totalChargesNum = generated.reduce((sum, r) => sum + (r.chargeNum || 0), 0);
   const paymentsNum = Number(bill?.totals?.totalPayments !== undefined ? bill.totals.totalPayments : (bill?.totals?.payments || bill?.paidAmount || 0));
@@ -190,6 +202,6 @@ export const calculateReconciledStatementTotals = (counselingVisits, bill = null
     paymentsCredits: `$${paymentsNum.toFixed(2)}`,
     balanceDueNum,
     balanceDue: `$${balanceDueNum.toFixed(2)}`,
-    totalVisitCount: eligible.length
+    totalVisitCount: activeVisits.length
   };
 };
