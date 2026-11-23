@@ -36,15 +36,7 @@ export const ScheduleAppointmentModal = ({
   const { currentUser } = useAuthStore();
   const isCounselorUser = currentUser?.providerId === 'prov-counselor' || currentUser?.role === 'Counselor';
 
-  const [serviceLines, setServiceLines] = useState(() => {
-    if (isCounselorUser) {
-      return [createDefaultServiceLine(1, '90834', 'Psychotherapy with patient, 45 minutes', 180.00)];
-    }
-    return [
-      createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
-      createDefaultServiceLine(2, '97039', 'High Intensity Laser Therapy (HILT)', 250.00)
-    ];
-  });
+  const [serviceLines, setServiceLines] = useState([]);
 
   const [formData, setFormData] = useState(() => {
     const defaultProviderId = isCounselorUser ? 'prov-counselor' : (currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`);
@@ -143,14 +135,15 @@ export const ScheduleAppointmentModal = ({
     setIsLoading(true);
     try {
       const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === formData.providerId);
-      const totalEstimatedCharge = serviceLines.reduce((sum, l) => sum + ((parseFloat(l.units) || 1) * (parseFloat(l.charge) || 0)), 0);
+      const validLines = serviceLines.filter(l => l.cptCode && l.cptCode.trim() !== '');
+      const totalEstimatedCharge = validLines.reduce((sum, l) => sum + ((parseFloat(l.units) || 1) * (parseFloat(l.charge) || 0)), 0);
       const created = await apiAppointmentService.createAppointment({
         ...formData,
         status: practiceSettings?.autoConfirmAppointments ? 'CONFIRMED' : 'SCHEDULED',
-        serviceLines,
+        serviceLines: validLines,
         totalEstimatedCharge,
-        cptCode: serviceLines.map(l => l.cptCode).filter(Boolean).join(',').substring(0, 10),
-        modifiers: serviceLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
+        cptCode: validLines.map(l => l.cptCode).filter(Boolean).join(',').substring(0, 10),
+        modifiers: validLines.map(l => [l.modifier1, l.modifier2, l.modifier3, l.modifier4].filter(Boolean).join('-')).filter(Boolean).join(', '),
         providerName: selectedProv?.name || 'FM Health and Wellness Center'
       });
       addToast(`Appointment scheduled for ${created.patientName || formData.patientName}!`, 'success');
@@ -287,15 +280,8 @@ export const ScheduleAppointmentModal = ({
                 if (pid === 'prov-counselor') {
                   aptType = 'Counseling Psychotherapy (45m)';
                   reason = 'Accident-related trauma & psychotherapy counseling';
-                  setServiceLines([
-                    createDefaultServiceLine(1, '90834', 'Psychotherapy with patient, 45 minutes', 180.00)
-                  ]);
                 } else if (pid === 'prov-josmic') {
                   reason = 'Post-MVA pain management & clinical evaluation';
-                  setServiceLines([
-                    createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
-                    createDefaultServiceLine(2, '97039', 'High Intensity Laser Therapy (HILT)', 250.00)
-                  ]);
                 }
                 if (pid === 'prov-tpi') { aptType = 'Trigger Point Injection'; }
                 if (pid === 'prov-tecar') { aptType = 'TECAR Therapy Session'; }
@@ -322,21 +308,7 @@ export const ScheduleAppointmentModal = ({
             <label className={labelCls}>Encounter Type *</label>
             <select
               value={formData.visitType}
-              onChange={e => {
-                const val = e.target.value;
-                set('visitType', val);
-                if (val === 'SUBSEQUENT') {
-                  setServiceLines([
-                    createDefaultServiceLine(1, '99214', 'Office/Outpatient Visit Established Moderate (30-39 min)', 275.00),
-                    createDefaultServiceLine(2, '97110', 'Therapeutic Exercise (15 min)', 110.00)
-                  ]);
-                } else {
-                  setServiceLines([
-                    createDefaultServiceLine(1, '99204', 'Initial Comprehensive Pain Management Consultation', 450.00),
-                    createDefaultServiceLine(2, '97039', 'High Intensity Laser Therapy (HILT)', 250.00)
-                  ]);
-                }
-              }}
+              onChange={e => set('visitType', e.target.value)}
               className={`${inputCls} font-bold text-teal-800 bg-teal-50/40`}
             >
               <option value="INITIAL">Initial Visit (New Patient)</option>
