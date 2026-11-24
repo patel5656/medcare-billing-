@@ -51,11 +51,13 @@ export const JosmicBillingStatement = ({
   const dbPatientId = bill?.patientSystemId || pt.patientId ||
     selectedCase?.patient?.patientId || selectedCase?.patientId || selectedCase?.id || '';
 
-  // Extract Billed To info (Attorney / Payer) directly from DB
-  const dbBillToName = bill?.billToName || 
-    (selectedCase?.lawFirm ? (selectedCase?.attorneyName ? `${selectedCase.attorneyName} (${selectedCase.lawFirm})` : selectedCase.lawFirm) : selectedCase?.attorneyName) || 
-    selectedCase?.attorney || 'Personal Injury Settlement';
-  const dbBillToAddress = bill?.billToAddress || selectedCase?.attorneyAddress || selectedCase?.lawFirmAddress || '';
+  // Extract Billed To info (Attorney / Payer) - Case Attorney takes precedence
+  const caseLawyer = selectedCase?.lawFirm 
+    ? (selectedCase?.attorneyName ? `${selectedCase.attorneyName} (${selectedCase.lawFirm})` : selectedCase.lawFirm) 
+    : (selectedCase?.attorneyName || selectedCase?.attorney);
+  const dbBillToName = caseLawyer || bill?.billToName || 'Personal Injury Settlement';
+  const caseAddress = selectedCase?.attorneyAddress || selectedCase?.lawFirmAddress;
+  const dbBillToAddress = caseAddress || bill?.billToAddress || '';
 
   // Real patient-specific MD consultation visits state from Appointments Calendar
   const [appointments, setAppointments] = useState(() => {

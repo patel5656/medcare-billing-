@@ -395,16 +395,6 @@ export const AnikBillingStatement = ({
               </div>
             </div>
           </div>
-
-          {/* Legal / Lien Notice */}
-          <div className="p-4 bg-[#fdf9fa] rounded-xl border border-[#eed8dc] text-[11px] text-slate-600 leading-relaxed">
-            <p className="font-semibold text-slate-800 mb-1">
-              NOTICE TO COUNSEL / THIRD PARTY PAYER:
-            </p>
-            <p>
-              This statement represents specialized medical laser therapy rendered pursuant to an active Letter of Protection (LOP) and healthcare provider lien on file. Please protect our medical lien upon settlement, verdict, or recovery. Remit payments payable to <strong className="text-slate-900">{providerName}</strong> referencing Statement No. <strong className="text-slate-900 font-mono">{formData.statementNumber || dbStatementNumber}</strong>.
-            </p>
-          </div>
         </div>
 
         {/* Footer */}

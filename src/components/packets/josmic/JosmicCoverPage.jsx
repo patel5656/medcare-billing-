@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '../../../utils/billingCalculations';
 import { apiCaseService } from '../../../services/api/apiCaseService';
+import { SearchableLawyerSelect } from '../../common/SearchableLawyerSelect';
 import fmLogo from '../../../assets/fm-logo.jpeg';
 
 /**
@@ -38,11 +39,13 @@ export const JosmicCoverPage = ({
   const dbPatientId = bill?.patientSystemId || pt.patientId ||
     packetData?.patient?.patientId || packetData?.patientId || packetData?.id || '161143192';
 
-  // Extract Billed To info
-  const dbBillToName = bill?.billToName ||
-    (packetData?.lawFirm ? (packetData?.attorneyName ? `${packetData.attorneyName} (${packetData.lawFirm})` : packetData.lawFirm) : packetData?.attorneyName) ||
-    packetData?.attorney || 'OJ Lawal and Associates';
-  const dbBillToAddress = bill?.billToAddress || packetData?.attorneyAddress || packetData?.lawFirmAddress || 'Houston, Texas 77031';
+  // Extract Billed To info (Case Attorney takes precedence)
+  const caseLawyer = packetData?.lawFirm
+    ? (packetData?.attorneyName ? `${packetData.attorneyName} (${packetData.lawFirm})` : packetData.lawFirm)
+    : (packetData?.attorneyName || packetData?.attorney);
+  const dbBillToName = caseLawyer || bill?.billToName || 'OJ Lawal and Associates';
+  const caseAddress = packetData?.attorneyAddress || packetData?.lawFirmAddress;
+  const dbBillToAddress = caseAddress || bill?.billToAddress || 'Houston, Texas 77031';
 
   // Extract Statement Number
   const dbStatementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || packetData?.statementNumber || '125639';
@@ -212,9 +215,38 @@ export const JosmicCoverPage = ({
 
               {/* BILLED TO */}
               <div>
-                <span className="block font-black text-[11px] text-[#722F37] tracking-wider uppercase mb-1">
-                  BILLED TO
-                </span>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="block font-black text-[11px] text-[#722F37] tracking-wider uppercase">
+                    BILLED TO
+                  </span>
+                  {!readOnly && (
+                    <div className="print:hidden w-44">
+                      <SearchableLawyerSelect
+                        value={formData.billToName}
+                        currentFirm={packetData?.lawFirm}
+                        placeholder="Select Lawyer..."
+                        onSelect={(selected) => {
+                          if (selected) {
+                            const name = selected.firm ? `${selected.name} (${selected.firm})` : selected.name;
+                            const addr = selected.address || '';
+                            handleFieldChange('billToName', name);
+                            handleFieldChange('billToAddress', addr);
+                            const caseId = packetData?.id || packetData?._id;
+                            if (caseId) {
+                              apiCaseService.updateCase(caseId, {
+                                attorneyName: selected.name,
+                                lawFirm: selected.firm,
+                                attorneyAddress: selected.address || '',
+                                attorneyPhone: selected.phone || '',
+                                attorneyEmail: selected.email || ''
+                              }).catch(console.error);
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={formData.billToName}

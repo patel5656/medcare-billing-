@@ -189,3 +189,103 @@ export const exportToPDF = async (elementOrId, filename = 'cms1500_claim.pdf') =
     }
   }
 };
+
+/**
+ * Direct client-side multi-page PDF exporter for full clinical packets (e.g. 7-page MD Consultation packet).
+ * Captures each page cleanly at true 1:1 scale (850px width converted to US Letter 8.5in x 11in)
+ * and generates a single downloadable PDF file without opening the browser print dialog.
+ *
+ * @param {string|HTMLElement} containerOrId - Container containing .print-page-sheet elements (e.g. "printable-packet")
+ * @param {string} filename - Target PDF filename
+ * @param {Function} [onProgress] - Optional callback function({ current, total })
+ */
+export const exportPacketToPDF = async (containerOrId, filename = 'clinical_packet.pdf', onProgress = null) => {
+  const html2canvas = (await import('html2canvas')).default;
+  const { jsPDF } = await import('jspdf');
+
+  const container = typeof containerOrId === 'string'
+    ? document.getElementById(containerOrId)
+    : containerOrId;
+
+  if (!container) {
+    throw new Error('Target printable packet container not found');
+  }
+
+  // Find all page sheets in the packet
+  const sheetElements = Array.from(container.querySelectorAll('.print-page-sheet'));
+  if (!sheetElements || sheetElements.length === 0) {
+    throw new Error('No printable pages found in packet to export');
+  }
+
+  // 1. Temporarily neutralize zoom transforms on all pages for pristine 1:1 rendering
+  const origTransforms = [];
+  sheetElements.forEach((el, idx) => {
+    origTransforms[idx] = {
+      transform: el.style.transform,
+      marginBottom: el.style.marginBottom,
+      transition: el.style.transition
+    };
+    el.style.transition = 'none';
+    el.style.transform = 'none';
+    el.style.marginBottom = '0px';
+  });
+
+  // Wait 2 animation frames for browser layout to repaint without transforms
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+  try {
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'in',
+      format: 'letter' // 8.5 x 11 inches
+    });
+
+    const total = sheetElements.length;
+
+    for (let i = 0; i < total; i++) {
+      if (typeof onProgress === 'function') {
+        onProgress({ current: i + 1, total });
+      }
+
+      // The actual page content is the first element child inside the sheet
+      const pageEl = sheetElements[i].firstElementChild || sheetElements[i];
+
+      const canvas = await html2canvas(pageEl, {
+        scale: 2, // 2x sharpness (192 dpi equivalent at 96 dpi)
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: 1280
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+      if (i > 0) {
+        pdf.addPage('letter', 'portrait');
+      }
+
+      // 8.5 x 11 in full bleed
+      pdf.addImage(imgData, 'JPEG', 0, 0, 8.5, 11, undefined, 'FAST');
+    }
+
+    const safeFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+    pdf.save(safeFilename);
+    return safeFilename;
+  } catch (err) {
+    console.error('Failed to export multi-page PDF packet:', err);
+    throw err;
+  } finally {
+    // 2. Restore all original zoom transforms
+    sheetElements.forEach((el, idx) => {
+      const orig = origTransforms[idx];
+      if (orig) {
+        el.style.transform = orig.transform;
+        el.style.marginBottom = orig.marginBottom;
+        el.style.transition = orig.transition;
+      }
+    });
+  }
+};

@@ -75,8 +75,8 @@ export const AssessmentsAndFormsPage = () => {
   const visibleTabs = isDoctor ? allTabs.filter(t => t.allowedForDoctor) : allTabs;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 print:space-y-0 print:m-0 print:p-0">
+      <div className="assessments-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Assessments & Clinical Procedure Forms</h1>
           <p className="text-xs text-slate-500">Provider-specific specialized evaluation and therapy session documentation forms</p>
@@ -119,7 +119,7 @@ export const AssessmentsAndFormsPage = () => {
       </div>
 
       {/* Modality Tabs */}
-      <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+      <div className="modality-tabs-bar flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto print:hidden">
         {visibleTabs.map(tab => (
           <button
             key={tab.id}
@@ -150,7 +150,7 @@ export const AssessmentsAndFormsPage = () => {
             </div>
             <h2 className="text-base font-bold text-slate-900">403 - Access Forbidden</h2>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Doctor accounts are restricted to Pain Management and Counseling assessment forms only. Access to FM Laser Therapy is restricted.
+              Doctor accounts are restricted to MD Consultation and Counseling assessment forms only. Access to FM Laser Therapy is restricted.
             </p>
           </div>
         ) : (
@@ -166,7 +166,7 @@ export const AssessmentsAndFormsPage = () => {
             </div>
             <h2 className="text-base font-bold text-slate-900">403 - Access Forbidden</h2>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Doctor accounts are restricted to Pain Management and Counseling assessment forms only. Access to Shockwave is restricted.
+              Doctor accounts are restricted to MD Consultation and Counseling assessment forms only. Access to Shockwave is restricted.
             </p>
           </div>
         ) : (
@@ -182,7 +182,7 @@ export const AssessmentsAndFormsPage = () => {
             </div>
             <h2 className="text-base font-bold text-slate-900">403 - Access Forbidden</h2>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Doctor accounts are restricted to Pain Management and Counseling assessment forms only. Access to FM Trigger Point Injections is restricted.
+              Doctor accounts are restricted to MD Consultation and Counseling assessment forms only. Access to FM Trigger Point Injections is restricted.
             </p>
           </div>
         ) : (
@@ -198,7 +198,7 @@ export const AssessmentsAndFormsPage = () => {
             </div>
             <h2 className="text-base font-bold text-slate-900">403 - Access Forbidden</h2>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Doctor accounts are restricted to Pain Management and Counseling assessment forms only. Access to FM TECAR Therapy is restricted.
+              Doctor accounts are restricted to MD Consultation and Counseling assessment forms only. Access to FM TECAR Therapy is restricted.
             </p>
           </div>
         ) : (

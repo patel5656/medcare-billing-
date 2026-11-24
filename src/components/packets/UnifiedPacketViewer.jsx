@@ -68,7 +68,7 @@ import {
   Printer, Download, Eye, Edit3, Lock, Unlock, ZoomIn, ZoomOut, 
   Maximize2, ChevronLeft, ChevronRight, FileCheck, AlertCircle, Sparkles, FileText, RotateCcw, User
 } from 'lucide-react';
-import { triggerPrint } from '../../utils/exportUtils';
+import { triggerPrint, exportPacketToPDF } from '../../utils/exportUtils';
 
 const getInitialZoom = () => {
   if (typeof window === 'undefined') return 0.9;
@@ -89,6 +89,8 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   const [latestNote, setLatestNote] = useState(null);
   const [counselingVisits, setCounselingVisits] = useState([]);
   const [mdConsultVisits, setMdConsultVisits] = useState([]);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
   
   const [activeTabFilter, setActiveTabFilter] = useState('ALL');
   const [zoomLevel, setZoomLevel] = useState(getInitialZoom);
@@ -244,9 +246,48 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     return () => window.removeEventListener('resize', handleResize);
   }, [zoomLevel]);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    if (activeTabFilter !== 'ALL') {
+      setActiveTabFilter('ALL');
+      await new Promise(r => setTimeout(r, 100));
+    }
     triggerPrint('printable-packet');
     addToast(`Opening print dialog for ${manifest.providerName} packet (${manifest.totalPages} pages)...`, 'info');
+  };
+
+  const handleDownloadPdf = async () => {
+    if (isDownloadingPdf) return;
+    setIsDownloadingPdf(true);
+    setDownloadProgress({ current: 0, total: manifest.totalPages });
+
+    const prevFilter = activeTabFilter;
+    if (prevFilter !== 'ALL') {
+      setActiveTabFilter('ALL');
+      await new Promise(r => setTimeout(r, 150));
+    }
+
+    try {
+      const patientNameSafe = (effectiveCase?.patientName || effectiveCase?.patient?.firstName || 'Patient')
+        .replace(/[^a-zA-Z0-9_-]/g, '_');
+      const caseNumSafe = (effectiveCase?.caseId || effectiveCase?.id || 'Report')
+        .replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `${patientNameSafe}_MD_Consultation_Packet_${caseNumSafe}.pdf`;
+
+      addToast(`Generating complete ${manifest.totalPages}-page PDF for direct download...`, 'info');
+      await exportPacketToPDF('printable-packet', filename, (prog) => {
+        setDownloadProgress(prog);
+      });
+      addToast(`Downloaded ${filename} (${manifest.totalPages} pages)!`, 'success');
+    } catch (err) {
+      console.error('Failed to download PDF packet:', err);
+      addToast(err?.message || 'Failed to download PDF', 'error');
+    } finally {
+      if (prevFilter !== 'ALL') {
+        setActiveTabFilter(prevFilter);
+      }
+      setIsDownloadingPdf(false);
+      setDownloadProgress({ current: 0, total: 0 });
+    }
   };
 
   const handleFinaliseLock = () => {
@@ -451,11 +492,31 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
 
             <button
               onClick={handlePrint}
-              className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 border border-slate-700"
+              className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 border border-slate-700 cursor-pointer"
+              title="Open browser print dialog for packet"
             >
               <Printer className="w-3.5 h-3.5 text-teal-400" />
               <span className="hidden sm:inline">Print Complete Packet ({manifest.totalPages} Pages)</span>
               <span className="sm:hidden">Print ({manifest.totalPages}p)</span>
+            </button>
+
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isDownloadingPdf}
+              className={`px-3 py-1.5 bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm border border-teal-500 cursor-pointer ${
+                isDownloadingPdf ? 'opacity-70 cursor-wait' : ''
+              }`}
+              title="Directly generate and download complete 7-page PDF"
+            >
+              <Download className={`w-3.5 h-3.5 text-white ${isDownloadingPdf ? 'animate-bounce' : ''}`} />
+              <span className="hidden sm:inline">
+                {isDownloadingPdf 
+                  ? `Downloading (${downloadProgress.current || 1}/${downloadProgress.total || manifest.totalPages})...` 
+                  : 'Download PDF'}
+              </span>
+              <span className="sm:hidden">
+                {isDownloadingPdf ? 'Downloading...' : 'PDF'}
+              </span>
             </button>
           </div>
         </div>
@@ -510,7 +571,7 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
       )}
 
       {/* CANVAS RENDERING CONTAINER - Fully Responsive Wrapper */}
-      <div className={`overflow-x-auto p-2 sm:p-6 rounded-2xl border flex justify-center print:bg-white print:p-0 print:border-none min-h-[450px] ${activeTabFilter === 'AI DOCTOR NOTE' ? 'bg-slate-100 border-slate-300' : 'bg-slate-950 border-slate-800'}`}>
+      <div className={`overflow-x-auto p-2 sm:p-6 rounded-2xl border flex justify-center print:bg-white print:p-0 print:border-none print:min-h-0 print:h-auto print:shadow-none print:m-0 min-h-[450px] ${activeTabFilter === 'AI DOCTOR NOTE' ? 'bg-slate-100 border-slate-300' : 'bg-slate-950 border-slate-800'}`}>
         
         {activeTabFilter === 'AI DOCTOR NOTE' ? (
           <AiDoctorsNoteWorkspace 
