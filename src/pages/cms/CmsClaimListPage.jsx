@@ -60,7 +60,7 @@ export const CmsClaimListPage = () => {
     const q = search.toLowerCase();
     if (!q) return true;
     return (
-      (c.box2 || '').toLowerCase().includes(q) ||
+      (c.patientName || c.box2 || '').toLowerCase().includes(q) ||
       (c.providerName || '').toLowerCase().includes(q) ||
       (c.dosDisplay || '').includes(q) ||
       (c.box17ReferringName || '').toLowerCase().includes(q) ||
@@ -78,7 +78,7 @@ export const CmsClaimListPage = () => {
     { key: 'claimId', label: 'Claim ID' },
     { key: 'dosDisplay', label: 'Date of Service (DOS)' },
     { key: 'providerName', label: 'Billing Provider' },
-    { key: 'box2', label: 'Patient Name' },
+    { key: 'patientName', label: 'Patient Name', formatter: (v, row) => row.patientName || row.box2 || '' },
     { key: 'box17ReferringName', label: 'Box 17 Referring Provider' },
     { key: 'box21Diagnoses', label: 'Box 21 Diagnoses', formatter: (v) => Array.isArray(v) ? v.join('; ') : String(v || '') },
     { key: 'box28TotalCharge', label: 'Box 28 Total Billed ($)', formatter: (v) => formatCurrency(parseFloat(v) || 0) },
@@ -147,7 +147,7 @@ export const CmsClaimListPage = () => {
                       {claim.providerName}
                     </td>
                     <td className="py-3.5 px-4 text-slate-700 whitespace-nowrap">
-                      {claim.box2}
+                      {claim.patientName || claim.box2}
                     </td>
                     <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
                       {claim.box17ReferringName || 'Dr. Segun Adeoye'}
@@ -178,7 +178,7 @@ export const CmsClaimListPage = () => {
             </tbody>
           </table>
         </div>
-        
+
         {/* -- Pagination -- */}
         {totalPages > 1 && (
           <div className="border-t border-slate-200 p-3">

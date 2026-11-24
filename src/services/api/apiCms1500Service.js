@@ -60,7 +60,24 @@ export const apiCms1500Service = {
     try {
       const res = await apiBillingService.getAllCmsClaims();
       if (res && res.bills) {
-        const rawClaims = res.bills.flatMap(bill => mapBillToCms1500Claims(bill, null, buildProviderConfigFromBill(bill)));
+        const rawClaims = res.bills
+          .filter(bill => {
+            const caseAssigned = bill.case?.assignedProviderIds;
+            const patientAssigned = bill.case?.patient?.assignedProviderIds;
+            let assigned = [];
+            if (caseAssigned) {
+              try { assigned = typeof caseAssigned === 'string' ? JSON.parse(caseAssigned) : caseAssigned; } catch (e) {}
+            }
+            if ((!Array.isArray(assigned) || assigned.length === 0) && patientAssigned) {
+              try { assigned = typeof patientAssigned === 'string' ? JSON.parse(patientAssigned) : patientAssigned; } catch (e) {}
+            }
+            if (Array.isArray(assigned) && assigned.length > 0) {
+              return assigned.includes(bill.providerId);
+            }
+            return true;
+          })
+          .flatMap(bill => mapBillToCms1500Claims(bill, null, buildProviderConfigFromBill(bill)));
+
         // Deduplicate claims by unique Patient Name + Provider + DOS + Total Charge
         const uniqueMap = new Map();
         for (const claim of rawClaims) {
@@ -87,7 +104,15 @@ export const apiCms1500Service = {
       const rawClaims = [];
       targetCases.forEach((c, idx) => {
         const caseRes = billResults[idx];
+        const assignedIds = Array.isArray(c.assignedProviderIds)
+          ? c.assignedProviderIds
+          : (typeof c.assignedProviderIds === 'string' ? JSON.parse(c.assignedProviderIds || '[]') : []);
+
         for (const bill of (caseRes?.allBills || [])) {
+          // If the case defines assignedProviderIds, ensure this bill's provider is assigned
+          if (assignedIds.length > 0 && !assignedIds.includes(bill.providerId)) {
+            continue; // Skip bill for unassigned clinic
+          }
           const claims = mapBillToCms1500Claims(bill, c, buildProviderConfigFromBill(bill));
           rawClaims.push(...claims);
         }

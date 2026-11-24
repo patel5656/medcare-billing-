@@ -52,10 +52,10 @@ const mapBox10Conditions = (accidentType) => {
 
 const parseDobToMmDdYy = (rawDob) => {
   if (!rawDob) return { mm: '', dd: '', yy: '' };
-  
+
   const dobStr = String(rawDob).trim().split('T')[0];
   if (!dobStr) return { mm: '', dd: '', yy: '' };
-  
+
   const parts = dobStr.split(/[-/]/);
   if (parts.length < 3) return { mm: '', dd: '', yy: '' };
 
@@ -127,6 +127,11 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
     // Fallback to pre-formatted name from backend
     patientName = bill.patientName || patientCase?.patientName || '';
   }
+
+  // Original natural patient profile name as entered by user (First Last)
+  const originalPatientName = bill.patientName || patientCase?.patientName ||
+    (pFirst ? `${pFirst} ${pMiddle ? pMiddle + ' ' : ''}${pLast}`.trim() : '') ||
+    patientName;
 
   // --- Patient demographics ---
   const patientId = bill.patientSystemId || patientCase?.patientId || bill.patientId || '';
@@ -286,6 +291,7 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
     return {
       claimId: `cms-${bill.id}-${idx}`,
       billId: bill.id,
+      patientName: originalPatientName,
       providerId: bill.providerId || providerConfig?.id || '',
       providerName: bill.providerName || '',
       dos: dosKey,
