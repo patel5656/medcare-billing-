@@ -103,7 +103,18 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   if (!bill) return [];
 
   // 1. Group service lines by unique Date of Service (dos) with normalized date keys
-  const lineItems = bill.lineItems || bill.serviceLines || [];
+  // Exclude legacy auto-seeded dummy template lines so only real saved services generate CMS claims
+  const dummyKeywords = [
+    'Biostimulation',
+    'Musculoskeletal Tissue Regeneration',
+    'Spinal Decompression Supplies',
+    'Deep Thermal Bio-Modulation'
+  ];
+  const rawItems = bill.lineItems || bill.serviceLines || [];
+  const lineItems = rawItems.filter(item => {
+    const desc = item.description || '';
+    return !dummyKeywords.some(kw => desc.includes(kw));
+  });
   if (!lineItems || lineItems.length === 0) return [];
   const dosGroups = {};
 

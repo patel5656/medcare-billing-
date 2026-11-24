@@ -68,7 +68,7 @@ export const FourBillsPage = () => {
         if (found) setCaseData(found);
       }
 
-      // Filter out any legacy auto-generated demo bills (such as Laser $14,606 or DAV'S $8,000)
+      // Filter out any legacy auto-generated demo bills and strip dummy template service lines
       const rawBills = bData?.allBills || [];
       const dummyKeywords = [
         'Biostimulation',
@@ -76,17 +76,28 @@ export const FourBillsPage = () => {
         'Spinal Decompression Supplies',
         'Deep Thermal Bio-Modulation'
       ];
-      const validBills = rawBills.filter(b => {
-        const lines = b.serviceLines || b.lineItems || [];
-        if (lines.length > 0 && lines.every(l => dummyKeywords.some(kw => (l.description || '').includes(kw)))) {
-          return false;
-        }
-        if ((b.totals?.totalCharges === 14606 || b.totals?.totalCharges === 8000 || b.totals?.totalCharges === 9706) &&
-            lines.some(l => dummyKeywords.some(kw => (l.description || '').includes(kw)))) {
-          return false;
-        }
-        return true;
-      });
+      const validBills = rawBills.map(b => {
+        const rawLines = b.serviceLines || b.lineItems || [];
+        const cleanLines = rawLines.filter(l => !dummyKeywords.some(kw => (l.description || '').includes(kw)));
+        // If the bill was purely dummy template lines, discard it
+        if (cleanLines.length === 0 && rawLines.length > 0) return null;
+        if (cleanLines.length === 0 && (!b.totals?.totalCharges || b.totals?.totalCharges === 0)) return null;
+
+        const newTotal = cleanLines.length > 0
+          ? cleanLines.reduce((acc, l) => acc + ((Number(l.charge) || 0) * (Number(l.units) || 1)), 0)
+          : (b.totals?.totalCharges || 0);
+
+        return {
+          ...b,
+          serviceLines: cleanLines,
+          lineItems: cleanLines,
+          totals: {
+            ...(b.totals || {}),
+            totalCharges: newTotal
+          },
+          balanceDue: newTotal
+        };
+      }).filter(Boolean);
 
       // Purge any dummy bills from the backend DB in background
       const dummyBills = rawBills.filter(b => !validBills.includes(b));
