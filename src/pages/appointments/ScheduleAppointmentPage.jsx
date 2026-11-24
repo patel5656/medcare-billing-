@@ -84,10 +84,9 @@ export const ScheduleAppointmentPage = () => {
 
   const { currentUser } = useAuthStore();
 
-  const [serviceLines, setServiceLines] = useState(() => {
-    const defaultProvKey = (currentUser?.providerId || 'prov-josmic').replace('prov-', '');
-    return getInitialServiceLinesForProvider(defaultProvKey, 'INITIAL');
-  });
+  const [serviceLines, setServiceLines] = useState(() => [
+    createDefaultServiceLine(1, '', '', 0)
+  ]);
 
   const initialProvConfig = INITIAL_PROVIDER_CONFIGS.josmic;
   const initialAddress = initialProvConfig ? `${initialProvConfig.address.street}, ${initialProvConfig.address.suite}, ${initialProvConfig.address.city} ${initialProvConfig.address.state} ${initialProvConfig.address.zipCode}` : '';
@@ -190,7 +189,7 @@ export const ScheduleAppointmentPage = () => {
     try {
       const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === formData.providerId);
       const filteredLines = serviceLines.filter(l => l.cptCode && l.cptCode.trim() !== '');
-      const validLines = filteredLines.length > 0 ? filteredLines : getInitialServiceLinesForProvider(formData.providerId.replace('prov-', ''), formData.visitType);
+      const validLines = filteredLines;
       const totalEstimatedCharge = validLines.reduce((sum, l) => sum + ((parseInt(l.units, 10) || 1) * cleanNumericFee(l.charge)), 0);
       const cleanReason = (formData.reasonForVisit || '').replace(/<!-- APPT_METADATA:[\s\S]*?-->/, '').trim();
       const metaPayload = JSON.stringify({ serviceLines: validLines, totalEstimatedCharge });
@@ -266,7 +265,6 @@ export const ScheduleAppointmentPage = () => {
                     location: provConfig?.address?.suite || '',
                     locationAddress: provAddress
                   }));
-                  setServiceLines(getInitialServiceLinesForProvider(provKey, formData.visitType));
                 }}
               >
                 <option value="prov-josmic">FM Health and Wellness Center (Pain Management)</option>
@@ -290,7 +288,6 @@ export const ScheduleAppointmentPage = () => {
                 onChange={e => {
                   const val = e.target.value;
                   set('visitType', val);
-                  setServiceLines(getInitialServiceLinesForProvider(formData.providerId.replace('prov-', ''), val));
                 }}
               >
                 <option value="INITIAL">Initial Visit (New Patient)</option>

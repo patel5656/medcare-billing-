@@ -70,9 +70,9 @@ export const ScheduleAppointmentModal = ({
     ];
   };
 
-  const [serviceLines, setServiceLines] = useState(() =>
-    getDefaultServiceLines(isCounselorUser ? 'prov-counselor' : (currentUser?.providerId || 'prov-josmic'), isCounselorUser)
-  );
+  const [serviceLines, setServiceLines] = useState(() => [
+    createDefaultServiceLine(1, '', '', 0)
+  ]);
 
   const [formData, setFormData] = useState(() => {
     const defaultProviderId = isCounselorUser ? 'prov-counselor' : (currentUser?.providerId || currentUser?.id || `doc-${currentUser?.name || 'unknown'}`);
@@ -97,6 +97,7 @@ export const ScheduleAppointmentModal = ({
   // Load patients and cases
   useEffect(() => {
     if (isOpen) {
+      setServiceLines([createDefaultServiceLine(1, '', '', 0)]);
       getGeneralSettings().then(res => {
         if (res) {
           setPracticeSettings(res);
@@ -172,7 +173,7 @@ export const ScheduleAppointmentModal = ({
     try {
       const selectedProv = Object.values(INITIAL_PROVIDER_CONFIGS).find(p => p.id === formData.providerId);
       const filteredLines = serviceLines.filter(l => l.cptCode && l.cptCode.trim() !== '');
-      const validLines = filteredLines.length > 0 ? filteredLines : getDefaultServiceLines(formData.providerId, isCounselorUser);
+      const validLines = filteredLines;
       const totalEstimatedCharge = validLines.reduce((sum, l) => sum + ((parseInt(l.units, 10) || 1) * cleanNumericFee(l.charge)), 0);
 
       const cleanReason = (formData.reasonForVisit || '').replace(/<!-- APPT_METADATA:[\s\S]*?-->/, '').trim();
@@ -329,7 +330,6 @@ export const ScheduleAppointmentModal = ({
                 if (pid === 'prov-tpi') { aptType = 'Trigger Point Injection'; }
                 if (pid === 'prov-tecar') { aptType = 'TECAR Therapy Session'; }
                 setFormData(p => ({ ...p, providerId: pid, appointmentType: aptType, reasonForVisit: reason }));
-                setServiceLines(getDefaultServiceLines(pid, pid === 'prov-counselor'));
               }}
               className={inputCls}
             >
