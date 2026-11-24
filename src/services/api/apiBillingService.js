@@ -24,7 +24,27 @@ export const apiBillingService = {
     if (!caseId) return { caseId: null, allBills: [] };
     const res = await fetch(`${API_BASE}/billing/cases/bills?caseId=${encodeURIComponent(caseId)}`);
     if (!res.ok) throw new Error('Failed to retrieve case bills.');
-    return res.json();
+    const data = await res.json();
+    if (data && Array.isArray(data.allBills)) {
+      data.allBills = data.allBills.filter(b => {
+        // Filter out legacy auto-seeded dummy bills (e.g. Laser Therapy $14,606 / $9,706 with dummy template lines)
+        const isDummyLaser = (b.providerId === 'prov-anik' || b.providerName?.toLowerCase().includes('laser')) &&
+          (b.totals?.totalCharges === 14606 || b.totals?.totalCharges === 9706 || (b.statementNumber && b.statementNumber.endsWith('-A'))) &&
+          (
+            b.totals?.totalCharges === 14606 ||
+            b.totals?.totalCharges === 9706 ||
+            b.serviceLines?.some(l => 
+              l.description?.includes('Biostimulation') || 
+              l.description?.includes('Spinal Decompression') ||
+              l.description?.includes('6 Sessions')
+            )
+          );
+        const isDummyESWT = (b.providerId === 'prov-davs' || b.providerName?.toLowerCase().includes('shockwave')) &&
+          b.serviceLines?.some(l => l.description?.includes('Musculoskeletal Tissue Regeneration'));
+        return !isDummyLaser && !isDummyESWT;
+      });
+    }
+    return data;
   },
 
   async getBillById(id) {

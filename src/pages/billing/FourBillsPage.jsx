@@ -68,7 +68,32 @@ export const FourBillsPage = () => {
         if (found) setCaseData(found);
       }
 
-      setBills(bData?.allBills || []);
+      // Filter out any legacy auto-generated demo bills
+      const rawBills = bData?.allBills || [];
+      const validBills = rawBills.filter(b => {
+        const isDummy = (b.providerId === 'prov-anik' || b.providerName?.toLowerCase().includes('laser')) &&
+          (b.totals?.totalCharges === 14606 || b.totals?.totalCharges === 9706 || (b.statementNumber && b.statementNumber.endsWith('-A'))) &&
+          (
+            b.totals?.totalCharges === 14606 ||
+            b.totals?.totalCharges === 9706 ||
+            b.serviceLines?.some(l => 
+              l.description?.includes('Biostimulation') || 
+              l.description?.includes('Spinal Decompression') ||
+              l.description?.includes('6 Sessions')
+            )
+          );
+        return !isDummy;
+      });
+
+      // Purge any dummy bills from the backend DB in background
+      const dummyBills = rawBills.filter(b => !validBills.includes(b));
+      dummyBills.forEach(db => {
+        if (db.id) {
+          apiBillingService.deleteBill(db.id).catch(() => {});
+        }
+      });
+
+      setBills(validBills);
     } catch (err) {
       console.error('Failed to load bills:', err);
     } finally {
