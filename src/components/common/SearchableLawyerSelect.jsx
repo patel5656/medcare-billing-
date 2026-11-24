@@ -86,7 +86,7 @@ export const SearchableLawyerSelect = ({
   const handleDelete = async (e, attorney) => {
     e.stopPropagation();
     const lawyerLabel = attorney.firm ? `${attorney.firm} (${attorney.name})` : attorney.name;
-    const isConfirmed = window.confirm(`Kya aap "${lawyerLabel}" ko delete karna chahte hain? Yeh database se permanently remove ho jayega.`);
+    const isConfirmed = window.confirm(`Are you sure you want to delete "${lawyerLabel}"? This record will be permanently removed from the database.`);
     if (!isConfirmed) return;
 
     try {
@@ -102,7 +102,7 @@ export const SearchableLawyerSelect = ({
       }
     } catch (err) {
       console.error('Failed to delete attorney:', err);
-      alert(err.message || 'Lawyer delete karne me error aaya.');
+      alert(err.message || 'Failed to delete lawyer record.');
     } finally {
       setDeletingId(null);
     }
@@ -206,22 +206,23 @@ export const SearchableLawyerSelect = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       {isSelected && (
-                        <Check className="w-4 h-4 text-teal-600 flex-shrink-0 mr-1" />
+                        <Check className="w-4 h-4 text-teal-600 flex-shrink-0 mr-0.5" />
                       )}
                       <button
                         type="button"
                         onClick={(e) => handleDelete(e, a)}
                         disabled={isDeleting}
                         title="Delete lawyer from database"
-                        className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 hover:border-rose-600 transition flex items-center gap-1.5 font-bold text-[11px] shadow-2xs cursor-pointer disabled:opacity-50 flex-shrink-0"
                       >
                         {isDeleting ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-500" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
                           <Trash2 className="w-3.5 h-3.5" />
                         )}
+                        <span>Delete</span>
                       </button>
                     </div>
                   </div>

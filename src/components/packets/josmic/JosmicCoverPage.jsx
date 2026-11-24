@@ -153,28 +153,42 @@ export const JosmicCoverPage = ({
       style={{ width: '850px', minHeight: '1100px' }}
     >
       <div className="flex-1 flex flex-col">
-        {/* Top Header with FM Health & Wellness Center Logo */}
-        <div className="text-center pt-8 pb-3 px-8">
-          <div className="flex justify-center mb-2">
-            <img
-              src={fmLogo}
-              alt="FM Health & Wellness Center Logo"
-              className="h-28 w-auto object-contain mx-auto mix-blend-multiply"
-            />
+        {/* Top Header Banner: Dark Burgundy Background matching Page 2 theme */}
+        <div className="bg-[#722F37] text-white p-6 sm:p-7 flex justify-between items-start">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-white p-1 shadow-sm flex items-center justify-center flex-shrink-0">
+              <img src={fmLogo} alt="FM Logo" className="w-full h-full object-contain" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-wide uppercase">
+                FM HEALTH &amp; WELLNESS CENTER
+              </h1>
+              <p className="text-xs text-white/90 font-medium mt-1">
+                MD Consultation | 9900 Westpark Drive, Suite 354
+              </p>
+              <p className="text-xs text-white/90 font-medium mt-0.5">
+                Houston, TX 77063 | 346-338-7020
+              </p>
+            </div>
           </div>
-          <h1 className="text-2xl font-black text-slate-950 tracking-tight">FM HEALTH &amp; WELLNESS CENTER</h1>
-          <p className="text-[11px] text-slate-600 mt-1 font-medium">9900 WESTPARK DRIVE, SUITE 354, HOUSTON, TX 77063</p>
-          <p className="text-[11px] text-slate-600 mt-0.5 underline font-medium">OFFICE: 346-338-7020</p>
+          <div className="text-right">
+            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider leading-none">
+              MD CONSULTATION<br />COVER PAGE
+            </h2>
+            <p className="text-xs font-mono text-white/90 mt-1.5 font-bold">
+              Statement No. {formData.statementNumber || dbStatementNumber}
+            </p>
+            <p className="text-xs text-white/90 mt-0.5 font-medium">
+              Statement Date: {formData.serviceDates || dbServiceDates}
+            </p>
+          </div>
         </div>
 
-        {/* Horizontal divider */}
-        <div className="border-t border-slate-300 mx-8"></div>
-
         {/* Main Content Area */}
-        <div className="px-8 sm:px-12 py-10 flex-1 flex flex-col items-center justify-start">
-          {/* Centered Document Titles matching Reference Design 1 */}
+        <div className="px-8 sm:px-12 py-8 flex-1 flex flex-col items-center justify-start">
+          {/* Centered Document Titles matching Burgundy Theme */}
           <div className="text-center my-6">
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-wider uppercase">
+            <h2 className="text-2xl sm:text-3xl font-black text-[#722F37] tracking-wider uppercase">
               MD CONSULTATION
             </h2>
             <h2 className="text-2xl sm:text-3xl font-black text-[#722F37] tracking-wider uppercase mt-1">
@@ -312,14 +326,14 @@ export const JosmicCoverPage = ({
                   onChange={(e) => handleFieldChange('totalBalance', e.target.value)}
                   placeholder="$0.00"
                   disabled={readOnly}
-                  className="w-full text-base sm:text-lg font-black text-slate-950 font-mono bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition"
+                  className="w-full text-base sm:text-lg font-black text-[#722F37] font-mono bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition"
                 />
               </div>
             </div>
           </div>
 
-          {/* Bottom Notification Card matching Reference Design 1 */}
-          <div className="w-full max-w-2xl border border-[#722F37] bg-[#fce8ed] rounded-xl p-5 text-center my-10 shadow-sm">
+          {/* Bottom Notification Card matching Theme */}
+          <div className="w-full max-w-2xl border-2 border-[#722F37] bg-[#fce8ed] rounded-xl p-5 text-center my-6 shadow-sm">
             <div className="font-extrabold text-[#722F37] text-xs sm:text-sm tracking-wide uppercase">
               MD CONSULTATION SERVICES
             </div>
@@ -330,9 +344,11 @@ export const JosmicCoverPage = ({
         </div>
       </div>
 
-      {/* Footer matching Reference Design 1 */}
-      <div className="px-8 pb-4 flex justify-center items-center text-[10px] text-slate-400 font-mono border-t border-slate-100 pt-2">
-        <span>FM Health &amp; Wellness Center | MD Consultation Billing Statement</span>
+      {/* Footer matching Theme */}
+      <div className="px-8 pb-4 flex justify-center items-center text-[10px] text-slate-400 font-mono border-t border-[#eed8dc] pt-2">
+        <span className="text-[#722F37] font-semibold">FM Health &amp; Wellness Center</span>
+        <span className="mx-1.5 text-slate-300">|</span>
+        <span>MD Consultation Billing Statement</span>
       </div>
     </div>
   );
