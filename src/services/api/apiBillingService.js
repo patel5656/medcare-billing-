@@ -26,22 +26,23 @@ export const apiBillingService = {
     if (!res.ok) throw new Error('Failed to retrieve case bills.');
     const data = await res.json();
     if (data && Array.isArray(data.allBills)) {
+      const dummyKeywords = [
+        'Biostimulation',
+        'Musculoskeletal Tissue Regeneration',
+        'Spinal Decompression Supplies',
+        'Deep Thermal Bio-Modulation'
+      ];
       data.allBills = data.allBills.filter(b => {
-        // Filter out legacy auto-seeded dummy bills (e.g. Laser Therapy $14,606 / $9,706 with dummy template lines)
-        const isDummyLaser = (b.providerId === 'prov-anik' || b.providerName?.toLowerCase().includes('laser')) &&
-          (b.totals?.totalCharges === 14606 || b.totals?.totalCharges === 9706 || (b.statementNumber && b.statementNumber.endsWith('-A'))) &&
-          (
-            b.totals?.totalCharges === 14606 ||
-            b.totals?.totalCharges === 9706 ||
-            b.serviceLines?.some(l => 
-              l.description?.includes('Biostimulation') || 
-              l.description?.includes('Spinal Decompression') ||
-              l.description?.includes('6 Sessions')
-            )
-          );
-        const isDummyESWT = (b.providerId === 'prov-davs' || b.providerName?.toLowerCase().includes('shockwave')) &&
-          b.serviceLines?.some(l => l.description?.includes('Musculoskeletal Tissue Regeneration'));
-        return !isDummyLaser && !isDummyESWT;
+        const lines = b.serviceLines || b.lineItems || [];
+        // Eliminate bills where all lines are legacy auto-seeded dummy template lines
+        if (lines.length > 0 && lines.every(l => dummyKeywords.some(kw => (l.description || '').includes(kw)))) {
+          return false;
+        }
+        if ((b.totals?.totalCharges === 14606 || b.totals?.totalCharges === 8000 || b.totals?.totalCharges === 9706) &&
+            lines.some(l => dummyKeywords.some(kw => (l.description || '').includes(kw)))) {
+          return false;
+        }
+        return true;
       });
     }
     return data;

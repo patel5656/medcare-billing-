@@ -48,6 +48,23 @@ const buildProviderConfigFromBill = (bill) => ({
   defaultPlaceOfService: '11',
 });
 
+const isDummyTemplateBill = (b) => {
+  if (!b) return true;
+  const dummyDesc = [
+    'Biostimulation',
+    'Musculoskeletal Tissue Regeneration',
+    'Spinal Decompression Supplies',
+    'Deep Thermal Bio-Modulation'
+  ];
+  const lines = b.serviceLines || b.lineItems || [];
+  // Skip bills with zero actual service lines
+  if (!lines || lines.length === 0) return true;
+  // Skip bills where every line is a dummy template line
+  const allDummy = lines.every(l => dummyDesc.some(d => (l.description || '').includes(d)));
+  if (allDummy) return true;
+  return false;
+};
+
 /**
  * Real API Service for fetching CMS-1500 Claims mapped directly from MySQL Database records via Backend endpoints.
  */
@@ -62,6 +79,8 @@ export const apiCms1500Service = {
       if (res && res.bills) {
         const rawClaims = res.bills
           .filter(bill => {
+            if (isDummyTemplateBill(bill)) return false;
+
             const caseAssigned = bill.case?.assignedProviderIds;
             const patientAssigned = bill.case?.patient?.assignedProviderIds;
             let assigned = [];
@@ -78,12 +97,20 @@ export const apiCms1500Service = {
           })
           .flatMap(bill => mapBillToCms1500Claims(bill, null, buildProviderConfigFromBill(bill)));
 
-        // Deduplicate claims by unique Patient Name + Provider + DOS + Total Charge
+        // Group/update claims by unique Patient Name + Provider + DOS (replaces outdated claims with newly saved charges)
         const uniqueMap = new Map();
         for (const claim of rawClaims) {
-          const key = `${(claim.box2 || '').trim().toLowerCase()}_${(claim.providerName || '').trim().toLowerCase()}_${(claim.dosDisplay || '').trim()}_${claim.box28TotalCharge || ''}`;
-          if (!uniqueMap.has(key)) {
+          const key = `${(claim.patientName || claim.box2 || '').trim().toLowerCase()}_${(claim.providerId || claim.providerName || '').trim().toLowerCase()}_${(claim.dosDisplay || claim.dos || '').trim()}`;
+          const existing = uniqueMap.get(key);
+          if (!existing) {
             uniqueMap.set(key, claim);
+          } else {
+            // Keep submitted/finalized claim, or update editable claim with newest saved line items
+            if (existing.status === 'SUBMITTED' || existing.status === 'FINALIZED') {
+              // preserve submitted claim
+            } else {
+              uniqueMap.set(key, claim);
+            }
           }
         }
         return sortClaimsNewestFirst(Array.from(uniqueMap.values()));
@@ -109,6 +136,8 @@ export const apiCms1500Service = {
           : (typeof c.assignedProviderIds === 'string' ? JSON.parse(c.assignedProviderIds || '[]') : []);
 
         for (const bill of (caseRes?.allBills || [])) {
+          if (isDummyTemplateBill(bill)) continue;
+
           // If the case defines assignedProviderIds, ensure this bill's provider is assigned
           if (assignedIds.length > 0 && !assignedIds.includes(bill.providerId)) {
             continue; // Skip bill for unassigned clinic
@@ -118,12 +147,19 @@ export const apiCms1500Service = {
         }
       });
 
-      // Deduplicate by Patient Name + Provider + DOS + Total Charge
+      // Group/update claims by unique Patient Name + Provider + DOS
       const uniqueMap = new Map();
       for (const claim of rawClaims) {
-        const key = `${(claim.box2 || '').trim().toLowerCase()}_${(claim.providerName || '').trim().toLowerCase()}_${(claim.dosDisplay || '').trim()}_${claim.box28TotalCharge || ''}`;
-        if (!uniqueMap.has(key)) {
+        const key = `${(claim.patientName || claim.box2 || '').trim().toLowerCase()}_${(claim.providerId || claim.providerName || '').trim().toLowerCase()}_${(claim.dosDisplay || claim.dos || '').trim()}`;
+        const existing = uniqueMap.get(key);
+        if (!existing) {
           uniqueMap.set(key, claim);
+        } else {
+          if (existing.status === 'SUBMITTED' || existing.status === 'FINALIZED') {
+            // preserve submitted claim
+          } else {
+            uniqueMap.set(key, claim);
+          }
         }
       }
 

@@ -68,21 +68,24 @@ export const FourBillsPage = () => {
         if (found) setCaseData(found);
       }
 
-      // Filter out any legacy auto-generated demo bills
+      // Filter out any legacy auto-generated demo bills (such as Laser $14,606 or DAV'S $8,000)
       const rawBills = bData?.allBills || [];
+      const dummyKeywords = [
+        'Biostimulation',
+        'Musculoskeletal Tissue Regeneration',
+        'Spinal Decompression Supplies',
+        'Deep Thermal Bio-Modulation'
+      ];
       const validBills = rawBills.filter(b => {
-        const isDummy = (b.providerId === 'prov-anik' || b.providerName?.toLowerCase().includes('laser')) &&
-          (b.totals?.totalCharges === 14606 || b.totals?.totalCharges === 9706 || (b.statementNumber && b.statementNumber.endsWith('-A'))) &&
-          (
-            b.totals?.totalCharges === 14606 ||
-            b.totals?.totalCharges === 9706 ||
-            b.serviceLines?.some(l => 
-              l.description?.includes('Biostimulation') || 
-              l.description?.includes('Spinal Decompression') ||
-              l.description?.includes('6 Sessions')
-            )
-          );
-        return !isDummy;
+        const lines = b.serviceLines || b.lineItems || [];
+        if (lines.length > 0 && lines.every(l => dummyKeywords.some(kw => (l.description || '').includes(kw)))) {
+          return false;
+        }
+        if ((b.totals?.totalCharges === 14606 || b.totals?.totalCharges === 8000 || b.totals?.totalCharges === 9706) &&
+            lines.some(l => dummyKeywords.some(kw => (l.description || '').includes(kw)))) {
+          return false;
+        }
+        return true;
       });
 
       // Purge any dummy bills from the backend DB in background

@@ -133,43 +133,70 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
       addToast('Please select a valid clinical patient case before initializing a bill.', 'warning');
       return;
     }
+    const chargeVal = parseFloat(formData.charge);
+    if (isNaN(chargeVal) || chargeVal < 0) {
+      addToast('Please enter a valid charge amount.', 'warning');
+      return;
+    }
+    if (!formData.cptCode) {
+      addToast('Please specify a CPT code.', 'warning');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      let targetBillId = `bill-${formData.providerId.replace('prov-', '')}-${formData.caseId}`;
+      const lineCharge = parseFloat(formData.charge) || 0.00;
+      const formattedDos = formData.dos || new Date().toISOString().split('T')[0];
+      const serviceLine = {
+        dos: formattedDos,
+        dateOfService: formattedDos,
+        cptCode: formData.cptCode.trim(),
+        description: formData.description || 'Treatment Service',
+        modifier1: formData.modifier1 || '',
+        modifier2: formData.modifier2 || '',
+        modifier3: formData.modifier3 || '',
+        modifier4: formData.modifier4 || '',
+        diagPointer: formData.diagPointer || 'A',
+        diagnosisPointer: formData.diagPointer || 'A',
+        units: 1,
+        charge: lineCharge,
+        balance: lineCharge,
+        lineBalance: lineCharge,
+        insurancePayment: 0.00,
+        patientPayment: 0.00,
+        otherPayment: 0.00,
+        adjustments: 0.00
+      };
 
-      try {
-        await apiBillingService.createBill({
-          id: targetBillId,
-          caseId: formData.caseId,
-          providerId: formData.providerId,
-          diagnosisCodes: formData.diagnosisCodes,
-          billToName: 'OJ LAW FIRM & ASSOCIATES',
-          billToAddress: '11711 Bedford St. Suite 01, Houston TX 77031'
-        });
-      } catch (e) {
-        // Bill might already exist
-      }
+      const targetBillId = `bill-${formData.providerId.replace('prov-', '')}-${formData.caseId}`;
 
-      const updated = await apiBillingService.addServiceLine(targetBillId, {
-        dos: formData.dos,
-        cptCode: formData.cptCode,
-        description: formData.description,
-        modifier1: formData.modifier1,
-        modifier2: formData.modifier2,
-        modifier3: formData.modifier3,
-        modifier4: formData.modifier4,
-        diagPointer: formData.diagPointer,
-        charge: parseFloat(formData.charge) || 0.00
+      // 1. Post bill with service lines directly in creation payload
+      const createdBill = await apiBillingService.createBill({
+        id: targetBillId,
+        caseId: formData.caseId,
+        providerId: formData.providerId,
+        diagnosisCodes: formData.diagnosisCodes,
+        billToName: 'OJ LAW FIRM & ASSOCIATES',
+        billToAddress: '11711 Bedford St. Suite 01, Houston TX 77031',
+        serviceLines: [serviceLine]
       });
 
+      // 2. Ensure service line is attached to actual bill ID returned by backend
+      const actualBillId = createdBill?.id || targetBillId;
+      const hasLine = createdBill?.serviceLines?.some(l => 
+        l.cptCode === serviceLine.cptCode &&
+        Math.abs(Number(l.charge) - lineCharge) < 0.01
+      );
+      if (!hasLine) {
+        await apiBillingService.addServiceLine(actualBillId, serviceLine).catch(console.warn);
+      }
+
       addToast('Provider bill statement & service line posted directly to database!', 'success');
-      if (onBillCreated) onBillCreated(updated);
+      if (onBillCreated) onBillCreated(createdBill);
       onClose();
     } catch (err) {
       console.error('Error posting bill:', err);
-      addToast('Saved bill service line directly to database!', 'success');
-      if (onBillCreated) onBillCreated();
-      onClose();
+      addToast(err.message || 'Failed to post bill statement.', 'error');
     } finally {
       setIsLoading(false);
     }

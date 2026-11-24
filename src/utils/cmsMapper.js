@@ -102,12 +102,34 @@ const parseSex = (rawSex) => {
 export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   if (!bill) return [];
 
-  // 1. Group service lines by unique Date of Service (dos)
+  // 1. Group service lines by unique Date of Service (dos) with normalized date keys
   const lineItems = bill.lineItems || bill.serviceLines || [];
+  if (!lineItems || lineItems.length === 0) return [];
   const dosGroups = {};
 
+  const normalizeDosKey = (raw) => {
+    if (!raw) return '';
+    const clean = String(raw).trim().split('T')[0];
+    const parts = clean.split(/[-/]/);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      } else if (parts[2].length === 4) {
+        const p0 = Number(parts[0]);
+        const p1 = Number(parts[1]);
+        if (p0 > 12) {
+          return `${parts[2]}-${String(p1).padStart(2, '0')}-${String(p0).padStart(2, '0')}`;
+        } else {
+          return `${parts[2]}-${String(p0).padStart(2, '0')}-${String(p1).padStart(2, '0')}`;
+        }
+      }
+    }
+    return clean;
+  };
+
   lineItems.forEach(item => {
-    const dosKey = item.dos || item.dateOfService || bill.statementDate;
+    const rawDos = item.dos || item.dateOfService || bill.statementDate || '';
+    const dosKey = normalizeDosKey(rawDos) || rawDos;
     if (!dosGroups[dosKey]) dosGroups[dosKey] = [];
     dosGroups[dosKey].push(item);
   });
@@ -258,7 +280,9 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
     const items = dosGroups[dosKey] || lineItems;
     let totalCharge = 0;
     const box24Lines = items.map(item => {
-      const lineFee = parseFloat(item.charge || item.fee || item.lineTotal || 0);
+      const units = parseInt(item.units) || 1;
+      const unitFee = parseFloat(item.charge || item.fee || item.lineTotal || 0);
+      const lineFee = unitFee * units;
       totalCharge += lineFee;
 
       const itemRenderingId = item.renderingProviderId || item.renderingId || item.renderingProvider?.providerId || item.renderingProvider?.id || renderingProviderId;
@@ -275,7 +299,7 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
         mod4: item.mod4 || item.modifier4 || (item.modifiers && item.modifiers[3]) || '',
         diagPtr: buildDiagPtr(item.diagPtr || item.diagPointer || item.diagnosisPointer || ''),
         charge: lineFee > 0 ? lineFee.toFixed(2) : '0.00',
-        units: String(item.units || 1),
+        units: String(units),
         renderingId: itemRenderingId,
         renderingNpi: itemRenderingNpi
       };
