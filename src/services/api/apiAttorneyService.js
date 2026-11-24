@@ -49,5 +49,19 @@ export const apiAttorneyService = {
       throw new Error(err.error || 'Failed to update attorney.');
     }
     return await res.json();
+  },
+
+  /**
+   * Delete an attorney record by ID
+   */
+  async deleteAttorney(id) {
+    const res = await fetch(`${API_BASE}/attorneys/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete attorney.');
+    }
+    return await res.json();
   }
 };
