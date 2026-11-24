@@ -11,6 +11,31 @@ import { AiDoctorsNoteForm } from './AiDoctorsNoteForm';
 import { triggerPrint } from '../../../utils/exportUtils';
 import { useAuthStore } from '../../../store/authStore';
 
+export const getClinicianSignatureForProvider = (providerOrReviewer) => {
+  if (!providerOrReviewer) return 'Dr. Segun Adeoye, DC / MD';
+  const text = String(providerOrReviewer).toLowerCase();
+  
+  if (text.includes('dav') || text.includes('shockwave') || text.includes('anatomy')) {
+    return 'Dr. Emily Davis, PT, DPT';
+  }
+  if (text.includes('counsel') || text.includes('hope') || text.includes('behavioral')) {
+    return 'Jordan Miller, LPC / LMFT';
+  }
+  if (text.includes('laser') || text.includes('anik')) {
+    return 'Dr. Segun Adeoye, DC';
+  }
+  if (text.includes('tecar') || text.includes('trigger') || text.includes('tpi') || text.includes('health') || text.includes('wellness') || text.includes('josmic') || text.includes('pain')) {
+    return 'Dr. Segun Adeoye, DC / MD';
+  }
+  if (text.includes('adeoye')) {
+    return 'Dr. Segun Adeoye, DC / MD';
+  }
+  if (text.includes('connor')) {
+    return 'Dr. Sarah Connor, MD';
+  }
+  return providerOrReviewer.startsWith('Dr.') ? providerOrReviewer : `Dr. ${providerOrReviewer}`;
+};
+
 export const AiDoctorsNoteWorkspace = ({ packetData, cases = [], selectedCaseId, setSelectedCaseId, isLocked, onBack }) => {
   const { addToast } = useUIStore();
   const { currentUser } = useAuthStore();
@@ -20,6 +45,28 @@ export const AiDoctorsNoteWorkspace = ({ packetData, cases = [], selectedCaseId,
   const [activeTab, setActiveTab] = useState('form'); // 'form' or 'preview'
   const [reviewer, setReviewer] = useState(currentUser?.name || 'Attending Provider');
   const [providers, setProviders] = useState([]);
+
+  const activeSignature = getClinicianSignatureForProvider(reviewer);
+
+  const handleReviewerChange = (newReviewer) => {
+    setReviewer(newReviewer);
+    const newSig = getClinicianSignatureForProvider(newReviewer);
+    if (localPacketData && localPacketData.id) {
+      const currentStorage = localPacketData.clinicalDocStorage || {};
+      const docNamespace = currentStorage["AI_DOCTORS_NOTE"] || {};
+      const updatedStorage = {
+        ...currentStorage,
+        AI_DOCTORS_NOTE: {
+          ...docNamespace,
+          attendingSignature: newSig,
+          attendingReviewer: newReviewer
+        }
+      };
+      const updatedPacket = { ...localPacketData, clinicalDocStorage: updatedStorage };
+      setLocalPacketData(updatedPacket);
+      apiCaseService.updateCase(localPacketData.id, { clinicalDocStorage: updatedStorage }).catch(console.error);
+    }
+  };
 
   React.useEffect(() => {
     apiProviderService.getProviders().then(res => {
@@ -34,6 +81,11 @@ export const AiDoctorsNoteWorkspace = ({ packetData, cases = [], selectedCaseId,
 
   React.useEffect(() => {
     setLocalPacketData(packetData);
+    if (packetData?.clinicalDocStorage?.['AI_DOCTORS_NOTE']?.attendingReviewer) {
+      setReviewer(packetData.clinicalDocStorage['AI_DOCTORS_NOTE'].attendingReviewer);
+    } else if (packetData?.assignedClinician || packetData?.referringProvider) {
+      setReviewer(packetData.assignedClinician || packetData.referringProvider);
+    }
   }, [packetData]);
 
   // Collect available documents from clinicalDocStorage (excluding the AI note itself)
@@ -219,7 +271,7 @@ export const AiDoctorsNoteWorkspace = ({ packetData, cases = [], selectedCaseId,
           <label className="block text-[10px] font-bold text-slate-700 mb-1">Attending Clinician / Reviewer:</label>
           <select 
             value={reviewer} 
-            onChange={(e) => setReviewer(e.target.value)}
+            onChange={(e) => handleReviewerChange(e.target.value)}
             className="w-full bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-teal-500 cursor-pointer"
           >
             <option value={currentUser?.name || 'Attending Provider'}>{currentUser?.name || 'Attending Provider'}</option>
@@ -349,7 +401,13 @@ export const AiDoctorsNoteWorkspace = ({ packetData, cases = [], selectedCaseId,
           
           {/* 7. STRUCTURED SECTIONS FORM */}
           <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
-            <AiDoctorsNoteForm packetData={localPacketData} isPreview={false} readOnly={isLocked} />
+            <AiDoctorsNoteForm 
+              packetData={localPacketData} 
+              isPreview={false} 
+              readOnly={isLocked} 
+              reviewer={reviewer}
+              activeSignature={activeSignature}
+            />
           </div>
 
           {/* 8. FINALIZE SECTION */}
@@ -371,7 +429,13 @@ export const AiDoctorsNoteWorkspace = ({ packetData, cases = [], selectedCaseId,
 
         {/* 9. STANDARDIZED DOCUMENT PREVIEW (Always block on print, follows tab on screen) */}
         <div className={`w-full flex justify-center py-4 bg-slate-100 rounded-xl border border-slate-200 overflow-x-auto print:bg-white print:border-none print:p-0 print:m-0 print:rounded-none print:block ${activeTab === 'preview' ? 'block' : 'hidden'}`}>
-          <AiDoctorsNoteForm packetData={localPacketData} isPreview={true} readOnly={isLocked} />
+          <AiDoctorsNoteForm 
+            packetData={localPacketData} 
+            isPreview={true} 
+            readOnly={isLocked} 
+            reviewer={reviewer}
+            activeSignature={activeSignature}
+          />
         </div>
       </div>
 
