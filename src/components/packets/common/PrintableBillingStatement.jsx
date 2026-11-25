@@ -53,13 +53,15 @@ export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selected
   const providerName = bill?.providerName || bill?.provider?.name || cfg?.name || selectedCase?.providerName || selectedCase?.treatingClinic || 'FM Laser Therapy';
   const providerAddress = bill?.providerAddress || bill?.provider?.address || (cfg?.address ? `${cfg.address.street}, ${cfg.address.city}, ${cfg.address.state} ${cfg.address.zipCode}` : '9900 Westpark Dr, Houston, TX 77063');
   const providerPhone = bill?.providerPhone || bill?.provider?.phone || cfg?.contact?.phone || '346-338-7020';
-  const statementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || selectedCase?.statementNumber || '121560';
-  const statementDate = bill?.statementDate || bill?.date || selectedCase?.incidentDate || selectedCase?.dateOfService || '04/13/2026';
 
-  const rawLines = bill?.serviceLines || bill?.lineItems || bill?.items || selectedCase?.serviceLines || selectedCase?.items || [];
+  const rawLines = bill?.serviceLines || bill?.lineItems || bill?.items || [];
   
   const displayItems = rawLines.map(item => {
-    const charge = Number(item.charge) || 0;
+    const units = Number(item.units) || 1;
+    const unitCharge = Number(item.charge) || 0;
+    const lineCharge = item.totalCharge !== undefined && Number(item.totalCharge) > 0 
+      ? Number(item.totalCharge) 
+      : (units > 1 ? units * unitCharge : unitCharge);
     const insPay = Number(item.payments?.insurance || item.insurancePayment || item.insPay) || 0;
     const patPay = Number(item.payments?.patient || item.patientPayment || item.patPay) || 0;
     const adj = Number(item.adjustments || item.adjustment || item.adj) || 0;
@@ -67,13 +69,14 @@ export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selected
       ? Number(item.lineBalance)
       : (item.balance !== undefined && item.balance !== null
           ? Number(item.balance)
-          : Math.max(0, charge - (insPay + patPay + adj)));
+          : Math.max(0, lineCharge - (insPay + patPay + adj)));
     return {
       ...item,
       dos: item.dos || item.dateOfService || item.date || '',
       cptCode: item.cptCode || item.cpt || '',
       description: item.description || item.serviceDescription || '',
-      charge,
+      units,
+      charge: lineCharge,
       insPay,
       patPay,
       adj,
@@ -81,17 +84,28 @@ export const PrintableBillingStatement = ({ bill = null, pageIndex = 0, selected
     };
   });
 
-  const totalCharges = rawLines.reduce((sum, i) => sum + (Number(i.charge) || 0), 0);
-  const totalInsPay = rawLines.reduce((sum, i) => sum + (Number(i.payments?.insurance || i.insurancePayment || i.insPay) || 0), 0);
-  const totalPatPay = rawLines.reduce((sum, i) => sum + (Number(i.payments?.patient || i.patientPayment || i.patPay) || 0), 0);
-  const totalAdj = rawLines.reduce((sum, i) => sum + (Number(i.adjustments || i.adjustment || i.adj) || 0), 0);
+  const statementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || (displayItems.length > 0 ? (selectedCase?.statementNumber || 'N/A') : '');
+  const statementDate = bill?.statementDate || bill?.date || (displayItems.length > 0 ? (selectedCase?.incidentDate || selectedCase?.dateOfService || '') : '');
+
+  const totalCharges = bill?.totals?.totalCharges !== undefined && Number(bill?.totals?.totalCharges) > 0
+    ? Number(bill.totals.totalCharges)
+    : displayItems.reduce((sum, i) => sum + i.charge, 0);
+  const totalInsPay = bill?.totals?.totalInsurancePayments !== undefined && Number(bill?.totals?.totalInsurancePayments) > 0
+    ? Number(bill.totals.totalInsurancePayments)
+    : displayItems.reduce((sum, i) => sum + i.insPay, 0);
+  const totalPatPay = bill?.totals?.totalPatientPayments !== undefined && Number(bill?.totals?.totalPatientPayments) > 0
+    ? Number(bill.totals.totalPatientPayments)
+    : displayItems.reduce((sum, i) => sum + i.patPay, 0);
+  const totalAdj = bill?.totals?.totalAdjustments !== undefined && Number(bill?.totals?.totalAdjustments) > 0
+    ? Number(bill.totals.totalAdjustments)
+    : displayItems.reduce((sum, i) => sum + i.adj, 0);
 
   const calculatedBalance = Math.max(0, totalCharges - (totalInsPay + totalPatPay + totalAdj));
-  const balanceDue = bill?.totals?.balanceDue !== undefined && bill?.totals?.balanceDue !== null && bill?.totals?.balanceDue > 0
+  const balanceDue = bill?.totals?.balanceDue !== undefined && bill?.totals?.balanceDue !== null && Number(bill?.totals?.balanceDue) > 0
     ? Number(bill.totals.balanceDue)
-    : (bill?.balanceDue !== undefined && bill?.balanceDue !== null && bill?.balanceDue > 0
+    : (bill?.balanceDue !== undefined && bill?.balanceDue !== null && Number(bill.balanceDue) > 0
         ? Number(bill.balanceDue)
-        : calculatedBalance);
+        : (displayItems.length > 0 ? calculatedBalance : 0));
 
   const agingCurrent = Number(bill?.aging?.current) || 0;
   const aging30 = Number(bill?.aging?.past30) || 0;

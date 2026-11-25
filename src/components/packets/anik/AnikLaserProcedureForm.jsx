@@ -91,7 +91,7 @@ export const AnikLaserProcedureForm = ({
 
     const lines = (serviceLines && serviceLines.length > 0)
       ? serviceLines
-      : (packetData?.serviceLines || packetData?.items || []);
+      : [];
 
     const uniqueDates = Array.from(new Set(
       lines.map(l => l.dos || l.dateOfService || l.date).filter(Boolean)
@@ -103,8 +103,6 @@ export const AnikLaserProcedureForm = ({
       }
       if (uniqueDates[0]) return uniqueDates[0];
     }
-
-    if (dos) return dos;
 
     return '';
   };

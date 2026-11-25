@@ -3,11 +3,13 @@ import { apiCms1500Service, sortClaimsNewestFirst } from '../../services/api/api
 import { apiBillingService } from '../../services/api/apiBillingService';
 import { apiCaseService } from '../../services/api/apiCaseService';
 import { formatCurrency } from '../../utils/billingCalculations';
-import { Search, Eye, Download, FileSpreadsheet } from 'lucide-react';
+import { Search, Eye, Download, FileSpreadsheet, Filter, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ExportDataModal } from '../../components/common/ExportDataModal';
 import { exportToCSV, getTimestampedFilename } from '../../utils/exportUtils';
 import { useUIStore } from '../../store/uiStore';
+import { apiProviderService } from '../../services/api/apiProviderService';
+import { getProviderDisplayName, matchesProviderFilter } from '../../utils/providerFilterUtils';
 import Pagination from '../../components/common/Pagination';
 
 export const CmsClaimListPage = () => {
@@ -16,9 +18,16 @@ export const CmsClaimListPage = () => {
   const [search, setSearch] = useState('');
   const [showExportModal, setShowExportModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [providersMap, setProvidersMap] = useState({});
   const ITEMS_PER_PAGE = 10;
-  const { addToast, activeProviderFilter } = useUIStore();
+  const { addToast, activeProviderFilter, setProviderFilter } = useUIStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    apiProviderService.getProviders().then(data => {
+      if (data) setProvidersMap(data);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     apiCms1500Service.getAllClaims()
@@ -38,20 +47,7 @@ export const CmsClaimListPage = () => {
   const filteredClaims = allClaims.filter(c => {
     // 1. Global Navbar Provider/Modality Filter
     if (activeProviderFilter && activeProviderFilter !== 'ALL') {
-      const claimProvId = (c.providerId || '').toLowerCase();
-      const claimProvName = (c.providerName || '').toLowerCase();
-      const filterId = activeProviderFilter.toLowerCase();
-
-      const isExactMatch = claimProvId === filterId;
-      const isAliasMatch =
-        (filterId.includes('josmic') && claimProvName.includes('josmic')) ||
-        (filterId.includes('dav') && (claimProvName.includes('dav') || claimProvName.includes('anatomy'))) ||
-        (filterId.includes('anik') && claimProvName.includes('anik')) ||
-        (filterId.includes('counselor') && (claimProvName.includes('counselor') || claimProvName.includes('behavioral') || claimProvName.includes('hope'))) ||
-        (filterId.includes('tpi') && (claimProvName.includes('trigger') || claimProvName.includes('tpi'))) ||
-        (filterId.includes('tecar') && (claimProvName.includes('tecar') || claimProvName.includes('physio')));
-
-      if (!isExactMatch && !isAliasMatch) {
+      if (!matchesProviderFilter(c.providerId, c.providerName, activeProviderFilter)) {
         return false;
       }
     }
@@ -114,6 +110,29 @@ export const CmsClaimListPage = () => {
         </div>
       </div>
 
+      {/* Active Provider Filter Banner */}
+      {activeProviderFilter && activeProviderFilter !== 'ALL' && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-teal-50/90 border border-teal-200 px-4 py-2.5 rounded-2xl text-xs shadow-2xs">
+          <div className="flex items-center gap-2 text-teal-900 font-medium">
+            <Filter className="w-4 h-4 text-teal-600 shrink-0" />
+            <span>
+              Active Provider Filter: <strong className="font-bold text-teal-950">{getProviderDisplayName(activeProviderFilter, providersMap)}</strong>
+            </span>
+            <span className="text-[11px] bg-teal-100 text-teal-800 font-semibold px-2 py-0.5 rounded-full">
+              {filteredClaims.length} of {allClaims.length} claim{allClaims.length === 1 ? '' : 's'} shown
+            </span>
+          </div>
+          <button
+            onClick={() => setProviderFilter('ALL')}
+            className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-teal-100 text-teal-700 hover:text-teal-900 border border-teal-200 rounded-xl font-bold text-xs shadow-2xs transition cursor-pointer self-start sm:self-auto"
+            title="Clear filter and view all claims"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Show All Practice Providers</span>
+          </button>
+        </div>
+      )}
+
       {/* Clean & Simple Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
@@ -131,10 +150,41 @@ export const CmsClaimListPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredClaims.length === 0 ? (
+              {allClaims.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-6 text-center text-xs text-slate-400">
-                    No claims found.
+                  <td colSpan={8} className="py-8 text-center text-xs text-slate-400">
+                    No claims found. No CMS-1500 claims have been generated yet.
+                  </td>
+                </tr>
+              ) : filteredClaims.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-xs text-slate-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <p>
+                        No claims match the active provider filter <strong className="text-slate-800">"{getProviderDisplayName(activeProviderFilter, providersMap)}"</strong>{search ? ` and search "${search}"` : ''}.
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        ({allClaims.length} total claims exist across practice providers)
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {activeProviderFilter !== 'ALL' && (
+                          <button
+                            onClick={() => setProviderFilter('ALL')}
+                            className="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-lg transition cursor-pointer"
+                          >
+                            Show All Practice Providers
+                          </button>
+                        )}
+                        {search && (
+                          <button
+                            onClick={() => setSearch('')}
+                            className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-lg transition cursor-pointer"
+                          >
+                            Clear Search
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </td>
                 </tr>
               ) : (

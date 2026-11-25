@@ -96,7 +96,7 @@ export const AnikTherapyAssessmentForm = ({
       return String(packetData.diagnosis).toUpperCase();
     }
 
-    return 'NECK AND LOW BACK';
+    return '';
   };
   const diagnosisText = getDbDiagnosisText();
 

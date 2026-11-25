@@ -75,7 +75,7 @@ export const DavEswtProcedureForm = ({
 
     const lines = (serviceLines && serviceLines.length > 0)
       ? serviceLines
-      : (packetData?.serviceLines || packetData?.items || []);
+      : [];
 
     if (Array.isArray(lines) && lines.length > 0) {
       const uniqueDates = Array.from(new Set(
@@ -86,8 +86,6 @@ export const DavEswtProcedureForm = ({
       }
       if (uniqueDates[0]) return uniqueDates[0];
     }
-
-    if (dos) return dos;
 
     return '';
   };

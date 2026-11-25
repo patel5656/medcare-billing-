@@ -108,8 +108,8 @@ export const JosmicBillingStatement = ({
   const displayItems = buildMdConsultationStatementRows(mdVisits, bill);
 
   // Extract Statement Number & Date directly from DB or earliest DOS
-  const dbStatementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || selectedCase?.statementNumber || '125639';
-  const fallbackDate = displayItems.length > 0 ? displayItems[0].dos : (bill?.statementDate || bill?.date || selectedCase?.incidentDate || selectedCase?.dateOfService || selectedCase?.initialDate || '09/21/2026');
+  const dbStatementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || (displayItems.length > 0 ? (selectedCase?.statementNumber || 'N/A') : '');
+  const fallbackDate = displayItems.length > 0 ? displayItems[0].dos : (bill?.statementDate || bill?.date || '');
   const dbStatementDate = formatDateStr(fallbackDate);
 
   let calcCharges = 0;

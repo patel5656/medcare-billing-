@@ -7,9 +7,10 @@ import { apiProviderService } from '../../services/api/apiProviderService';
 import { formatCurrency } from '../../utils/billingCalculations';
 import { formatStatus } from '../../utils/formatters';
 import { useUIStore } from '../../store/uiStore';
-import { Receipt, PlusCircle, AlertTriangle, ChevronRight, User, Shield, FileText, Lock, ArrowLeft, Building, Stethoscope, DollarSign, Calendar, Layers, Edit3, Trash2, FileSpreadsheet } from 'lucide-react';
+import { Receipt, PlusCircle, AlertTriangle, ChevronRight, User, Shield, FileText, Lock, ArrowLeft, Building, Stethoscope, DollarSign, Calendar, Layers, Edit3, Trash2, FileSpreadsheet, Filter, X } from 'lucide-react';
 import { CreateBillModal } from '../../components/modals/CreateBillModal';
 import { ExportDataModal } from '../../components/common/ExportDataModal';
+import { getProviderDisplayName, matchesProviderFilter } from '../../utils/providerFilterUtils';
 
 export const FourBillsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -22,8 +23,15 @@ export const FourBillsPage = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [editingBill, setEditingBill] = useState(null);
   const [editChargesAmount, setEditChargesAmount] = useState('');
-  const { addToast } = useUIStore();
+  const [providersMap, setProvidersMap] = useState({});
+  const { addToast, activeProviderFilter, setProviderFilter } = useUIStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    apiProviderService.getProviders().then(data => {
+      if (data) setProvidersMap(data);
+    }).catch(() => {});
+  }, []);
 
 
   // 1. Initial Load: Fetch all cases from backend
@@ -172,11 +180,14 @@ export const FourBillsPage = () => {
     }
   };
 
-  // Grand totals across all provider statements for this case
-  const grandTotalCharges = bills.reduce((acc, b) => acc + (b.totals?.totalCharges || 0), 0);
-  const grandTotalPayments = bills.reduce((acc, b) => acc + (b.totals?.totalPayments || 0), 0);
-  const grandTotalAdjustments = bills.reduce((acc, b) => acc + (b.totals?.totalAdjustments || 0), 0);
-  const grandBalanceDue = bills.reduce((acc, b) => acc + (b.totals?.balanceDue || 0), 0);
+  // Filter bills by activeProviderFilter while preserving case and patient data
+  const displayedBills = bills.filter(b => matchesProviderFilter(b.providerId, b.providerName, activeProviderFilter));
+
+  // Grand totals across displayed provider statements for this case
+  const grandTotalCharges = displayedBills.reduce((acc, b) => acc + (b.totals?.totalCharges || 0), 0);
+  const grandTotalPayments = displayedBills.reduce((acc, b) => acc + (b.totals?.totalPayments || 0), 0);
+  const grandTotalAdjustments = displayedBills.reduce((acc, b) => acc + (b.totals?.totalAdjustments || 0), 0);
+  const grandBalanceDue = displayedBills.reduce((acc, b) => acc + (b.totals?.balanceDue || 0), 0);
 
   return (
     <div className="space-y-5">
@@ -301,14 +312,46 @@ export const FourBillsPage = () => {
               <span className="text-slate-400 block text-[10px] uppercase font-bold">Case Financials:</span>
               <div className="flex items-center justify-between text-xs mt-0.5">
                 <span className="text-slate-400">Total Statements:</span>
-                <strong className="text-teal-300 font-mono">{bills.length} Bills</strong>
+                <strong className="text-teal-300 font-mono">
+                  {activeProviderFilter && activeProviderFilter !== 'ALL'
+                    ? `${displayedBills.length} of ${bills.length} Bills (Filtered)`
+                    : `${bills.length} Bills`}
+                </strong>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Total Balance Due:</span>
-                <strong className="text-emerald-400 font-mono font-bold">{formatCurrency(grandBalanceDue)}</strong>
+                <span className="text-slate-400">Balance Due:</span>
+                <strong className="text-emerald-400 font-mono font-bold">
+                  {formatCurrency(grandBalanceDue)}
+                  {activeProviderFilter && activeProviderFilter !== 'ALL' && displayedBills.length !== bills.length && (
+                    <span className="text-[10px] text-slate-400 font-normal ml-1">(Filtered)</span>
+                  )}
+                </strong>
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Active Provider Filter Banner */}
+      {activeProviderFilter && activeProviderFilter !== 'ALL' && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-teal-50/90 border border-teal-200 px-4 py-2.5 rounded-2xl text-xs shadow-2xs">
+          <div className="flex items-center gap-2 text-teal-900 font-medium">
+            <Filter className="w-4 h-4 text-teal-600 shrink-0" />
+            <span>
+              Active Provider Filter: <strong className="font-bold text-teal-950">{getProviderDisplayName(activeProviderFilter, providersMap)}</strong>
+            </span>
+            <span className="text-[11px] bg-teal-100 text-teal-800 font-semibold px-2 py-0.5 rounded-full">
+              {displayedBills.length} of {bills.length} statement{bills.length === 1 ? '' : 's'} shown
+            </span>
+          </div>
+          <button
+            onClick={() => setProviderFilter('ALL')}
+            className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-teal-100 text-teal-700 hover:text-teal-900 border border-teal-200 rounded-xl font-bold text-xs shadow-2xs transition cursor-pointer self-start sm:self-auto"
+            title="Clear filter and view all provider statements"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Show All Practice Providers</span>
+          </button>
         </div>
       )}
 
@@ -343,9 +386,27 @@ export const FourBillsPage = () => {
             <PlusCircle className="w-4 h-4" /> Create First Provider Bill
           </button>
         </div>
+      ) : displayedBills.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-100">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">No Provider Bills Match Filter</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+              No billing statements for <strong className="text-slate-800">{getProviderDisplayName(activeProviderFilter, providersMap)}</strong> exist under case {caseData?.caseId || selectedCaseId}. There are {bills.length} statement(s) for other practice providers.
+            </p>
+          </div>
+          <button
+            onClick={() => setProviderFilter('ALL')}
+            className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-sm inline-flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <X className="w-4 h-4" /> Clear Filter / Show All Practice Providers
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {bills.map((bill) => (
+          {displayedBills.map((bill) => (
             <div key={bill.id} className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4 hover:border-teal-300 hover:shadow-md transition">
               <div>
                 <div className="flex items-center justify-between mb-2 gap-1">

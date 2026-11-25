@@ -80,24 +80,18 @@ export const apiCms1500Service = {
         const rawClaims = res.bills
           .filter(bill => {
             if (isDummyTemplateBill(bill)) return false;
-
-            const caseAssigned = bill.case?.assignedProviderIds;
-            const patientAssigned = bill.case?.patient?.assignedProviderIds;
-            let assigned = [];
-            if (caseAssigned) {
-              try { assigned = typeof caseAssigned === 'string' ? JSON.parse(caseAssigned) : caseAssigned; } catch (e) {}
-            }
-            if ((!Array.isArray(assigned) || assigned.length === 0) && patientAssigned) {
-              try { assigned = typeof patientAssigned === 'string' ? JSON.parse(patientAssigned) : patientAssigned; } catch (e) {}
-            }
-            if (Array.isArray(assigned) && assigned.length > 0) {
-              return assigned.includes(bill.providerId);
-            }
+            if (!bill.serviceLines || bill.serviceLines.length === 0) return false;
             return true;
           })
           .flatMap(bill => mapBillToCms1500Claims(bill, null, buildProviderConfigFromBill(bill)));
 
         // Group/update claims by unique Patient Name + Provider + DOS (replaces outdated claims with newly saved charges)
+        const isClaimFinalized = (status) => {
+          if (!status) return false;
+          const s = String(status).toUpperCase();
+          return s === 'SUBMITTED' || s === 'FINALIZED' || s === 'FINALISED' || s === 'FINALISED_DEMO' || s === 'PAID';
+        };
+
         const uniqueMap = new Map();
         for (const claim of rawClaims) {
           const key = `${(claim.patientName || claim.box2 || '').trim().toLowerCase()}_${(claim.providerId || claim.providerName || '').trim().toLowerCase()}_${(claim.dosDisplay || claim.dos || '').trim()}`;
@@ -106,8 +100,8 @@ export const apiCms1500Service = {
             uniqueMap.set(key, claim);
           } else {
             // Keep submitted/finalized claim, or update editable claim with newest saved line items
-            if (existing.status === 'SUBMITTED' || existing.status === 'FINALIZED') {
-              // preserve submitted claim
+            if (isClaimFinalized(existing.status) && !isClaimFinalized(claim.status)) {
+              // preserve submitted/finalized claim
             } else {
               uniqueMap.set(key, claim);
             }
@@ -136,18 +130,19 @@ export const apiCms1500Service = {
           : (typeof c.assignedProviderIds === 'string' ? JSON.parse(c.assignedProviderIds || '[]') : []);
 
         for (const bill of (caseRes?.allBills || [])) {
-          if (isDummyTemplateBill(bill)) continue;
-
-          // If the case defines assignedProviderIds, ensure this bill's provider is assigned
-          if (assignedIds.length > 0 && !assignedIds.includes(bill.providerId)) {
-            continue; // Skip bill for unassigned clinic
-          }
+          if (isDummyTemplateBill(bill) || !bill.serviceLines || bill.serviceLines.length === 0) continue;
           const claims = mapBillToCms1500Claims(bill, c, buildProviderConfigFromBill(bill));
           rawClaims.push(...claims);
         }
       });
 
       // Group/update claims by unique Patient Name + Provider + DOS
+      const isClaimFinalized = (status) => {
+        if (!status) return false;
+        const s = String(status).toUpperCase();
+        return s === 'SUBMITTED' || s === 'FINALIZED' || s === 'FINALISED' || s === 'FINALISED_DEMO' || s === 'PAID';
+      };
+
       const uniqueMap = new Map();
       for (const claim of rawClaims) {
         const key = `${(claim.patientName || claim.box2 || '').trim().toLowerCase()}_${(claim.providerId || claim.providerName || '').trim().toLowerCase()}_${(claim.dosDisplay || claim.dos || '').trim()}`;
@@ -155,8 +150,8 @@ export const apiCms1500Service = {
         if (!existing) {
           uniqueMap.set(key, claim);
         } else {
-          if (existing.status === 'SUBMITTED' || existing.status === 'FINALIZED') {
-            // preserve submitted claim
+          if (isClaimFinalized(existing.status) && !isClaimFinalized(claim.status)) {
+            // preserve submitted/finalized claim
           } else {
             uniqueMap.set(key, claim);
           }

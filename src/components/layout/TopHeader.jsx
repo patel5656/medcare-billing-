@@ -202,24 +202,39 @@ export const TopHeader = () => {
         <div className="flex items-center gap-3 w-full">
           {/* Provider Dropdown */}
           {currentUser?.role !== 'Receptionist' && (
-            <div className="relative shrink-0 min-w-[210px]">
-              <select
-                value={activeProviderFilter}
-                onChange={(e) => setProviderFilter(e.target.value)}
-                className="w-full bg-white text-slate-900 text-xs font-semibold rounded-xl px-3.5 py-2 border border-slate-200 shadow-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 appearance-none pr-8 cursor-pointer outline-none"
-              >
-                <option value="ALL">All Practice Providers ({providersList.length} Modalities)</option>
-                {providersList.map((prov) => {
-                  const pName = prov.name?.trim() || '';
-                  const displayName = pName.startsWith('FM') ? pName : `FM ${pName}`;
-                  return (
-                    <option key={prov.id} value={prov.id}>
-                      {displayName} {prov.isPlaceholder ? '(Pending Docs)' : ''}
-                    </option>
-                  );
-                })}
-              </select>
-              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="relative shrink-0 flex items-center gap-1.5">
+              <div className="relative min-w-[210px]">
+                <select
+                  value={activeProviderFilter}
+                  onChange={(e) => setProviderFilter(e.target.value)}
+                  className={`w-full bg-white text-slate-900 text-xs font-semibold rounded-xl px-3.5 py-2 border shadow-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 appearance-none pr-8 cursor-pointer outline-none ${
+                    activeProviderFilter !== 'ALL' ? 'border-teal-400 bg-teal-50/30' : 'border-slate-200'
+                  }`}
+                >
+                  <option value="ALL">All Practice Providers ({providersList.length} Modalities)</option>
+                  {providersList.map((prov) => {
+                    const pName = prov.name?.trim() || '';
+                    const displayName = pName.startsWith('FM') ? pName : `FM ${pName}`;
+                    return (
+                      <option key={prov.id} value={prov.id}>
+                        {displayName} {prov.isPlaceholder ? '(Pending Docs)' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+              {activeProviderFilter !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => setProviderFilter('ALL')}
+                  className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-xl border border-rose-200 transition cursor-pointer flex items-center gap-1 shrink-0"
+                  title="Clear Provider Filter (Show All Practice Providers)"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span className="hidden xl:inline">Clear</span>
+                </button>
+              )}
             </div>
           )}
 

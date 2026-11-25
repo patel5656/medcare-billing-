@@ -103,17 +103,10 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
   if (!bill) return [];
 
   // 1. Group service lines by unique Date of Service (dos) with normalized date keys
-  // Exclude legacy auto-seeded dummy template lines so only real saved services generate CMS claims
-  const dummyKeywords = [
-    'Biostimulation',
-    'Musculoskeletal Tissue Regeneration',
-    'Spinal Decompression Supplies',
-    'Deep Thermal Bio-Modulation'
-  ];
   const rawItems = bill.lineItems || bill.serviceLines || [];
   const lineItems = rawItems.filter(item => {
-    const desc = item.description || '';
-    return !dummyKeywords.some(kw => desc.includes(kw));
+    const charge = Number(item.charge || item.fee || 0);
+    return charge > 0 || Boolean(item.cptCode);
   });
   if (!lineItems || lineItems.length === 0) return [];
   const dosGroups = {};
@@ -229,7 +222,7 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
 
   // --- Rendering provider from real DB data ---
   const renderingProvider = bill.renderingProvider || providerConfig?.renderingProvider || {};
-  const renderingName = renderingProvider.name || '';
+  const renderingName = renderingProvider.name || bill.providerName || providerConfig?.name || '';
   const renderingNpi = renderingProvider.npi || providerNpi;
   const renderingProviderId = renderingProvider.providerId || renderingProvider.id || renderingProvider.renderingId || bill.renderingProviderId || '';
 
@@ -332,7 +325,9 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       dos: dosKey,
       dosDisplay: dosKey,
       createdAt: bill.createdAt || bill.created_at || bill.createdAtTimestamp || bill.updatedAt || bill.updated_at || bill.statementDate || bill.date || new Date().toISOString(),
-      status: 'Generated & Validated',
+      status: (bill.status && (bill.status.includes('FINAL') || bill.status === 'SUBMITTED' || bill.status === 'PAID'))
+        ? (bill.status.includes('FINAL') ? 'FINALIZED' : bill.status)
+        : 'Generated & Validated',
       formVersion: '02/12',
       box1: parsedSignatures.box1 || 'OTHER',
       box1a: bill.insurancePolicyNumber || patientCase?.insurancePolicyNumber || ptObj?.primaryPolicyNumber || patientCase?.patient?.primaryPolicyNumber || '',

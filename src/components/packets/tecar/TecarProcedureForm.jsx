@@ -6,12 +6,13 @@ import { apiClinicalNoteService } from '../../../services/api/apiClinicalNoteSer
 import { apiCaseService } from '../../../services/api/apiCaseService';
 import { useUIStore } from '../../../store/uiStore';
 
-export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = false, packetData = null, serviceLines = [] }) => {
+export const TecarProcedureForm = ({ dos = '', readOnly = false, blankMode = false, packetData = null, serviceLines = [], bill = null }) => {
   const [localVersion, setLocalVersion] = useState(0);
   const { addToast } = useUIStore ? useUIStore() : { addToast: () => {} };
 
   const serviceDates = packetData?.serviceDates || [];
-  const activeDos = blankMode ? '' : (dos || (serviceDates.length > 0 ? serviceDates[0] : (packetData?.procedureDos || packetData?.tecarDos || packetData?.serviceDate || '')));
+  const lineDos = serviceLines && serviceLines.length > 0 ? (serviceLines[0].dos || serviceLines[0].dateOfService || serviceLines[0].date) : null;
+  const activeDos = blankMode ? '' : (lineDos || (serviceDates.length > 0 ? serviceDates[0] : (packetData?.procedureDos || packetData?.tecarDos || packetData?.serviceDate || '')));
   
   const docKey = activeDos ? `TECAR_PROCEDURE_${activeDos}` : 'TECAR_PROCEDURE';
   const storage = packetData?.clinicalDocStorage?.[docKey] || {};

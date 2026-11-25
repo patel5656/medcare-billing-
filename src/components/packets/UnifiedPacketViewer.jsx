@@ -11,6 +11,7 @@ import {
   buildMdConsultationStatementRows 
 } from '../../utils/mdConsultationBillingHelper';
 import { mapBillToCms1500Claims } from '../../utils/cmsMapper';
+import { matchesProviderFilter } from '../../utils/providerFilterUtils';
 import { useUIStore } from '../../store/uiStore';
 
 // Common Components
@@ -138,9 +139,9 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
         const caseIdentifier = effectiveCase.id || effectiveCase.caseId;
         const res = await apiBillingService.getFourBillsByCase(caseIdentifier).catch(() => null);
         
-        let providerBill = res?.allBills?.find(b => b.providerId === providerId);
+        let providerBill = res?.allBills?.find(b => matchesProviderFilter(b.providerId, b.providerName, providerId));
         if (!providerBill && effectiveCase?.bills && Array.isArray(effectiveCase.bills)) {
-          providerBill = effectiveCase.bills.find(b => b.providerId === providerId) || (providerId === 'prov-counselor' ? effectiveCase.bills[0] : null);
+          providerBill = effectiveCase.bills.find(b => matchesProviderFilter(b.providerId, b.providerName, providerId)) || null;
         }
 
         if (providerBill) {
@@ -373,9 +374,9 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
 
     // JOSMIC Components
     if (key === 'JosmicCoverPage') {
-      const activeLines = mdConsultVisits.length > 0 
-        ? buildMdConsultationStatementRows(mdConsultVisits, bill)
-        : (bill ? bill.serviceLines : []);
+      const activeLines = (bill && bill.serviceLines && bill.serviceLines.length > 0)
+        ? bill.serviceLines
+        : (mdConsultVisits.length > 0 ? buildMdConsultationStatementRows(mdConsultVisits, bill) : []);
       return <JosmicCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={activeLines} />;
     }
     if (key === 'JosmicBillingStatement') return <JosmicBillingStatement bill={blankPracticeMode ? null : bill} selectedCase={effectiveCase} readOnly={isLocked} blankMode={blankPracticeMode} providerId={providerId} appointments={mdConsultVisits} />;
@@ -397,12 +398,12 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     // TPI Components
     if (key === 'TpiCoverPage') return <TpiCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
     if (key === 'TpiAssessmentForm') return <TpiAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'TpiProcedureForm') return <TpiProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
+    if (key === 'TpiProcedureForm') return <TpiProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
 
     // TECAR Components
     if (key === 'TecarCoverPage') return <TecarCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? bill.serviceLines : []} />;
     if (key === 'TecarAssessmentForm') return <TecarAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'TecarProcedureForm') return <TecarProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
+    if (key === 'TecarProcedureForm') return <TecarProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
 
     // General Component
     if (key === 'PatientFinalTreatmentReport') return <PatientFinalTreatmentReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;

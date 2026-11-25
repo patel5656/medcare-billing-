@@ -133,6 +133,10 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
       addToast('Please select a valid clinical patient case before initializing a bill.', 'warning');
       return;
     }
+    if (!formData.providerId) {
+      addToast('Please select a practice provider / service modality.', 'warning');
+      return;
+    }
     const chargeVal = parseFloat(formData.charge);
     if (isNaN(chargeVal) || chargeVal < 0) {
       addToast('Please enter a valid charge amount.', 'warning');
@@ -147,6 +151,7 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
     try {
       const lineCharge = parseFloat(formData.charge) || 0.00;
       const formattedDos = formData.dos || new Date().toISOString().split('T')[0];
+      const unitsCount = 1;
       const serviceLine = {
         dos: formattedDos,
         dateOfService: formattedDos,
@@ -158,10 +163,10 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
         modifier4: formData.modifier4 || '',
         diagPointer: formData.diagPointer || 'A',
         diagnosisPointer: formData.diagPointer || 'A',
-        units: 1,
+        units: unitsCount,
         charge: lineCharge,
-        balance: lineCharge,
-        lineBalance: lineCharge,
+        balance: lineCharge * unitsCount,
+        lineBalance: lineCharge * unitsCount,
         insurancePayment: 0.00,
         patientPayment: 0.00,
         otherPayment: 0.00,
@@ -170,7 +175,7 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
 
       const targetBillId = `bill-${formData.providerId.replace('prov-', '')}-${formData.caseId}`;
 
-      // 1. Post bill with service lines directly in creation payload
+      // Single atomic post: creates bill (or updates existing) and saves service line directly in backend
       const createdBill = await apiBillingService.createBill({
         id: targetBillId,
         caseId: formData.caseId,
@@ -180,16 +185,6 @@ export const CreateBillModal = ({ isOpen, onClose, selectedCaseId, onBillCreated
         billToAddress: '11711 Bedford St. Suite 01, Houston TX 77031',
         serviceLines: [serviceLine]
       });
-
-      // 2. Ensure service line is attached to actual bill ID returned by backend
-      const actualBillId = createdBill?.id || targetBillId;
-      const hasLine = createdBill?.serviceLines?.some(l => 
-        l.cptCode === serviceLine.cptCode &&
-        Math.abs(Number(l.charge) - lineCharge) < 0.01
-      );
-      if (!hasLine) {
-        await apiBillingService.addServiceLine(actualBillId, serviceLine).catch(console.warn);
-      }
 
       addToast('Provider bill statement & service line posted directly to database!', 'success');
       if (onBillCreated) onBillCreated(createdBill);

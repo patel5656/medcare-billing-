@@ -49,7 +49,7 @@ export const DavCoverPage = ({
 
     const lines = (serviceLines && serviceLines.length > 0)
       ? serviceLines
-      : (bill?.items || bill?.serviceLines || packetData?.serviceLines || packetData?.items || []);
+      : (bill?.items || bill?.serviceLines || []);
 
     if (Array.isArray(lines) && lines.length > 0) {
       lines.forEach(line => {

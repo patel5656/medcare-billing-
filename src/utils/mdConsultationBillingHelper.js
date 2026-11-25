@@ -19,9 +19,9 @@ export const filterAndSortMdConsultationVisits = (appointments, targetCaseId, ta
       return false;
     }
 
-    // 3. Status check: Exclude cancelled or no-show visits
+    // 3. Status check: Exclude cancelled, no-show, or uncompleted scheduled visits
     const status = (a.status || '').toUpperCase();
-    if (status === 'CANCELLED' || status === 'NO_SHOW') {
+    if (status === 'CANCELLED' || status === 'NO_SHOW' || status === 'SCHEDULED' || status === 'PENDING') {
       return false;
     }
 
@@ -221,79 +221,27 @@ export const extractLinesFromAppointment = (appt) => {
 };
 
 /**
- * Reconcile appointments with persisted bill service lines,
- * removing template dummy rows (like 97039 Radiofrequency) while preserving
- * legitimate payments, adjustments, and customized charges.
+ * Reconcile appointments with persisted bill service lines.
+ * Priority 1: Actual saved Provider Bills Ledger service lines and totals.
+ * Priority 2: Only completed visits (status === 'COMPLETED'). Scheduled visits never fabricate charges.
  */
 export const buildMdConsultationStatementRows = (appointments, bill = null) => {
   const billLines = bill?.serviceLines || bill?.lineItems || [];
   
-  // 1. If appointments exist, extract real appointment service lines
-  if (appointments && appointments.length > 0) {
-    const extractedLines = [];
-    appointments.forEach(appt => {
-      const lines = extractLinesFromAppointment(appt);
-      extractedLines.push(...lines);
-    });
-
-    // Reconcile each line with any recorded payments or adjustments from billLines
-    return extractedLines.map((line, idx) => {
-      // Look for a matching billLine by appointmentId or by cptCode + dos
-      const matchedBillLine = billLines.find(bl => 
-        (bl.id && bl.id === line.id) || 
-        (bl.cptCode === line.cptCode && (bl.dos === line.dos || bl.dateOfService === line.dos))
-      );
-
-      const insPay = matchedBillLine ? (Number(matchedBillLine.insurancePayment) || Number(matchedBillLine.payments?.insurance) || 0) : 0;
-      const patPay = matchedBillLine ? (Number(matchedBillLine.patientPayment) || Number(matchedBillLine.payments?.patient) || 0) : 0;
-      const adj = matchedBillLine ? (Number(matchedBillLine.adjustments) || Number(matchedBillLine.adjustment) || 0) : 0;
-      const charge = line.charge;
-      const units = line.units || 1;
-      const totalCharge = charge * units;
-      const lineBal = Math.max(0, totalCharge - (insPay + patPay + adj));
-
-      return {
-        id: line.id || `srv-md-${idx + 1}`,
-        dos: line.dos,
-        dateOfService: line.dos,
-        cptCode: line.cptCode,
-        description: line.description,
-        modifier1: line.modifier1,
-        modifier2: line.modifier2,
-        units,
-        charge: totalCharge,
-        insPay,
-        patPay,
-        adj,
-        lineBal,
-        payments: {
-          insurance: insPay,
-          patient: patPay,
-          other: 0
-        }
-      };
-    });
-  }
-
-  // 2. If no appointments found, check billLines but FILTER OUT the unwanted dummy template (97039 Radiofrequency)
-  // if it was purely an auto-generated placeholder
+  // 1. If a persisted bill exists with saved service lines, use the actual Provider Bills Ledger service lines!
   if (billLines.length > 0) {
-    // Filter out hardcoded template 97039 if there's no appointment backing it
-    const filteredBillLines = billLines.filter(l => {
-      if (l.cptCode === '97039' && (l.description?.includes('Radiofrequency') || l.description?.includes('TECAR'))) {
-        return false;
-      }
-      return true;
-    });
-
-    return (filteredBillLines.length > 0 ? filteredBillLines : billLines.slice(0, 1)).map(item => {
+    return billLines.map(item => {
       const units = Number(item.units) || 1;
       const unitCharge = Number(item.charge) || 0;
-      const lineCharge = units > 1 ? units * unitCharge : unitCharge;
+      const lineCharge = item.totalCharge !== undefined && Number(item.totalCharge) > 0 
+        ? Number(item.totalCharge) 
+        : (units > 1 ? units * unitCharge : unitCharge);
       const insPay = Number(item.payments?.insurance || item.insurancePayment || item.insPay) || 0;
       const patPay = Number(item.payments?.patient || item.patientPayment || item.patPay) || 0;
       const adj = Number(item.adjustments || item.adjustment || item.adj) || 0;
-      const lineBal = Math.max(0, lineCharge - (insPay + patPay + adj));
+      const lineBal = item.lineBalance !== undefined && item.lineBalance !== null
+        ? Number(item.lineBalance)
+        : Math.max(0, lineCharge - (insPay + patPay + adj));
 
       return {
         ...item,
@@ -306,6 +254,47 @@ export const buildMdConsultationStatementRows = (appointments, bill = null) => {
         patPay,
         adj,
         lineBal
+      };
+    });
+  }
+
+  // 2. If no saved bill exists, only include visits that are actually COMPLETED!
+  // Scheduled visits must NEVER fabricate billing charges.
+  const completedVisits = (appointments || []).filter(a => {
+    const status = (a.status || '').toUpperCase();
+    return status === 'COMPLETED';
+  });
+
+  if (completedVisits.length > 0) {
+    const extractedLines = [];
+    completedVisits.forEach(appt => {
+      const lines = extractLinesFromAppointment(appt);
+      extractedLines.push(...lines);
+    });
+
+    return extractedLines.map((line, idx) => {
+      const units = line.units || 1;
+      const charge = line.charge || 0;
+      const totalCharge = units * charge;
+      return {
+        id: line.id || `srv-md-${idx + 1}`,
+        dos: line.dos,
+        dateOfService: line.dos,
+        cptCode: line.cptCode,
+        description: line.description,
+        modifier1: line.modifier1,
+        modifier2: line.modifier2,
+        units,
+        charge: totalCharge,
+        insPay: 0,
+        patPay: 0,
+        adj: 0,
+        lineBal: totalCharge,
+        payments: {
+          insurance: 0,
+          patient: 0,
+          other: 0
+        }
       };
     });
   }

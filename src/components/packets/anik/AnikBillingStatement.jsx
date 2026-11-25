@@ -73,7 +73,7 @@ export const AnikBillingStatement = ({
   const providerNpi = bill?.providerNpi || provIdentifiers.npi || '1932847562';
 
   // Extract raw service lines from DB
-  const rawLines = bill?.serviceLines || bill?.lineItems || bill?.items || selectedCase?.serviceLines || selectedCase?.items || [];
+  const rawLines = bill?.serviceLines || bill?.lineItems || bill?.items || [];
   
   // Compute itemized display lines and calculate fallback totals if DB bill.totals is absent
   let calcCharges = 0;
@@ -145,7 +145,7 @@ export const AnikBillingStatement = ({
       dates.push(bill.statementDate);
     }
 
-    if (dates.length === 0) return '09/08/2026 - 09/16/2026';
+    if (dates.length === 0) return '';
     const formattedList = dates.map(formatDateStr).sort();
     if (formattedList.length === 1) return formattedList[0];
     if (formattedList[0] === formattedList[formattedList.length - 1]) return formattedList[0];

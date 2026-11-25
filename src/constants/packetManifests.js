@@ -16,13 +16,13 @@ export const PACKET_MANIFESTS = {
       { pageNumber: 1, id: 'anik-cover', type: 'COVER', title: 'Patient & Case Cover Page', componentKey: 'AnikCoverPage' },
       { pageNumber: 2, id: 'anik-bill-1', type: 'BILLING', title: 'Billing Statement (Page 1 - Summary)', componentKey: 'AnikBillingStatement', statementPage: 1 },
       { pageNumber: 3, id: 'anik-bill-2', type: 'BILLING', title: 'Billing Statement (Page 2 - Service Line Ledger)', componentKey: 'AnikBillingStatement', statementPage: 2 },
-      { pageNumber: 4, id: 'anik-cms-1', type: 'CMS-1500', title: 'CMS-1500 Claim (01/22/2026)', componentKey: 'CmsRedGridForm', claimIndex: 0 },
-      { pageNumber: 5, id: 'anik-cms-2', type: 'CMS-1500', title: 'CMS-1500 Claim (01/24/2026)', componentKey: 'CmsRedGridForm', claimIndex: 1 },
-      { pageNumber: 6, id: 'anik-cms-3', type: 'CMS-1500', title: 'CMS-1500 Claim (01/26/2026)', componentKey: 'CmsRedGridForm', claimIndex: 2 },
+      { pageNumber: 4, id: 'anik-cms-1', type: 'CMS-1500', title: 'CMS-1500 Claim (Claim 1)', componentKey: 'CmsRedGridForm', claimIndex: 0 },
+      { pageNumber: 5, id: 'anik-cms-2', type: 'CMS-1500', title: 'CMS-1500 Claim (Claim 2)', componentKey: 'CmsRedGridForm', claimIndex: 1 },
+      { pageNumber: 6, id: 'anik-cms-3', type: 'CMS-1500', title: 'CMS-1500 Claim (Claim 3)', componentKey: 'CmsRedGridForm', claimIndex: 2 },
       { pageNumber: 7, id: 'anik-assess', type: 'ASSESSMENT', title: 'Therapy Assessment Chart', componentKey: 'AnikTherapyAssessmentForm' },
-      { pageNumber: 8, id: 'anik-proc-1', type: 'PROCEDURE', title: 'Laser Procedure Form (01/22/2026)', componentKey: 'AnikLaserProcedureForm', pageIndex: 0, dos: '01/22/2026' },
-      { pageNumber: 9, id: 'anik-proc-2', type: 'PROCEDURE', title: 'Laser Procedure Form (01/24/2026)', componentKey: 'AnikLaserProcedureForm', pageIndex: 1, dos: '01/24/2026' },
-      { pageNumber: 10, id: 'anik-proc-3', type: 'PROCEDURE', title: 'Laser Procedure Form (01/26/2026)', componentKey: 'AnikLaserProcedureForm', pageIndex: 2, dos: '01/26/2026' },
+      { pageNumber: 8, id: 'anik-proc-1', type: 'PROCEDURE', title: 'Laser Procedure Form (Session 1)', componentKey: 'AnikLaserProcedureForm', pageIndex: 0 },
+      { pageNumber: 9, id: 'anik-proc-2', type: 'PROCEDURE', title: 'Laser Procedure Form (Session 2)', componentKey: 'AnikLaserProcedureForm', pageIndex: 1 },
+      { pageNumber: 10, id: 'anik-proc-3', type: 'PROCEDURE', title: 'Laser Procedure Form (Session 3)', componentKey: 'AnikLaserProcedureForm', pageIndex: 2 },
       { pageNumber: 11, id: 'anik-narr-1', type: 'NARRATIVE', title: 'Initial Narrative Report (Page 1)', componentKey: 'AnikNarrativeReport', reportPage: 1 },
       { pageNumber: 12, id: 'anik-narr-2', type: 'NARRATIVE', title: 'Initial Narrative Report (Page 2)', componentKey: 'AnikNarrativeReport', reportPage: 2 },
       { pageNumber: 13, id: 'anik-narr-3', type: 'NARRATIVE', title: 'Initial Narrative Report (Page 3)', componentKey: 'AnikNarrativeReport', reportPage: 3 },
@@ -44,9 +44,9 @@ export const PACKET_MANIFESTS = {
       { pageNumber: 5, id: 'davs-cms-3', type: 'CMS-1500', title: 'CMS-1500 Claim Form', componentKey: 'CmsRedGridForm', claimIndex: 2 },
       { pageNumber: 6, id: 'davs-prog-1', type: 'ASSESSMENT', title: 'Clinical Progress Note (Page 1)', componentKey: 'DavProgressNote', notePage: 1 },
       { pageNumber: 7, id: 'davs-prog-2', type: 'ASSESSMENT', title: 'Clinical Progress Note (Page 2)', componentKey: 'DavProgressNote', notePage: 2 },
-      { pageNumber: 8, id: 'davs-proc-1', type: 'PROCEDURE', title: 'ESWT Shockwave Form (01/22/2026)', componentKey: 'DavEswtProcedureForm', pageIndex: 0, formPage: 1, dos: '01/22/2026' },
-      { pageNumber: 9, id: 'davs-proc-2', type: 'PROCEDURE', title: 'ESWT Shockwave Form (01/24/2026)', componentKey: 'DavEswtProcedureForm', pageIndex: 1, formPage: 2, dos: '01/24/2026' },
-      { pageNumber: 10, id: 'davs-proc-3', type: 'PROCEDURE', title: 'ESWT Shockwave Form (01/26/2026)', componentKey: 'DavEswtProcedureForm', pageIndex: 2, formPage: 3, dos: '01/26/2026' },
+      { pageNumber: 8, id: 'davs-proc-1', type: 'PROCEDURE', title: 'ESWT Shockwave Form (Session 1)', componentKey: 'DavEswtProcedureForm', pageIndex: 0, formPage: 1 },
+      { pageNumber: 9, id: 'davs-proc-2', type: 'PROCEDURE', title: 'ESWT Shockwave Form (Session 2)', componentKey: 'DavEswtProcedureForm', pageIndex: 1, formPage: 2 },
+      { pageNumber: 10, id: 'davs-proc-3', type: 'PROCEDURE', title: 'ESWT Shockwave Form (Session 3)', componentKey: 'DavEswtProcedureForm', pageIndex: 2, formPage: 3 },
       { pageNumber: 11, id: 'davs-final-1', type: 'NARRATIVE', title: 'Shockwave Narrative Report (Page 1)', componentKey: 'DavFinalNarrative', reportPage: 1 },
       { pageNumber: 12, id: 'davs-final-2', type: 'NARRATIVE', title: 'Shockwave Narrative Report (Page 2)', componentKey: 'DavFinalNarrative', reportPage: 2 },
       { pageNumber: 13, id: 'davs-final-3', type: 'NARRATIVE', title: 'Shockwave Narrative Report (Page 3)', componentKey: 'DavFinalNarrative', reportPage: 3 },
@@ -60,7 +60,7 @@ export const PACKET_MANIFESTS = {
     pages: [
       { pageNumber: 1, id: 'josmic-cover', type: 'COVER', title: 'Patient & Case Cover Page', componentKey: 'JosmicCoverPage' },
       { pageNumber: 2, id: 'josmic-bill-1', type: 'BILLING', title: 'Billing Statement', componentKey: 'JosmicBillingStatement', pageIndex: 0 },
-      { pageNumber: 3, id: 'josmic-cms-1', type: 'CMS-1500', title: 'CMS-1500 Claim (12/30/2025)', componentKey: 'CmsRedGridForm', claimIndex: 0 },
+      { pageNumber: 3, id: 'josmic-cms-1', type: 'CMS-1500', title: 'CMS-1500 Claim Form', componentKey: 'CmsRedGridForm', claimIndex: 0 },
       { pageNumber: 4, id: 'josmic-pain-1', type: 'NARRATIVE', title: 'MD Consultation Report (Page 1)', componentKey: 'JosmicPainManagementReport', reportPage: 1 },
       { pageNumber: 5, id: 'josmic-pain-2', type: 'NARRATIVE', title: 'MD Consultation Report (Page 2)', componentKey: 'JosmicPainManagementReport', reportPage: 2 },
       { pageNumber: 6, id: 'josmic-pain-3', type: 'NARRATIVE', title: 'MD Consultation Report (Page 3)', componentKey: 'JosmicPainManagementReport', reportPage: 3 },
@@ -95,7 +95,7 @@ export const PACKET_MANIFESTS = {
       { pageNumber: 2, id: 'tpi-bill-1', type: 'BILLING', title: 'Provider Billing Statement', componentKey: 'PrintableBillingStatement', pageIndex: 0 },
       { pageNumber: 3, id: 'tpi-cms-1', type: 'CMS-1500', title: 'CMS-1500 Claim', componentKey: 'CmsRedGridForm', claimIndex: 0 },
       { pageNumber: 4, id: 'tpi-assess', type: 'ASSESSMENT', title: 'FM Trigger Point Assessment', componentKey: 'TpiAssessmentForm' },
-      { pageNumber: 5, id: 'tpi-proc-1', type: 'PROCEDURE', title: 'FM Trigger Point Procedure', componentKey: 'TpiProcedureForm', dos: '01/15/2026' }
+      { pageNumber: 5, id: 'tpi-proc-1', type: 'PROCEDURE', title: 'FM Trigger Point Procedure', componentKey: 'TpiProcedureForm' }
     ]
   },
 
@@ -108,7 +108,7 @@ export const PACKET_MANIFESTS = {
       { pageNumber: 2, id: 'tecar-bill-1', type: 'BILLING', title: 'Provider Billing Statement', componentKey: 'PrintableBillingStatement', pageIndex: 0 },
       { pageNumber: 3, id: 'tecar-cms-1', type: 'CMS-1500', title: 'CMS-1500 Claim', componentKey: 'CmsRedGridForm', claimIndex: 0 },
       { pageNumber: 4, id: 'tecar-assess', type: 'ASSESSMENT', title: 'FM TECAR Therapy Assessment', componentKey: 'TecarAssessmentForm' },
-      { pageNumber: 5, id: 'tecar-proc-1', type: 'PROCEDURE', title: 'FM TECAR Procedure Log', componentKey: 'TecarProcedureForm', dos: '01/20/2026' }
+      { pageNumber: 5, id: 'tecar-proc-1', type: 'PROCEDURE', title: 'FM TECAR Procedure Log', componentKey: 'TecarProcedureForm' }
     ]
   },
 

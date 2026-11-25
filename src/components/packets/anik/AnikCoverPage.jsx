@@ -58,7 +58,7 @@ export const AnikCoverPage = ({
     
     const lines = (serviceLines && serviceLines.length > 0) 
       ? serviceLines 
-      : (bill?.items || bill?.lineItems || bill?.serviceLines || packetData?.serviceLines || packetData?.items || []);
+      : (bill?.items || bill?.lineItems || bill?.serviceLines || []);
     
     if (Array.isArray(lines) && lines.length > 0) {
       lines.forEach(item => {
