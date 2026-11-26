@@ -76,43 +76,13 @@ export const FourBillsPage = () => {
         if (found) setCaseData(found);
       }
 
-      // Filter out any legacy auto-generated demo bills and strip dummy template service lines
+      // Retain all saved bills for this case that have service lines or billed amounts
       const rawBills = bData?.allBills || [];
-      const dummyKeywords = [
-        'Biostimulation',
-        'Musculoskeletal Tissue Regeneration',
-        'Spinal Decompression Supplies',
-        'Deep Thermal Bio-Modulation'
-      ];
-      const validBills = rawBills.map(b => {
-        const rawLines = b.serviceLines || b.lineItems || [];
-        const cleanLines = rawLines.filter(l => !dummyKeywords.some(kw => (l.description || '').includes(kw)));
-        // If the bill was purely dummy template lines, discard it
-        if (cleanLines.length === 0 && rawLines.length > 0) return null;
-        if (cleanLines.length === 0 && (!b.totals?.totalCharges || b.totals?.totalCharges === 0)) return null;
-
-        const newTotal = cleanLines.length > 0
-          ? cleanLines.reduce((acc, l) => acc + ((Number(l.charge) || 0) * (Number(l.units) || 1)), 0)
-          : (b.totals?.totalCharges || 0);
-
-        return {
-          ...b,
-          serviceLines: cleanLines,
-          lineItems: cleanLines,
-          totals: {
-            ...(b.totals || {}),
-            totalCharges: newTotal
-          },
-          balanceDue: newTotal
-        };
-      }).filter(Boolean);
-
-      // Purge any dummy bills from the backend DB in background
-      const dummyBills = rawBills.filter(b => !validBills.includes(b));
-      dummyBills.forEach(db => {
-        if (db.id) {
-          apiBillingService.deleteBill(db.id).catch(() => {});
-        }
+      const validBills = rawBills.filter(b => {
+        if (!b) return false;
+        const lines = b.serviceLines || b.lineItems || [];
+        const hasCharges = (b.totals?.totalCharges && Number(b.totals?.totalCharges) > 0) || (b.totalAmount && Number(b.totalAmount) > 0);
+        return lines.length > 0 || hasCharges;
       });
 
       setBills(validBills);

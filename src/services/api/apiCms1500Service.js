@@ -50,18 +50,12 @@ const buildProviderConfigFromBill = (bill) => ({
 
 const isDummyTemplateBill = (b) => {
   if (!b) return true;
-  const dummyDesc = [
-    'Biostimulation',
-    'Musculoskeletal Tissue Regeneration',
-    'Spinal Decompression Supplies',
-    'Deep Thermal Bio-Modulation'
-  ];
   const lines = b.serviceLines || b.lineItems || [];
-  // Skip bills with zero actual service lines
-  if (!lines || lines.length === 0) return true;
-  // Skip bills where every line is a dummy template line
-  const allDummy = lines.every(l => dummyDesc.some(d => (l.description || '').includes(d)));
-  if (allDummy) return true;
+  // Skip bills with zero actual service lines and zero charges
+  if (!lines || lines.length === 0) {
+    const total = Number(b.totals?.totalCharges || b.totalAmount || 0);
+    return total <= 0;
+  }
   return false;
 };
 
@@ -85,7 +79,7 @@ export const apiCms1500Service = {
           })
           .flatMap(bill => mapBillToCms1500Claims(bill, null, buildProviderConfigFromBill(bill)));
 
-        // Group/update claims by unique Patient Name + Provider + DOS (replaces outdated claims with newly saved charges)
+        // Index claims by unique claimId / billId + DOS
         const isClaimFinalized = (status) => {
           if (!status) return false;
           const s = String(status).toUpperCase();
@@ -94,7 +88,7 @@ export const apiCms1500Service = {
 
         const uniqueMap = new Map();
         for (const claim of rawClaims) {
-          const key = `${(claim.patientName || claim.box2 || '').trim().toLowerCase()}_${(claim.providerId || claim.providerName || '').trim().toLowerCase()}_${(claim.dosDisplay || claim.dos || '').trim()}`;
+          const key = claim.claimId || `${claim.billId}_${claim.dos}`;
           const existing = uniqueMap.get(key);
           if (!existing) {
             uniqueMap.set(key, claim);
@@ -136,7 +130,7 @@ export const apiCms1500Service = {
         }
       });
 
-      // Group/update claims by unique Patient Name + Provider + DOS
+      // Index claims by unique claimId / billId + DOS
       const isClaimFinalized = (status) => {
         if (!status) return false;
         const s = String(status).toUpperCase();
@@ -145,7 +139,7 @@ export const apiCms1500Service = {
 
       const uniqueMap = new Map();
       for (const claim of rawClaims) {
-        const key = `${(claim.patientName || claim.box2 || '').trim().toLowerCase()}_${(claim.providerId || claim.providerName || '').trim().toLowerCase()}_${(claim.dosDisplay || claim.dos || '').trim()}`;
+        const key = claim.claimId || `${claim.billId}_${claim.dos}`;
         const existing = uniqueMap.get(key);
         if (!existing) {
           uniqueMap.set(key, claim);
