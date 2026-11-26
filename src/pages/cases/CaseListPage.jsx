@@ -11,6 +11,7 @@ import { useUIStore } from '../../store/uiStore';
 import { useAuthStore } from '../../store/authStore';
 import { ROLES } from '../../constants/rolePermissions';
 import Pagination from '../../components/common/Pagination';
+import { getProviderShortLabel } from '../../utils/providerFilterUtils';
 
 export const CaseListPage = () => {
   const { addToast } = useUIStore();
@@ -215,7 +216,7 @@ export const CaseListPage = () => {
                   <div className="flex flex-wrap gap-1">
                     {c.assignedProviderIds?.map(pid => (
                       <span key={pid} className="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 text-slate-800 rounded border border-slate-200">
-                        {pid.replace('prov-', '').toUpperCase()}
+                        {getProviderShortLabel(pid)}
                       </span>
                     ))}
                   </div>
@@ -284,7 +285,7 @@ export const CaseListPage = () => {
                         <div className="flex flex-wrap gap-1">
                           {c.assignedProviderIds?.map(pid => (
                             <span key={pid} className="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 text-slate-800 rounded border border-slate-200">
-                              {pid.replace('prov-', '').toUpperCase()}
+                              {getProviderShortLabel(pid)}
                             </span>
                           ))}
                         </div>

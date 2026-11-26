@@ -176,7 +176,10 @@ button, a {
   .printable-area button,
   .printable-modal .print\:hidden,
   .printable-modal .no-print,
-  .printable-modal button {
+  .printable-modal button,
+  .ai-autodraft-toolbar,
+  [data-pdf-hide="true"],
+  .no-pdf {
     display: none !important;
     visibility: hidden !important;
   }
@@ -400,3 +403,13 @@ body {
     height: 100%;
     line-height: 1;
 }
+
+/* PDF Export mode: cleanly hide toolbar elements and non-printable UI from DOM capture */
+[data-exporting-pdf="true"] .ai-autodraft-toolbar,
+[data-exporting-pdf="true"] [data-pdf-hide="true"],
+[data-exporting-pdf="true"] .no-pdf,
+[data-exporting-pdf="true"] .print\:hidden {
+    display: none !important;
+    visibility: hidden !important;
+}
+

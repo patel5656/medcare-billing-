@@ -193,10 +193,6 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
 
   const handleSave = async (e) => {
     if (e) e.preventDefault();
-    if (closedCheck.isPast) {
-      addToast('Rescheduling to past dates is disabled. Please select today or a future working day.', 'error');
-      return;
-    }
     if (closedCheck.isClosed && !formData.holidayOverride) {
       addToast(`${closedCheck.reason}. Please enable Admin Override to reschedule on a weekend/holiday.`, 'warning');
       return;
@@ -440,7 +436,6 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
             <label className={labelCls}>Visit Date *</label>
             <input
               type="date"
-              min={getTodayDateStr()}
               required
               className={inputCls}
               value={formData.date}
@@ -478,35 +473,23 @@ export const EditAppointmentModal = ({ isOpen, onClose, appointment, onAppointme
           />
         </div>
 
-        {/* Weekend / Holiday / Past Date Alert Banner */}
+        {/* Weekend / Holiday Alert Banner */}
         {closedCheck.isClosed && (
-          closedCheck.isPast ? (
-            <div className="p-3.5 bg-red-50 border border-red-300 rounded-xl text-red-950 space-y-1.5 text-xs">
-              <div className="flex items-center gap-2 font-bold text-red-900">
-                <span>🚫</span>
-                <span>Past Date - Booking Disabled</span>
-              </div>
-              <p className="text-[11px] text-red-800">
-                Appointments cannot be rescheduled to past dates (yesterday or earlier). Please select today or a future valid working day.
-              </p>
+          <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-950 space-y-1.5 text-xs">
+            <div className="flex items-center gap-2 font-bold text-amber-900">
+              <span>{closedCheck.isWeekend ? '📅' : '🇺🇸'}</span>
+              <span>Clinic Closed: {closedCheck.reason}</span>
             </div>
-          ) : (
-            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-950 space-y-1.5 text-xs">
-              <div className="flex items-center gap-2 font-bold text-amber-900">
-                <span>{closedCheck.isWeekend ? '📅' : '🇺🇸'}</span>
-                <span>Clinic Closed: {closedCheck.reason}</span>
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer font-bold text-amber-950 pt-1">
-                <input
-                  type="checkbox"
-                  checked={formData.holidayOverride}
-                  onChange={e => set('holidayOverride', e.target.checked)}
-                  className="rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
-                />
-                Admin Override: Authorize Weekend / Holiday Appointment
-              </label>
-            </div>
-          )
+            <label className="flex items-center gap-2 cursor-pointer font-bold text-amber-950 pt-1">
+              <input
+                type="checkbox"
+                checked={formData.holidayOverride}
+                onChange={e => set('holidayOverride', e.target.checked)}
+                className="rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+              />
+              Admin Override: Authorize Weekend / Holiday Appointment
+            </label>
+          </div>
         )}
 
         <div>

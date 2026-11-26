@@ -40,7 +40,10 @@ export const AiAutoDraftToolbar = ({
   };
 
   return (
-    <div className="flex items-center justify-between bg-gradient-to-r from-teal-50 via-indigo-50 to-purple-50 border border-teal-200/90 rounded-xl px-4 py-2.5 shadow-sm print:hidden mb-4">
+    <div
+      data-pdf-hide="true"
+      className="ai-autodraft-toolbar no-pdf flex items-center justify-between bg-gradient-to-r from-teal-50 via-indigo-50 to-purple-50 border border-teal-200/90 rounded-xl px-4 py-2.5 shadow-sm print:hidden mb-4"
+    >
       <div className="flex items-center gap-2.5">
         <div className="w-7 h-7 rounded-lg bg-teal-600 flex items-center justify-center text-white shadow-sm shrink-0">
           <Sparkles className="w-4 h-4 text-amber-300" />

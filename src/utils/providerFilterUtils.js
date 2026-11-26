@@ -11,6 +11,38 @@ export const KNOWN_PROVIDERS_MAP = {
 };
 
 /**
+ * Standard short display labels for provider badges across Clinical Cases, Patients, and Modality views.
+ * Replaces legacy developer IDs/codes (e.g., JOSMIC -> PAIN CON, ANIK -> LASER).
+ */
+export const PROVIDER_SHORT_LABELS = {
+  'prov-josmic': 'PAIN CON',
+  'josmic': 'PAIN CON',
+  'prov-anik': 'LASER',
+  'anik': 'LASER',
+  'prov-davs': 'DAVS',
+  'davs': 'DAVS',
+  'prov-counselor': 'COUNSELOR',
+  'counselor': 'COUNSELOR',
+  'prov-tecar': 'TECAR',
+  'tecar': 'TECAR',
+  'prov-tpi': 'TPI',
+  'tpi': 'TPI'
+};
+
+/**
+ * Returns user-facing short label for provider badges (e.g., in Case List & Patient List assigned providers).
+ * Formats: 'prov-josmic' -> 'PAIN CON', 'prov-anik' -> 'LASER', etc.
+ */
+export const getProviderShortLabel = (providerId) => {
+  if (!providerId) return '';
+  const key = String(providerId).toLowerCase().trim();
+  if (PROVIDER_SHORT_LABELS[key]) return PROVIDER_SHORT_LABELS[key];
+  const cleaned = key.replace('prov-', '');
+  if (PROVIDER_SHORT_LABELS[cleaned]) return PROVIDER_SHORT_LABELS[cleaned];
+  return cleaned.toUpperCase();
+};
+
+/**
  * Returns formatted display name for a provider given its ID and an optional providers dictionary.
  */
 export const getProviderDisplayName = (providerId, providersMap = {}) => {

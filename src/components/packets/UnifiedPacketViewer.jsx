@@ -91,6 +91,7 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   const [counselingVisits, setCounselingVisits] = useState([]);
   const [mdConsultVisits, setMdConsultVisits] = useState([]);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
   
   const [activeTabFilter, setActiveTabFilter] = useState('ALL');
@@ -259,6 +260,7 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
   const handleDownloadPdf = async () => {
     if (isDownloadingPdf) return;
     setIsDownloadingPdf(true);
+    setIsExportingPdf(true);
     setDownloadProgress({ current: 0, total: manifest.totalPages });
 
     const prevFilter = activeTabFilter;
@@ -266,6 +268,9 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
       setActiveTabFilter('ALL');
       await new Promise(r => setTimeout(r, 150));
     }
+
+    // Two animation frames to allow React to paint the unscaled, clean 1:1 layout
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
     try {
       const patientNameSafe = (effectiveCase?.patientName || effectiveCase?.patient?.firstName || 'Patient')
@@ -286,6 +291,7 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
       if (prevFilter !== 'ALL') {
         setActiveTabFilter(prevFilter);
       }
+      setIsExportingPdf(false);
       setIsDownloadingPdf(false);
       setDownloadProgress({ current: 0, total: 0 });
     }
@@ -355,20 +361,20 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
     if (key === 'CmsRedGridForm') {
       const idx = pageDef.claimIndex !== undefined ? pageDef.claimIndex : 0;
       const claim = cmsClaims && cmsClaims.length > idx ? cmsClaims[idx] : null;
-      return <CmsRedGridForm claim={claim} blankMode={blankPracticeMode} readOnly={isLocked} onClaimChange={handleCmsClaimChange} />;
+      return <CmsRedGridForm claim={claim} blankMode={blankPracticeMode} readOnly={isLocked || isExportingPdf} isExporting={isExportingPdf} onClaimChange={handleCmsClaimChange} />;
     }
     
     // ANIK Components
-    if (key === 'AnikCoverPage') return <AnikCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
-    if (key === 'AnikBillingStatement') return <AnikBillingStatement statementPage={pageDef.statementPage || 1} bill={blankPracticeMode ? null : bill} selectedCase={effectiveCase} readOnly={isLocked} blankMode={blankPracticeMode} />;
-    if (key === 'AnikTherapyAssessmentForm') return <AnikTherapyAssessmentForm readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
-    if (key === 'AnikLaserProcedureForm') return <AnikLaserProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} pageIndex={pageDef.pageIndex !== undefined ? pageDef.pageIndex : (pageDef.pageNumber ? pageDef.pageNumber - 8 : 0)} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} procedureData={effectiveCase?.procedures?.[pageDef.pageIndex !== undefined ? pageDef.pageIndex : 0]} bill={bill} />;
-    if (key === 'AnikNarrativeReport') return <AnikNarrativeReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
-    if (key === 'AnikFinalReport') return <AnikFinalReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
+    if (key === 'AnikCoverPage') return <AnikCoverPage readOnly={isLocked || isExportingPdf} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
+    if (key === 'AnikBillingStatement') return <AnikBillingStatement statementPage={pageDef.statementPage || 1} bill={blankPracticeMode ? null : bill} selectedCase={effectiveCase} readOnly={isLocked || isExportingPdf} blankMode={blankPracticeMode} />;
+    if (key === 'AnikTherapyAssessmentForm') return <AnikTherapyAssessmentForm readOnly={isLocked || isExportingPdf} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? bill.serviceLines : []} />;
+    if (key === 'AnikLaserProcedureForm') return <AnikLaserProcedureForm dos={blankPracticeMode ? '' : pageDef.dos} pageIndex={pageDef.pageIndex !== undefined ? pageDef.pageIndex : (pageDef.pageNumber ? pageDef.pageNumber - 8 : 0)} readOnly={isLocked || isExportingPdf} blankMode={blankPracticeMode} packetData={effectiveCase} serviceLines={bill ? (bill.serviceLines || bill.items) : []} procedureData={effectiveCase?.procedures?.[pageDef.pageIndex !== undefined ? pageDef.pageIndex : 0]} bill={bill} />;
+    if (key === 'AnikNarrativeReport') return <AnikNarrativeReport reportPage={pageDef.reportPage} readOnly={isLocked || isExportingPdf} blankMode={blankPracticeMode} packetData={effectiveCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
+    if (key === 'AnikFinalReport') return <AnikFinalReport reportPage={pageDef.reportPage} readOnly={isLocked || isExportingPdf} blankMode={blankPracticeMode} packetData={effectiveCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
 
     // DAV'S Components
-    if (key === 'DavCoverPage') return <DavCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
-    if (key === 'DavEswtProcedureForm') return <DavEswtProcedureForm pageIndex={pageDef.pageIndex !== undefined ? pageDef.pageIndex : (pageDef.pageNumber ? pageDef.pageNumber - 8 : 0)} formPage={pageDef.formPage || (pageDef.pageIndex !== undefined ? pageDef.pageIndex + 1 : (pageDef.pageNumber ? pageDef.pageNumber - 7 : 1))} dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} procedureData={effectiveCase?.procedures?.[pageDef.pageIndex !== undefined ? pageDef.pageIndex : 0]} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
+    if (key === 'DavCoverPage') return <DavCoverPage readOnly={isLocked || isExportingPdf} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={bill ? (bill.serviceLines || bill.items) : []} cmsClaims={cmsClaims} />;
+    if (key === 'DavEswtProcedureForm') return <DavEswtProcedureForm pageIndex={pageDef.pageIndex !== undefined ? pageDef.pageIndex : (pageDef.pageNumber ? pageDef.pageNumber - 8 : 0)} formPage={pageDef.formPage || (pageDef.pageIndex !== undefined ? pageDef.pageIndex + 1 : (pageDef.pageNumber ? pageDef.pageNumber - 7 : 1))} dos={blankPracticeMode ? '' : pageDef.dos} readOnly={isLocked || isExportingPdf} blankMode={blankPracticeMode} packetData={effectiveCase} procedureData={effectiveCase?.procedures?.[pageDef.pageIndex !== undefined ? pageDef.pageIndex : 0]} serviceLines={bill ? (bill.serviceLines || bill.items) : []} bill={bill} />;
     if (key === 'DavProgressNote') return <DavProgressNote notePage={pageDef.notePage} blankMode={blankPracticeMode} packetData={effectiveCase} dos={blankPracticeMode ? '' : pageDef.dos} serviceLines={bill ? (bill.serviceLines || bill.items) : []} />;
     if (key === 'DavFinalNarrative') return <DavFinalNarrative reportPage={pageDef.reportPage} blankMode={blankPracticeMode} packetData={effectiveCase} />;
 
@@ -377,10 +383,42 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
       const activeLines = (bill && bill.serviceLines && bill.serviceLines.length > 0)
         ? bill.serviceLines
         : (mdConsultVisits.length > 0 ? buildMdConsultationStatementRows(mdConsultVisits, bill) : []);
-      return <JosmicCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} bill={bill} serviceLines={activeLines} />;
+      return (
+        <JosmicCoverPage
+          readOnly={isLocked || isExportingPdf}
+          isExporting={isExportingPdf}
+          blankMode={blankPracticeMode}
+          packetData={effectiveCase}
+          bill={bill}
+          serviceLines={activeLines}
+          appointments={mdConsultVisits}
+        />
+      );
     }
-    if (key === 'JosmicBillingStatement') return <JosmicBillingStatement bill={blankPracticeMode ? null : bill} selectedCase={effectiveCase} readOnly={isLocked} blankMode={blankPracticeMode} providerId={providerId} appointments={mdConsultVisits} />;
-    if (key === 'JosmicPainManagementReport') return <JosmicPainManagementReport reportPage={pageDef.reportPage} readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase} />;
+    if (key === 'JosmicBillingStatement') {
+      return (
+        <JosmicBillingStatement
+          bill={blankPracticeMode ? null : bill}
+          selectedCase={effectiveCase}
+          readOnly={isLocked || isExportingPdf}
+          isExporting={isExportingPdf}
+          blankMode={blankPracticeMode}
+          providerId={providerId}
+          appointments={mdConsultVisits}
+        />
+      );
+    }
+    if (key === 'JosmicPainManagementReport') {
+      return (
+        <JosmicPainManagementReport
+          reportPage={pageDef.reportPage}
+          readOnly={isLocked || isExportingPdf}
+          isExporting={isExportingPdf}
+          blankMode={blankPracticeMode}
+          packetData={effectiveCase}
+        />
+      );
+    }
 
     // Counselor Components
     if (key === 'CounselorCoverPage') return <CounselorCoverPage readOnly={isLocked} blankMode={blankPracticeMode} packetData={effectiveCase || latestNote} bill={bill} counselingVisits={counselingVisits} />;
@@ -582,25 +620,39 @@ export const UnifiedPacketViewer = ({ providerId = 'prov-anik', initialBlank = f
             onBack={() => setActiveTabFilter('ALL')} 
           />
         ) : (
-          <div id="printable-packet" className="w-full flex flex-col items-center space-y-6 print:space-y-0 print:m-0 print:p-0 print:block">
+          <div 
+            id="printable-packet" 
+            data-exporting-pdf={isExportingPdf ? "true" : undefined}
+            className={`w-full flex flex-col items-center ${isExportingPdf ? 'space-y-0' : 'space-y-6'} print:space-y-0 print:m-0 print:p-0 print:block`}
+          >
             {filteredPages.map((pageDef) => (
-              <div key={pageDef.id} className="relative group w-full flex flex-col items-center print-page-item">
-                <div className="text-[10px] font-mono text-slate-400 font-bold mb-1 print:hidden self-center">
-                  PAGE {pageDef.pageNumber} OF {manifest.totalPages} - {pageDef.title}
-                </div>
+              <div 
+                key={pageDef.id} 
+                className={`relative group w-full flex flex-col items-center print-page-item ${isExportingPdf ? 'm-0 p-0' : ''}`}
+              >
+                {!isExportingPdf && (
+                  <div className="text-[10px] font-mono text-slate-400 font-bold mb-1 print:hidden self-center">
+                    PAGE {pageDef.pageNumber} OF {manifest.totalPages} - {pageDef.title}
+                  </div>
+                )}
                 
                 {/* Scaled Sheet Container */}
                 <div
-                  className="w-full flex justify-center overflow-x-auto print-page-sheet-wrapper print:min-h-0 print:h-auto print:m-0 print:p-0"
-                  style={{ minHeight: `${1100 * zoomLevel + 20}px` }}
+                  className={`w-full flex justify-center print-page-sheet-wrapper print:min-h-0 print:h-auto print:m-0 print:p-0 ${
+                    isExportingPdf ? 'overflow-visible m-0 p-0' : 'overflow-x-auto'
+                  }`}
+                  style={{ 
+                    minHeight: isExportingPdf ? '1100px' : `${1100 * zoomLevel + 20}px`,
+                    height: isExportingPdf ? 'auto' : undefined
+                  }}
                 >
                   <div
                     className="print-page-sheet print:w-full print:max-w-none print:m-0 print:p-0"
                     style={{
-                      transform: `scale(${zoomLevel})`,
+                      transform: isExportingPdf ? 'none' : `scale(${zoomLevel})`,
                       transformOrigin: 'top center',
-                      transition: 'transform 0.2s ease',
-                      marginBottom: `${(1 - zoomLevel) * -1100}px`
+                      transition: isExportingPdf ? 'none' : 'transform 0.2s ease',
+                      marginBottom: isExportingPdf ? '0px' : `${(1 - zoomLevel) * -1100}px`
                     }}
                   >
                     {renderPageComponent(pageDef)}

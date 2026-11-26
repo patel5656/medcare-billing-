@@ -24,8 +24,10 @@ const STATUS_COLORS = {
 
 const PROVIDER_COLORS = {
   ANIK: 'bg-purple-50 text-purple-700 border-purple-200',
+  LASER: 'bg-purple-50 text-purple-700 border-purple-200',
   DAVS: 'bg-sky-50 text-sky-700 border-sky-200',
   JOSMIC: 'bg-teal-50 text-teal-700 border-teal-200',
+  'PAIN CON': 'bg-teal-50 text-teal-700 border-teal-200',
   COUNSELOR: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   OTHER: 'bg-slate-100 text-slate-700 border-slate-200',
 };
@@ -562,9 +564,9 @@ export const TreatmentSessionsPage = () => {
       const formatted = (Array.isArray(data) ? data : (data.appointments || [])).map(a => {
         let providerShort = 'OTHER';
         const pName = (a.providerName || '').toUpperCase();
-        if (pName.includes('ANIK')) providerShort = 'ANIK';
+        if (pName.includes('ANIK') || pName.includes('LASER')) providerShort = 'LASER';
         else if (pName.includes('DAVS') || pName.includes("DAV'S")) providerShort = 'DAVS';
-        else if (pName.includes('JOSMIC')) providerShort = 'JOSMIC';
+        else if (pName.includes('JOSMIC') || pName.includes('PAIN')) providerShort = 'PAIN CON';
         else if (pName.includes('COUNSELOR') || pName.includes('BEHAVIORAL')) providerShort = 'COUNSELOR';
 
         let duration = '45 min';

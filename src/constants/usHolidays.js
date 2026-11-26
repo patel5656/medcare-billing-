@@ -128,19 +128,9 @@ export const isWeekend = (dateStr) => {
   return { isWeekend: false, dayName: '' };
 };
 
-// Check if clinic is closed on dateStr (Past date, Weekend, or US Federal Holiday)
+// Check if clinic is closed on dateStr (Weekend, or US Federal Holiday)
 export const isClinicClosed = (dateStr) => {
   if (!dateStr) return { isClosed: false, reason: '' };
-
-  if (isPastDate(dateStr)) {
-    return {
-      isClosed: true,
-      isPast: true,
-      isWeekend: false,
-      isHoliday: false,
-      reason: 'Past Date - Appointments cannot be scheduled for past dates'
-    };
-  }
 
   const weekendCheck = isWeekend(dateStr);
   if (weekendCheck.isWeekend) {

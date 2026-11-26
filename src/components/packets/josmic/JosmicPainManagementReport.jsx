@@ -5,6 +5,19 @@ import { apiCaseService } from '../../../services/api/apiCaseService';
 import { apiClinicalNoteService } from '../../../services/api/apiClinicalNoteService';
 import { useUIStore } from '../../../store/uiStore';
 import fmLogo from '../../../assets/fm-logo.jpeg';
+import { getTodayDateStr } from '../../../constants/usHolidays';
+
+const getTodayStr = () => {
+  try {
+    return getTodayDateStr();
+  } catch {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+};
 
 const CB = ({ 
   checked = false, 
@@ -200,9 +213,36 @@ const PatientInfoBar = ({ blankMode, packetData }) => {
 };
 
 // --- PAGE 1 ------------------------------------------------------------------
-const Page1 = ({ blankMode, packetData, readOnly = false }) => {
+const Page1 = ({ blankMode, packetData, readOnly = false, isExporting = false }) => {
   const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
-  const dosDate = packetData?.initialDate || packetData?.accidentDate || '';
+  
+  // Resolve Current Date:
+  // 1. Saved valid non-blank date in clinicalDocStorage
+  // 2. Case initialDate / DOS if set
+  // 3. Case accidentDate if set
+  // 4. Default to today's clinic-local date (fixes empty cases like Samuel Barber and new forms)
+  const savedCurrentDate = typeof storage.currentDate === 'string' ? storage.currentDate.trim() : '';
+  const fallbackDate = (typeof packetData?.initialDate === 'string' && packetData.initialDate.trim())
+    ? packetData.initialDate.trim()
+    : ((typeof packetData?.accidentDate === 'string' && packetData.accidentDate.trim())
+      ? packetData.accidentDate.trim()
+      : getTodayStr());
+  const currentDateVal = savedCurrentDate || fallbackDate;
+
+  // Auto-persist default date to case storage if missing and not read-only/blank
+  useEffect(() => {
+    if (!readOnly && !isExporting && !blankMode && packetData?.id && !savedCurrentDate && currentDateVal) {
+      const currentStorage = packetData.clinicalDocStorage || {};
+      const docNamespace = currentStorage['JOSMIC_PAIN_REPORT'] || {};
+      if (!docNamespace.currentDate || !docNamespace.currentDate.trim()) {
+        const updatedDoc = { ...docNamespace, currentDate: currentDateVal };
+        const updatedStorage = { ...currentStorage, ['JOSMIC_PAIN_REPORT']: updatedDoc };
+        packetData.clinicalDocStorage = updatedStorage;
+        apiCaseService.updateCase(packetData.id, { clinicalDocStorage: updatedStorage }).catch(() => {});
+      }
+    }
+  }, [packetData?.id, savedCurrentDate, currentDateVal, readOnly, isExporting, blankMode]);
+
   const patientDob = packetData?.patient?.dob || packetData?.patientDob || '';
   const patientGender = packetData?.patient?.sex || packetData?.patientSex || packetData?.patient?.gender || '';
   const chiefComplaintText = storage.chiefComplaint || packetData?.chiefComplaint || packetData?.mechanismOfInjury || '';
@@ -211,7 +251,26 @@ const Page1 = ({ blankMode, packetData, readOnly = false }) => {
     <div>
       <div className="flex items-center gap-4 mb-4">
         <span className="text-[11px] font-bold text-slate-700">Current Date:</span>
-        <div className="border-b border-slate-500 w-32 text-[11px] font-mono">{blankMode || !packetData ? '' : dosDate}&nbsp;</div>
+        <div className="border-b border-slate-500 w-36 text-[11px] font-mono flex items-center min-h-[22px]">
+          {blankMode || !packetData ? (
+            <span>&nbsp;</span>
+          ) : isExporting || readOnly ? (
+            <span className="w-full font-mono text-[11px] font-bold text-slate-900 bg-transparent py-0 px-0.5 leading-normal overflow-visible block">
+              {currentDateVal || ''}
+            </span>
+          ) : (
+            <EditableClinicalField
+              packetData={packetData}
+              docKey="JOSMIC_PAIN_REPORT"
+              field="currentDate"
+              value={currentDateVal}
+              readOnly={readOnly || blankMode}
+              inputType="input"
+              placeholder="YYYY-MM-DD"
+              className="w-full font-mono text-[11px] text-slate-800 bg-transparent py-0 px-0.5 outline-none"
+            />
+          )}
+        </div>
       </div>
 
       <div className="bg-slate-50 border border-slate-200 p-3 mb-4 grid grid-cols-3 gap-3 text-[11px] font-mono">
@@ -348,32 +407,75 @@ const getRosNeurologicChecked = (label, packetData) => {
 };
 
 // --- PAGE 2 ------------------------------------------------------------------
-const Page2 = ({ blankMode, packetData, readOnly = false }) => {
+const Page2 = ({ blankMode, packetData, readOnly = false, isExporting = false }) => {
   const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
   const currentPain = storage.painCurrent || packetData?.painSeverityCurrent || packetData?.painCurrent || packetData?.painScore || '';
   const worstPain = storage.painWorst || packetData?.painSeverityWorst || packetData?.painWorst || '';
   const bestPain = storage.painBest || packetData?.painSeverityBest || packetData?.painBest || '';
+
+  // Resolve Date of Injury:
+  // 1. Any explicitly saved injury date in clinicalDocStorage
+  // 2. Fall back to clinical case's saved accident/incident date
+  // 3. If neither exists, leave blank '' (never use today's date, appointment date, or dummy values)
+  const savedInjuryDate = typeof storage.dateOfInjury === 'string'
+    ? storage.dateOfInjury.trim()
+    : ((typeof storage.injuryDate === 'string') ? storage.injuryDate.trim() : '');
+
+  const caseAccidentDate = (typeof packetData?.accidentDate === 'string' && packetData.accidentDate.trim())
+    ? packetData.accidentDate.trim()
+    : ((typeof packetData?.incidentDate === 'string' && packetData.incidentDate.trim())
+      ? packetData.incidentDate.trim()
+      : ((typeof packetData?.dateOfInjury === 'string' && packetData.dateOfInjury.trim())
+        ? packetData.dateOfInjury.trim()
+        : ((typeof packetData?.injuryDate === 'string' && packetData.injuryDate.trim())
+          ? packetData.injuryDate.trim()
+          : ((packetData?.accidentDateVal)
+            ? String(packetData.accidentDateVal).slice(0, 10)
+            : ((typeof packetData?.patient?.accidentDate === 'string' && packetData.patient.accidentDate.trim())
+              ? packetData.patient.accidentDate.trim()
+              : '')))));
+
+  const resolvedInjuryDate = savedInjuryDate || caseAccidentDate || '';
 
   return (
     <div>
       <div className="mb-4 text-[11px]">
         <div className="flex items-center gap-3 mb-2">
           <span className="font-bold">2.1 Date of Injury:</span>
-          <div className="border-b border-slate-400 w-24 font-mono">{blankMode || !packetData ? '' : (packetData.accidentDate || '')}&nbsp;</div>
+          <div className="border-b border-slate-400 w-28 font-mono flex items-center min-h-[20px]">
+            {blankMode || !packetData ? (
+              <span>&nbsp;</span>
+            ) : isExporting || readOnly ? (
+              <span className="w-full font-mono text-[11px] font-bold text-slate-900 bg-transparent py-0 px-0.5 leading-normal overflow-visible block">
+                {resolvedInjuryDate || ''}
+              </span>
+            ) : (
+              <EditableClinicalField
+                packetData={packetData}
+                docKey="JOSMIC_PAIN_REPORT"
+                field="dateOfInjury"
+                value={resolvedInjuryDate}
+                readOnly={readOnly || blankMode}
+                inputType="input"
+                placeholder="YYYY-MM-DD"
+                className="w-full font-mono text-[11px] text-slate-800 bg-transparent py-0 px-0.5 outline-none"
+              />
+            )}
+          </div>
         </div>
         <p className="font-bold mb-2">2.2 Pain Severity (0-10): rate in scale of severity</p>
         <div className="grid grid-cols-3 gap-4 mb-3 pl-2">
           <div className="flex items-center">
             <span className="font-semibold mr-1">Current: </span>
-            <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="painCurrent" value={currentPain} readOnly={blankMode} inputType="input" className="w-12 border-b border-dashed border-slate-400 font-mono text-center" />
+            <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="painCurrent" value={currentPain} readOnly={readOnly || blankMode} inputType="input" className="w-12 border-b border-dashed border-slate-400 font-mono text-center" />
           </div>
           <div className="flex items-center">
             <span className="font-semibold mr-1">Worst: </span>
-            <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="painWorst" value={worstPain} readOnly={blankMode} inputType="input" className="w-12 border-b border-dashed border-slate-400 font-mono text-center" />
+            <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="painWorst" value={worstPain} readOnly={readOnly || blankMode} inputType="input" className="w-12 border-b border-dashed border-slate-400 font-mono text-center" />
           </div>
           <div className="flex items-center">
             <span className="font-semibold mr-1">Best: </span>
-            <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="painBest" value={bestPain} readOnly={blankMode} inputType="input" className="w-12 border-b border-dashed border-slate-400 font-mono text-center" />
+            <EditableClinicalField packetData={packetData} docKey="JOSMIC_PAIN_REPORT" field="painBest" value={bestPain} readOnly={readOnly || blankMode} inputType="input" className="w-12 border-b border-dashed border-slate-400 font-mono text-center" />
           </div>
         </div>
       </div>
@@ -871,7 +973,7 @@ const Page4 = ({ blankMode, packetData, readOnly = false }) => {
 };
 
 // --- MAIN COMPONENT -----------------------------------------------------------
-export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, packetData = null, readOnly = false }) => {
+export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, packetData = null, readOnly = false, isExporting = false }) => {
   const [localVersion, setLocalVersion] = useState(0);
   const { addToast } = useUIStore ? useUIStore() : { addToast: () => {} };
   const storage = packetData?.clinicalDocStorage?.['JOSMIC_PAIN_REPORT'] || {};
@@ -995,6 +1097,8 @@ export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, 
 
       const newPainDoc = {
         ...(packetData.clinicalDocStorage?.JOSMIC_PAIN_REPORT || {}),
+        currentDate: (storage.currentDate && storage.currentDate.trim()) || (packetData?.initialDate && packetData.initialDate.trim()) || getTodayStr(),
+        dateOfInjury: (storage.dateOfInjury && storage.dateOfInjury.trim()) || (packetData?.accidentDate && packetData.accidentDate.trim()) || '',
         chiefComplaint: parsed.chiefComplaint || `Patient presents for comprehensive pain management evaluation following an accident on ${packetData.accidentDate || 'recent date'}.`,
         painCurrent: String(parsed.painCurrent || '7'),
         painWorst: String(parsed.painWorst || '9'),
@@ -1030,23 +1134,25 @@ export const JosmicPainManagementReport = ({ reportPage = 1, blankMode = false, 
   const PageContent = pageComponents[reportPage] || Page1;
 
   return (
-    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none" style={{ width: '100%', maxWidth: '850px', minHeight: '1100px', padding: '40px 56px', paddingBottom: '60px' }}>
+    <div className="relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none box-border" style={{ width: '100%', maxWidth: '850px', height: '1100px', minHeight: '1100px', maxHeight: '1100px', padding: '40px 56px', paddingBottom: '60px' }}>
       
-      {/* Universal AI Auto-Draft Toolbar (Hidden on print) */}
-      {!readOnly && !blankMode && packetData && (
-        <AiAutoDraftToolbar
-          title="AI MD Consultation Scribe"
-          badge="4-Page Comprehensive"
-          subtitle="Auto-synthesize HPI, ROS, physical exam findings, diagnoses & treatment recommendations from case context"
-          hasExistingContent={Boolean(storage.chiefComplaint || storage.otherDiagnosis || storage.checkboxOverrides)}
-          readOnly={readOnly || blankMode}
-          onDraft={handleAutoDraftAi}
-        />
+      {/* Universal AI Auto-Draft Toolbar (Hidden on print & PDF) */}
+      {!readOnly && !isExporting && !blankMode && packetData && (
+        <div data-pdf-hide="true" className="ai-autodraft-toolbar no-pdf print:hidden">
+          <AiAutoDraftToolbar
+            title="AI MD Consultation Scribe"
+            badge="4-Page Comprehensive"
+            subtitle="Auto-synthesize HPI, ROS, physical exam findings, diagnoses & treatment recommendations from case context"
+            hasExistingContent={Boolean(storage.chiefComplaint || storage.otherDiagnosis || storage.checkboxOverrides)}
+            readOnly={readOnly || blankMode}
+            onDraft={handleAutoDraftAi}
+          />
+        </div>
       )}
 
       <PageHeader page={reportPage} blankMode={blankMode} packetData={packetData} />
       <PatientInfoBar blankMode={blankMode} packetData={packetData} />
-      <PageContent key={localVersion} blankMode={blankMode} packetData={packetData} readOnly={readOnly} />
+      <PageContent key={localVersion} blankMode={blankMode} packetData={packetData} readOnly={readOnly || isExporting} isExporting={isExporting} />
 
       {/* Footer */}
       <div className="absolute bottom-4 left-0 right-0 px-14 flex justify-between text-[9px] text-slate-400 font-mono border-t border-slate-100 pt-2">

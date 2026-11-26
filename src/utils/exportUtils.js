@@ -217,6 +217,11 @@ export const exportPacketToPDF = async (containerOrId, filename = 'clinical_pack
     throw new Error('No printable pages found in packet to export');
   }
 
+  // Scroll to top of window so coordinate calculations are pristine
+  const origScrollX = window.scrollX || window.pageXOffset || 0;
+  const origScrollY = window.scrollY || window.pageYOffset || 0;
+  window.scrollTo(0, 0);
+
   // 1. Temporarily neutralize zoom transforms on all pages for pristine 1:1 rendering
   const origTransforms = [];
   sheetElements.forEach((el, idx) => {
@@ -258,7 +263,38 @@ export const exportPacketToPDF = async (containerOrId, filename = 'clinical_pack
         backgroundColor: '#ffffff',
         scrollX: 0,
         scrollY: 0,
-        windowWidth: 1280
+        windowWidth: 1280,
+        ignoreElements: (el) => {
+          if (!el || !el.classList) return false;
+          return (
+            el.classList.contains('print:hidden') ||
+            el.classList.contains('no-print') ||
+            el.classList.contains('ai-autodraft-toolbar') ||
+            el.classList.contains('no-pdf') ||
+            el.getAttribute?.('data-pdf-hide') === 'true'
+          );
+        },
+        onclone: (clonedDoc) => {
+          try {
+            const hides = clonedDoc.querySelectorAll('.ai-autodraft-toolbar, [data-pdf-hide="true"], .no-pdf');
+            hides.forEach((h) => h.remove());
+
+            const inputs = clonedDoc.querySelectorAll('input');
+            inputs.forEach((input) => {
+              if (input.value) {
+                input.setAttribute('value', input.value);
+              }
+            });
+            const textareas = clonedDoc.querySelectorAll('textarea');
+            textareas.forEach((ta) => {
+              if (ta.value) {
+                ta.textContent = ta.value;
+              }
+            });
+          } catch (e) {
+            console.warn('html2canvas onclone warning:', e);
+          }
+        }
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.98);
@@ -287,5 +323,7 @@ export const exportPacketToPDF = async (containerOrId, filename = 'clinical_pack
         el.style.transition = orig.transition;
       }
     });
+    // Restore window scroll position
+    window.scrollTo(origScrollX, origScrollY);
   }
 };

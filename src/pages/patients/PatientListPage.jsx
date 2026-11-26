@@ -10,6 +10,7 @@ import { PatientDetailsModal } from '../../components/modals/PatientDetailsModal
 import { ExportDataModal } from '../../components/common/ExportDataModal';
 import { DeleteConfirmModal } from '../../components/modals/DeleteConfirmModal';
 import { exportToCSV, getTimestampedFilename } from '../../utils/exportUtils';
+import { getProviderShortLabel } from '../../utils/providerFilterUtils';
 
 export const PatientListPage = () => {
   const location = useLocation();
@@ -266,7 +267,7 @@ export const PatientListPage = () => {
                   <div className="flex flex-wrap gap-1 pt-1">
                     {pat.assignedProviderIds?.map((pid) => (
                       <span key={pid} className="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 text-slate-700 rounded-md border border-slate-200">
-                        {pid.replace('prov-', '').toUpperCase()}
+                        {getProviderShortLabel(pid)}
                       </span>
                     ))}
                   </div>
@@ -343,7 +344,7 @@ export const PatientListPage = () => {
                         <div className="flex flex-wrap gap-1">
                           {pat.assignedProviderIds?.map(pid => (
                             <span key={pid} className="px-1.5 py-0.5 text-[9px] font-bold bg-slate-100 text-slate-800 rounded-md border border-slate-200">
-                              {pid.replace('prov-', '').toUpperCase()}
+                              {getProviderShortLabel(pid)}
                             </span>
                           ))}
                         </div>

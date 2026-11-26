@@ -10,7 +10,25 @@ const FieldInput = ({ defaultValue = '', placeholder = '', className = '', readO
   const baseClasses = "w-full bg-transparent hover:bg-amber-100/70 focus:bg-amber-100 focus:ring-1 focus:ring-amber-600 rounded px-0.5 outline-none text-slate-900 font-mono font-bold uppercase transition cursor-text border-b border-transparent focus:border-amber-500";
   
   if (readOnly) {
-    return <span className={`w-full bg-transparent px-0.5 text-slate-900 font-mono font-bold uppercase inline-block ${className}`} style={{ transform: 'translateY(-2.5px)' }}>{val}</span>;
+    if (multiline) {
+      return (
+        <div className={`w-full whitespace-pre-line text-slate-900 font-mono font-bold uppercase leading-tight overflow-visible ${className}`}>
+          {val}
+        </div>
+      );
+    }
+    const hasCustomWidth = className && /\bw-\S+/.test(className);
+    const widthClass = hasCustomWidth ? '' : 'w-full';
+    const hasCustomPadding = className && /\bp[xye]?-/.test(className);
+    const paddingClass = hasCustomPadding ? '' : 'px-0.5';
+    const hasCustomLeading = className && /\bleading-/.test(className);
+    const leadingClass = hasCustomLeading ? '' : 'leading-tight';
+
+    return (
+      <span className={`${widthClass} ${paddingClass} ${leadingClass} bg-transparent text-slate-900 font-mono font-bold uppercase inline-block overflow-visible ${className}`}>
+        {val}
+      </span>
+    );
   }
 
   if (multiline) {
@@ -125,9 +143,9 @@ const SignatureFieldInput = ({ defaultValue = '', className = '', readOnly = fal
 
   if (readOnly) {
     if (isBase64) {
-      return <div className={`flex items-end ${className}`}><img src={val} alt="Signature" className="h-4 max-w-[150px] object-contain" /></div>;
+      return <div className={`flex items-end ${className}`}><img src={val} alt="Signature" className="h-5 max-w-[150px] object-contain" /></div>;
     }
-    return <span className={className}>{val}</span>;
+    return <span className={`inline-block leading-tight overflow-visible ${className}`}>{val}</span>;
   }
 
   return (
@@ -187,7 +205,8 @@ const SignatureFieldInput = ({ defaultValue = '', className = '', readOnly = fal
  * Form Approved OMB-0938-1197 FORM CMS-1500 (02/12)
  * Fits strictly on 1 US Letter portrait page (8.5" x 11")
  */
-export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, readOnly = false, onSignatureChange, onClaimChange }) => {
+export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, readOnly: propReadOnly = false, isExporting = false, onSignatureChange, onClaimChange }) => {
+  const readOnly = propReadOnly || isExporting;
   const emptyClaim = {
     box1: '', box1a: '', box2: '', box3Dob: { mm: '', dd: '', yy: '' }, box3Sex: '',
     box4: '', box5Address: '', box5City: '', box5State: '', box5Zip: '', box5Phone: '',
@@ -217,11 +236,12 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
     box6Relation: rawClaim?.box6Relation || 'Self',
     box8Status: rawClaim?.box8Status || '',
     box8EmploymentStatus: rawClaim?.box8EmploymentStatus || '',
+    box9bSex: rawClaim?.box9bSex || '',
     box10Employment: rawClaim?.box10Employment || 'NO',
     box10AutoAccident: rawClaim?.box10AutoAccident || 'YES',
     box10OtherAccident: rawClaim?.box10OtherAccident || 'NO',
     box11InsuredSex: rawClaim?.box11InsuredSex || '',
-    box11d: rawClaim?.box11d || 'NO',
+    box11d: rawClaim?.box11d !== undefined && rawClaim?.box11d !== null ? rawClaim.box11d : '',
     box20OutsideLab: rawClaim?.box20OutsideLab || rawClaim?.box20 || '',
     box25Type: rawClaim?.box25Type || 'EIN',
     box27AcceptAssignment: rawClaim?.box27AcceptAssignment || 'YES',
@@ -234,11 +254,12 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
       box6Relation: rawClaim?.box6Relation || 'Self',
       box8Status: rawClaim?.box8Status || '',
       box8EmploymentStatus: rawClaim?.box8EmploymentStatus || '',
+      box9bSex: rawClaim?.box9bSex || '',
       box10Employment: rawClaim?.box10Employment || 'NO',
       box10AutoAccident: rawClaim?.box10AutoAccident || 'YES',
       box10OtherAccident: rawClaim?.box10OtherAccident || 'NO',
       box11InsuredSex: rawClaim?.box11InsuredSex || '',
-      box11d: rawClaim?.box11d || 'NO',
+      box11d: rawClaim?.box11d !== undefined && rawClaim?.box11d !== null ? rawClaim.box11d : '',
       box20OutsideLab: rawClaim?.box20OutsideLab || rawClaim?.box20 || '',
       box25Type: rawClaim?.box25Type || 'EIN',
       box27AcceptAssignment: rawClaim?.box27AcceptAssignment || 'YES',
@@ -249,6 +270,7 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
     rawClaim?.box6Relation,
     rawClaim?.box8Status,
     rawClaim?.box8EmploymentStatus,
+    rawClaim?.box9bSex,
     rawClaim?.box10Employment,
     rawClaim?.box10AutoAccident,
     rawClaim?.box10OtherAccident,
@@ -570,36 +592,36 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             <div>
               <div className="p-0.5 border-b border-[#b91c1c]">
                 <span>9. OTHER INSURED'S NAME (Last Name, First Name, Middle Initial)</span>
-                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9)} onChange={(v) => handleFieldChange('box9', v)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
               </div>
               <div className="p-0.5 border-b border-[#b91c1c]">
                 <span>a. OTHER INSURED'S POLICY OR GROUP NUMBER</span>
-                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9a)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9a)} onChange={(v) => handleFieldChange('box9a', v)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
               </div>
               <div className="flex border-b border-[#b91c1c]">
                 <div className="w-1/2 p-0.5 border-r border-[#b91c1c]">
                   <span>b. OTHER INSURED'S DATE OF BIRTH</span>
                   <div className="flex gap-1 mt-0.5">
-                    <FieldInput defaultValue={c(claim.box9bDob?.mm)} readOnly={readOnly} className="w-5 text-[10px] text-center" placeholder="MM" /> 
-                    <FieldInput defaultValue={c(claim.box9bDob?.dd)} readOnly={readOnly} className="w-5 text-[10px] text-center" placeholder="DD" /> 
-                    <FieldInput defaultValue={c(claim.box9bDob?.yy)} readOnly={readOnly} className="w-8 text-[10px] text-center" placeholder="YY" />
+                    <FieldInput defaultValue={c(claim.box9bDob?.mm)} onChange={(v) => handleFieldChange('box9bDob', { ...(claim.box9bDob || {}), mm: v })} readOnly={readOnly} className="w-5 text-[10px] text-center" placeholder="MM" /> 
+                    <FieldInput defaultValue={c(claim.box9bDob?.dd)} onChange={(v) => handleFieldChange('box9bDob', { ...(claim.box9bDob || {}), dd: v })} readOnly={readOnly} className="w-5 text-[10px] text-center" placeholder="DD" /> 
+                    <FieldInput defaultValue={c(claim.box9bDob?.yy)} onChange={(v) => handleFieldChange('box9bDob', { ...(claim.box9bDob || {}), yy: v })} readOnly={readOnly} className="w-8 text-[10px] text-center" placeholder="YY" />
                   </div>
                 </div>
                 <div className="w-1/2 p-0.5">
                   <span>SEX</span>
-                  <div className="flex gap-1.5 mt-0.5 font-mono text-slate-900">
-                    <span className="text-[7.5px]">M <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box9bSex === 'M')}</span></span>
-                    <span className="text-[7.5px]">F <span className="inline-flex items-center justify-center w-3 h-3 border border-[#b91c1c] font-bold">{chk(claim.box9bSex === 'F')}</span></span>
+                  <div className="flex gap-1 pr-1 items-center font-mono text-slate-900 mt-0.5">
+                    {renderCmsBox('box9bSex', 'M', 'M', { labelPosition: 'left' })}
+                    {renderCmsBox('box9bSex', 'F', 'F', { labelPosition: 'left' })}
                   </div>
                 </div>
               </div>
               <div className="p-0.5 border-b border-[#b91c1c]">
                 <span>c. EMPLOYER'S NAME OR SCHOOL NAME</span>
-                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9c)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9c)} onChange={(v) => handleFieldChange('box9c', v)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
               </div>
               <div className="p-0.5">
                 <span>d. INSURANCE PLAN NAME OR PROGRAM NAME</span>
-                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9d)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
+                <div className="mt-0.5"><FieldInput defaultValue={c(claim.box9d)} onChange={(v) => handleFieldChange('box9d', v)} readOnly={readOnly} className="text-xs font-mono font-bold" /></div>
               </div>
             </div>
           </div>
@@ -979,37 +1001,37 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
               const tDos = formatDos(line.toDos || line.fromDos || line.dos || claim.dos);
 
               return (
-                <div key={idx} className="h-[25px] min-h-[25px] max-h-[25px] flex flex-col justify-between relative px-0.5 py-0.5">
+                <div key={idx} className="h-[25px] min-h-[25px] max-h-[25px] flex flex-col justify-between relative px-0.5 py-0 overflow-visible">
                   {/* Left Outside Margin Line Number (1-6) */}
                   <span className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-3 text-center font-sans font-bold text-[9.5px] text-[#991b1b] select-none pointer-events-none">
                     {idx + 1}
                   </span>
 
-                  <div className="h-full flex flex-col justify-between overflow-hidden">
+                  <div className="h-full flex flex-col justify-between overflow-visible">
                     {/* Top Sub-line: Note / Rendering Provider ID (Upper 24J) */}
-                    <div className="grid grid-cols-12 items-center text-[7px] font-bold leading-none h-[9px]">
+                    <div className="grid grid-cols-12 items-center text-[7px] font-bold leading-none h-[9px] overflow-visible">
                       <div className="col-span-11 text-slate-700 uppercase tracking-tight overflow-hidden text-ellipsis whitespace-nowrap pl-1">
                         {line.note && <span>Note: {line.note}</span>}
                       </div>
-                      <div className="col-span-1 flex text-[7.5px] font-mono h-full items-center">
+                      <div className="col-span-1 flex text-[7.5px] font-mono h-full items-center overflow-visible">
                         <div className="flex-1"></div>
                         <div className="flex-1"></div>
-                        <div className="flex-[2] h-full flex items-center justify-center">
-                          <FieldInput defaultValue={hasData ? (line.renderingId || '') : ''} readOnly={readOnly} className="w-full text-center text-[7.5px]" />
+                        <div className="flex-[2] h-full flex items-center justify-center overflow-visible">
+                          <FieldInput defaultValue={hasData ? (line.renderingId || '') : ''} readOnly={readOnly} className="w-full text-center text-[7.5px] leading-tight" />
                         </div>
                       </div>
                     </div>
 
                     {/* Bottom Line: Main Grid Data */}
-                    <div className="grid grid-cols-12 text-center items-center font-bold h-[14px]">
+                    <div className="grid grid-cols-12 text-center items-center font-bold h-[14px] leading-tight overflow-visible">
                       {/* 24.A Dates of Service */}
-                      <div className="col-span-3 text-[9px] border-r border-[#b91c1c]/20 flex">
-                        <div className="w-1/2 flex px-0.5 border-r border-slate-300">
+                      <div className="col-span-3 text-[9px] border-r border-[#b91c1c]/20 flex items-center overflow-visible">
+                        <div className="w-1/2 flex px-0.5 border-r border-slate-300 items-center overflow-visible">
                           <FieldInput defaultValue={hasData ? fDos.mm : ''} readOnly={readOnly} className="w-1/3 text-center" />
                           <FieldInput defaultValue={hasData ? fDos.dd : ''} readOnly={readOnly} className="w-1/3 text-center" />
                           <FieldInput defaultValue={hasData ? fDos.yy : ''} readOnly={readOnly} className="w-1/3 text-center" />
                         </div>
-                        <div className="w-1/2 flex px-0.5">
+                        <div className="w-1/2 flex px-0.5 items-center overflow-visible">
                           <FieldInput defaultValue={hasData ? tDos.mm : ''} readOnly={readOnly} className="w-1/3 text-center" />
                           <FieldInput defaultValue={hasData ? tDos.dd : ''} readOnly={readOnly} className="w-1/3 text-center" />
                           <FieldInput defaultValue={hasData ? tDos.yy : ''} readOnly={readOnly} className="w-1/3 text-center" />
@@ -1017,17 +1039,17 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
                       </div>
                       
                       {/* 24.B Place of Service */}
-                      <div className="col-span-1 border-r border-[#b91c1c]/20">
+                      <div className="col-span-1 border-r border-[#b91c1c]/20 flex items-center justify-center overflow-visible">
                         <FieldInput defaultValue={hasData ? (line.pos || '11') : ''} readOnly={readOnly} className="text-center" />
                       </div>
 
                       {/* 24.C EMG */}
-                      <div className="col-span-1 border-r border-[#b91c1c]/20">
+                      <div className="col-span-1 border-r border-[#b91c1c]/20 flex items-center justify-center overflow-visible">
                         <FieldInput defaultValue={hasData ? (line.emg) : ''} readOnly={readOnly} className="text-center" />
                       </div>
 
                       {/* 24.D CPT & Modifiers */}
-                      <div className="col-span-3 border-r border-[#b91c1c]/20 flex items-center justify-between px-0.5 gap-0.5 text-[9px]">
+                      <div className="col-span-3 border-r border-[#b91c1c]/20 flex items-center justify-between px-0.5 gap-0.5 text-[9px] overflow-visible">
                         <FieldInput defaultValue={line.cpt || ''} readOnly={readOnly} placeholder="CPT" className="w-12 font-mono font-black text-slate-950 text-center" />
                         <FieldInput defaultValue={line.mod1 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
                         <FieldInput defaultValue={line.mod2 || ''} readOnly={readOnly} placeholder="" className="w-4 text-center font-bold text-teal-800" />
@@ -1036,30 +1058,30 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
                       </div>
 
                       {/* 24.E Diagnosis Pointer */}
-                      <div className="col-span-1 border-r border-[#b91c1c]/20 font-black">
+                      <div className="col-span-1 border-r border-[#b91c1c]/20 font-black flex items-center justify-center overflow-visible">
                         <FieldInput defaultValue={line.diagPtr || ''} readOnly={readOnly} className="text-center" />
                       </div>
 
                       {/* 24.F Charges */}
-                      <div className="col-span-1 border-r border-[#b91c1c]/20 text-right pr-1 font-black">
-                        <FieldInput defaultValue={hasData ? cleanAmount(line.charge) : ''} readOnly={readOnly} className="text-right" />
+                      <div className="col-span-1 border-r border-[#b91c1c]/20 text-right pr-0.5 font-black flex items-center justify-end overflow-visible">
+                        <FieldInput defaultValue={hasData ? cleanAmount(line.charge) : ''} readOnly={readOnly} className="text-right text-[8.5px] sm:text-[9px] font-black tracking-tight" />
                       </div>
 
                       {/* 24.G Units */}
-                      <div className="col-span-1 border-r border-[#b91c1c]/20 font-bold">
+                      <div className="col-span-1 border-r border-[#b91c1c]/20 font-bold flex items-center justify-center overflow-visible">
                         <FieldInput defaultValue={hasData ? (line.units || '1') : ''} readOnly={readOnly} className="text-center" />
                       </div>
 
                       {/* 24.H-J Rendering NPI & ID Qual */}
-                      <div className="col-span-1 flex text-[8.5px] font-mono h-full items-center">
-                        <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
+                      <div className="col-span-1 flex text-[8.5px] font-mono h-full items-center overflow-visible">
+                        <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center overflow-visible">
                           <FieldInput defaultValue="" readOnly={readOnly} className="w-full text-center" />
                         </div>
-                        <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center">
+                        <div className="flex-1 border-r border-[#b91c1c]/20 h-full flex items-center justify-center overflow-visible">
                           <FieldInput defaultValue={hasData ? 'NPI' : ''} readOnly={readOnly} className="w-full text-center text-[5.5px]" />
                         </div>
-                        <div className="flex-[2] h-full flex items-center justify-center">
-                          <FieldInput defaultValue={hasData ? (line.renderingNpi || claim.box33Npi || '') : ''} readOnly={readOnly} className="w-full text-center text-[5px] px-0 tracking-tighter" />
+                        <div className="flex-[2] h-full flex items-center justify-center overflow-visible">
+                          <FieldInput defaultValue={hasData ? (line.renderingNpi || claim.box33Npi || '') : ''} readOnly={readOnly} className="w-full text-center text-[5.5px] px-0 tracking-tighter leading-tight" />
                         </div>
                       </div>
                     </div>
@@ -1097,59 +1119,59 @@ export const CmsRedGridForm = ({ claim: rawClaim = null, blankMode = false, read
             </div>
           </div>
 
-          <div className="col-span-1 p-0.5 border-r border-[#b91c1c] text-right">
-            <span>28. TOTAL CHARGE</span>
-            <div className="mt-0.5">
-              <FieldInput defaultValue={blankMode || !claim.box28TotalCharge ? '' : `$${cleanAmount(claim.box28TotalCharge)}`} readOnly={readOnly} className="font-mono text-[10px] font-black text-right" />
+          <div className="col-span-1 p-0.5 border-r border-[#b91c1c] text-right overflow-visible">
+            <span className="block leading-none text-[6.5px]">28. TOTAL CHARGE</span>
+            <div className="mt-0.5 overflow-visible">
+              <FieldInput defaultValue={blankMode || !claim.box28TotalCharge ? '' : `$${cleanAmount(claim.box28TotalCharge)}`} readOnly={readOnly} className="font-mono text-[8.5px] sm:text-[9px] font-black text-right tracking-tight px-0 leading-tight block w-full overflow-visible" />
             </div>
           </div>
 
-          <div className="col-span-1 p-0.5 border-r border-[#b91c1c] text-right">
-            <span>29. AMOUNT PAID</span>
-            <div className="mt-0.5">
-              <FieldInput defaultValue={blankMode || claim.box29AmountPaid === undefined || claim.box29AmountPaid === null || claim.box29AmountPaid === '' ? '' : `$${cleanAmount(claim.box29AmountPaid)}`} readOnly={readOnly} className="font-mono text-[10px] font-bold text-right" />
+          <div className="col-span-1 p-0.5 border-r border-[#b91c1c] text-right overflow-visible">
+            <span className="block leading-none text-[6.5px]">29. AMOUNT PAID</span>
+            <div className="mt-0.5 overflow-visible">
+              <FieldInput defaultValue={blankMode || claim.box29AmountPaid === undefined || claim.box29AmountPaid === null || claim.box29AmountPaid === '' ? '' : `$${cleanAmount(claim.box29AmountPaid)}`} readOnly={readOnly} className="font-mono text-[8.5px] sm:text-[9px] font-bold text-right tracking-tight px-0 leading-tight block w-full overflow-visible" />
             </div>
           </div>
 
-          <div className="col-span-2 p-0.5 text-right">
-            <span>30. BALANCE DUE</span>
-            <div className="mt-0.5">
-              <FieldInput defaultValue={blankMode || (!claim.box30BalanceDue && !claim.box28TotalCharge) ? '' : `$${cleanAmount(claim.box30BalanceDue || claim.box28TotalCharge)}`} readOnly={readOnly} className="font-mono text-[10px] font-black text-right" />
+          <div className="col-span-2 p-0.5 text-right overflow-visible">
+            <span className="block leading-none text-[6.5px]">30. BALANCE DUE</span>
+            <div className="mt-0.5 overflow-visible">
+              <FieldInput defaultValue={blankMode || (!claim.box30BalanceDue && !claim.box28TotalCharge) ? '' : `$${cleanAmount(claim.box30BalanceDue || claim.box28TotalCharge)}`} readOnly={readOnly} className="font-mono text-[9.5px] sm:text-[10px] font-black text-right tracking-tight px-0 leading-tight block w-full overflow-visible" />
             </div>
           </div>
         </div>
 
         {/* 🔴 ROW 10: BOXES 31, 32, 33 */}
-        <div className="grid grid-cols-12 text-[7.5px] font-bold text-[#991b1b] font-mono h-14">
-          <div className="col-span-4 border-r border-[#b91c1c] pr-1 flex flex-col justify-between p-0.5">
+        <div className="grid grid-cols-12 text-[7.5px] font-bold text-[#991b1b] font-mono h-14 overflow-visible">
+          <div className="col-span-4 border-r border-[#b91c1c] pr-1 flex flex-col justify-between p-0.5 overflow-visible">
             <div>
               <span className="leading-none block text-[7px]">31. SIGNATURE OF PHYSICIAN OR SUPPLIER INCLUDING DEGREES OR CREDENTIALS</span>
               <span className="text-[5.5px] font-normal leading-tight block text-slate-500">(I certify that the statements on the reverse apply to this bill and are made a part thereof.)</span>
             </div>
-            <div className="flex justify-between items-end mt-0.5">
-              <SignatureFieldInput defaultValue={c(claim.box31ProviderSignature || '')} onChange={(val) => { if (claim) { claim.box31ProviderSignature = val; if (onSignatureChange) onSignatureChange(claim); } }} readOnly={readOnly} className="font-bold text-[9px] w-2/3" />
-              <FieldInput defaultValue={blankMode || !claim.box31Date ? '' : `DATE ${claim.box31Date}`} readOnly={readOnly} className="text-[7.5px] text-slate-600 w-1/3 text-right" />
+            <div className="flex justify-between items-end mt-0.5 overflow-visible">
+              <SignatureFieldInput defaultValue={c(claim.box31ProviderSignature || '')} onChange={(val) => { if (claim) { claim.box31ProviderSignature = val; if (onSignatureChange) onSignatureChange(claim); } }} readOnly={readOnly} className="font-bold text-[8.5px] w-2/3 leading-tight overflow-visible" />
+              <FieldInput defaultValue={blankMode || !claim.box31Date ? '' : `DATE ${claim.box31Date}`} readOnly={readOnly} className="text-[7.5px] text-slate-600 w-1/3 text-right leading-tight overflow-visible" />
             </div>
           </div>
 
-          <div className="col-span-4 border-r border-[#b91c1c] px-1 flex flex-col justify-between p-0.5 relative">
-            <div>
-              <span className="text-[7px]">32. SERVICE FACILITY LOCATION INFORMATION</span>
-              <FieldInput defaultValue={c(claim.box32Facility || '')} readOnly={readOnly} multiline={true} className="font-bold text-[8.5px] mt-0.5 leading-tight" />
+          <div className="col-span-4 border-r border-[#b91c1c] px-1 flex flex-col justify-between p-0.5 relative overflow-visible">
+            <div className="overflow-visible">
+              <span className="text-[7px] block leading-none">32. SERVICE FACILITY LOCATION INFORMATION</span>
+              <FieldInput defaultValue={c(claim.box32Facility || '')} readOnly={readOnly} multiline={true} className="font-bold text-[7.5px] sm:text-[8px] mt-0.5 leading-[1.15] overflow-visible" />
             </div>
-            <div className="flex justify-between text-[6.5px] mt-0.5 border-t border-[#b91c1c]/40 pt-0.5 absolute bottom-0 left-0 right-0 px-1">
-              <span>a. <span className="font-mono text-slate-900 text-[7.5px]">{c(claim.box32Npi || claim.box32aNpi)}</span></span>
+            <div className="flex justify-between text-[6.5px] border-t border-[#b91c1c]/40 pt-0.5 absolute bottom-0.5 left-0 right-0 px-1 overflow-visible leading-none">
+              <span>a. <span className="font-mono text-slate-900 text-[7.5px] font-bold">{c(claim.box32Npi || claim.box32aNpi)}</span></span>
               <span>b.</span>
             </div>
           </div>
 
-          <div className="col-span-4 pl-1 flex flex-col justify-between p-0.5 relative">
-            <div>
-              <span className="text-[7px]">33. BILLING PROVIDER INFO &amp; PH # {c(claim.box33Phone || '')}</span>
-              <FieldInput defaultValue={c(claim.box33BillingProvider || '')} readOnly={readOnly} multiline={true} className="font-bold text-[8.5px] mt-0.5 leading-tight" />
+          <div className="col-span-4 pl-1 flex flex-col justify-between p-0.5 relative overflow-visible">
+            <div className="overflow-visible">
+              <span className="text-[7px] block leading-none">33. BILLING PROVIDER INFO &amp; PH # {c(claim.box33Phone || '')}</span>
+              <FieldInput defaultValue={c(claim.box33BillingProvider || '')} readOnly={readOnly} multiline={true} className="font-bold text-[7.5px] sm:text-[8px] mt-0.5 leading-[1.15] overflow-visible" />
             </div>
-            <div className="flex justify-between text-[6.5px] mt-0.5 border-t border-[#b91c1c]/40 pt-0.5 absolute bottom-0 left-0 right-0 px-1">
-              <span>a. <span className="font-mono text-slate-900 text-[7.5px]">{c(claim.box33Npi)}</span></span>
+            <div className="flex justify-between text-[6.5px] border-t border-[#b91c1c]/40 pt-0.5 absolute bottom-0.5 left-0 right-0 px-1 overflow-visible leading-none">
+              <span>a. <span className="font-mono text-slate-900 text-[7.5px] font-bold">{c(claim.box33Npi)}</span></span>
               <span>b.</span>
             </div>
           </div>

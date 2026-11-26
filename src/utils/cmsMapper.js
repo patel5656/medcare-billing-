@@ -94,6 +94,25 @@ const parseSex = (rawSex) => {
   return '';
 };
 
+// Formats an insured name as LASTNAME, FIRSTNAME MI according to CMS-1500 rules
+const formatInsuredName = (rawName) => {
+  if (!rawName) return '';
+  const trimmed = String(rawName).trim();
+  if (!trimmed) return '';
+  if (trimmed.includes(',')) {
+    return trimmed.toUpperCase();
+  }
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].toUpperCase();
+  if (parts.length === 2) {
+    return `${parts[1].toUpperCase()}, ${parts[0].toUpperCase()}`;
+  }
+  const first = parts[0].toUpperCase();
+  const last = parts[parts.length - 1].toUpperCase();
+  const middle = parts.slice(1, -1).map(p => p.charAt(0).toUpperCase()).join(' ');
+  return `${last}, ${first} ${middle}`.trim();
+};
+
 
 /**
  * Maps a bill statement and case to date-grouped CMS-1500 claims.
@@ -200,19 +219,27 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
     box11InsuredSex = parseSex(patientSex);
   }
 
-  // Box 11d: Is There Another Health Benefit Plan?
-  const secComp = (ptObj.secondaryInsuranceCompany || bill.secondaryInsuranceCompany || patientCase?.secondaryInsuranceCompany || patientCase?.patient?.secondaryInsuranceCompany || '').trim();
-  const secPolicy = (ptObj.secondaryPolicyNumber || bill.secondaryPolicyNumber || patientCase?.secondaryPolicyNumber || patientCase?.patient?.secondaryPolicyNumber || '').trim();
+  // Box 11d & Other Insured (Box 9, 9a, 9b, 9c, 9d) auto-fill logic
+  // Only use saved data belonging to the actual other insured person (never primary policyholder or patient's employer)
+  const secComp = (ptObj.secondaryInsuranceCompany || bill.secondaryInsuranceCompany || patientCase?.secondaryInsuranceCompany || patientCase?.patient?.secondaryInsuranceCompany || ptObj.otherInsuranceCompany || bill.otherInsuranceCompany || ptObj.otherInsurancePlan || bill.otherInsurancePlan || '').trim();
+  const secPolicy = (ptObj.secondaryPolicyNumber || bill.secondaryPolicyNumber || patientCase?.secondaryPolicyNumber || patientCase?.patient?.secondaryPolicyNumber || ptObj.secondaryGroupNumber || bill.secondaryGroupNumber || ptObj.otherInsuredPolicy || bill.otherInsuredPolicy || '').trim();
+
+  const rawOtherName = (ptObj.otherInsuredName || bill.otherInsuredName || patientCase?.otherInsuredName || ptObj.otherInsured || bill.otherInsured || ptObj.secondaryPolicyHolderName || bill.secondaryPolicyHolderName || '').trim();
+  const rawOtherDob = ptObj.otherInsuredDob || bill.otherInsuredDob || patientCase?.otherInsuredDob || ptObj.secondaryPolicyHolderDob || bill.secondaryPolicyHolderDob || '';
+  const rawOtherSex = ptObj.otherInsuredSex || bill.otherInsuredSex || patientCase?.otherInsuredSex || ptObj.secondaryPolicyHolderSex || bill.secondaryPolicyHolderSex || '';
+  const rawOtherEmployer = (ptObj.otherInsuredEmployer || bill.otherInsuredEmployer || patientCase?.otherInsuredEmployer || '').trim();
+
+  const hasOtherInsurance = Boolean(secComp || secPolicy || rawOtherName || rawOtherDob || rawOtherSex || rawOtherEmployer);
   const primCompany = (bill.insuranceCompany || patientCase?.insuranceCompany || ptObj.primaryInsuranceCompany || patientCase?.patient?.primaryInsuranceCompany || '').trim();
   const primPolicy = (bill.insurancePolicyNumber || patientCase?.insurancePolicyNumber || ptObj.primaryPolicyNumber || patientCase?.patient?.primaryPolicyNumber || primaryGroupNumber || '').trim();
 
-  let box11d = '';
-  if (secComp || secPolicy) {
-    box11d = 'YES';
-  } else if ((primCompany || primPolicy) && !secComp && !secPolicy) {
-    box11d = 'NO';
+  let autoBox11d = '';
+  if (hasOtherInsurance) {
+    autoBox11d = 'YES';
+  } else if (primCompany || primPolicy) {
+    autoBox11d = 'NO';
   } else {
-    box11d = '';
+    autoBox11d = '';
   }
 
   // --- Provider identifiers from real DB data ---
@@ -348,11 +375,24 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box7Phone: patientPhone,
       box8Status: parsedSignatures.box8Status || box8Status,
       box8EmploymentStatus: parsedSignatures.box8EmploymentStatus || box8EmploymentStatus,
-      box9a: '',
-      box9bDob: { mm: '', dd: '', yy: '' },
-      box9bSex: '',
-      box9c: '',
-      box9d: '',
+      box9: parsedSignatures.box9 !== undefined && parsedSignatures.box9 !== null
+        ? parsedSignatures.box9
+        : (autoBox11d === 'YES' || hasOtherInsurance ? formatInsuredName(rawOtherName) : ''),
+      box9a: parsedSignatures.box9a !== undefined && parsedSignatures.box9a !== null
+        ? parsedSignatures.box9a
+        : (autoBox11d === 'YES' || hasOtherInsurance ? secPolicy : ''),
+      box9bDob: (parsedSignatures.box9bDob && typeof parsedSignatures.box9bDob === 'object' && (parsedSignatures.box9bDob.mm || parsedSignatures.box9bDob.dd || parsedSignatures.box9bDob.yy))
+        ? parsedSignatures.box9bDob
+        : ((autoBox11d === 'YES' || hasOtherInsurance) && rawOtherDob ? parseDobToMmDdYy(rawOtherDob) : { mm: '', dd: '', yy: '' }),
+      box9bSex: parsedSignatures.box9bSex !== undefined && parsedSignatures.box9bSex !== null
+        ? parsedSignatures.box9bSex
+        : ((autoBox11d === 'YES' || hasOtherInsurance) && rawOtherSex ? parseSex(rawOtherSex) : ''),
+      box9c: parsedSignatures.box9c !== undefined && parsedSignatures.box9c !== null
+        ? parsedSignatures.box9c
+        : ((autoBox11d === 'YES' || hasOtherInsurance) && rawOtherEmployer ? rawOtherEmployer : ''),
+      box9d: parsedSignatures.box9d !== undefined && parsedSignatures.box9d !== null
+        ? parsedSignatures.box9d
+        : (autoBox11d === 'YES' || hasOtherInsurance ? secComp : ''),
       box10Employment: parsedSignatures.box10Employment || box10.box10Employment,
       box10AutoAccident: parsedSignatures.box10AutoAccident || box10.box10AutoAccident,
       box10OtherAccident: parsedSignatures.box10OtherAccident || box10.box10OtherAccident,
@@ -363,7 +403,7 @@ export const mapBillToCms1500Claims = (bill, patientCase, providerConfig) => {
       box11InsuredSex: parsedSignatures.box11InsuredSex || box11InsuredSex,
       box11b: '',
       box11c: bill.insuranceCompany || patientCase?.insuranceCompany || ptObj?.primaryInsuranceCompany || patientCase?.patient?.primaryInsuranceCompany || '',
-      box11d: parsedSignatures.box11d || box11d,
+      box11d: (parsedSignatures.box11d !== undefined && parsedSignatures.box11d !== null) ? parsedSignatures.box11d : autoBox11d,
       box12Signature: parsedSignatures.box12Signature || '',
       box12Date: dosKey,
       box13Signature: parsedSignatures.box13Signature || '',
@@ -478,18 +518,24 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     box11InsuredSex = parseSex(apptSex);
   }
 
-  const apptSecComp = (apptPt.secondaryInsuranceCompany || appointment.secondaryInsuranceCompany || '').trim();
-  const apptSecPolicy = (apptPt.secondaryPolicyNumber || appointment.secondaryPolicyNumber || '').trim();
+  const apptSecComp = (apptPt.secondaryInsuranceCompany || appointment.secondaryInsuranceCompany || apptPt.otherInsuranceCompany || appointment.otherInsuranceCompany || '').trim();
+  const apptSecPolicy = (apptPt.secondaryPolicyNumber || appointment.secondaryPolicyNumber || apptPt.otherInsuredPolicy || appointment.otherInsuredPolicy || '').trim();
+  const apptRawOtherName = (apptPt.otherInsuredName || appointment.otherInsuredName || apptPt.otherInsured || appointment.otherInsured || apptPt.secondaryPolicyHolderName || appointment.secondaryPolicyHolderName || '').trim();
+  const apptRawOtherDob = apptPt.otherInsuredDob || appointment.otherInsuredDob || apptPt.secondaryPolicyHolderDob || appointment.secondaryPolicyHolderDob || '';
+  const apptRawOtherSex = apptPt.otherInsuredSex || appointment.otherInsuredSex || apptPt.secondaryPolicyHolderSex || appointment.secondaryPolicyHolderSex || '';
+  const apptRawOtherEmployer = (apptPt.otherInsuredEmployer || appointment.otherInsuredEmployer || '').trim();
+
+  const apptHasOtherInsurance = Boolean(apptSecComp || apptSecPolicy || apptRawOtherName || apptRawOtherDob || apptRawOtherSex || apptRawOtherEmployer);
   const apptPrimCompany = (appointment.insuranceCompany || appointment.insuranceCarrier || apptPt.primaryInsuranceCompany || '').trim();
   const apptPrimPolicy = (appointment.insurancePolicyNumber || appointment.policyNumber || '').trim();
 
-  let box11d = '';
-  if (apptSecComp || apptSecPolicy) {
-    box11d = 'YES';
-  } else if ((apptPrimCompany || apptPrimPolicy) && !apptSecComp && !apptSecPolicy) {
-    box11d = 'NO';
+  let apptBox11d = '';
+  if (apptHasOtherInsurance) {
+    apptBox11d = 'YES';
+  } else if (apptPrimCompany || apptPrimPolicy) {
+    apptBox11d = 'NO';
   } else {
-    box11d = '';
+    apptBox11d = '';
   }
 
   return {
@@ -517,11 +563,12 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     box7Phone: apptPhone,
     box8Status,
     box8EmploymentStatus,
-    box9a: '',
-    box9bDob: { mm: '', dd: '', yy: '' },
-    box9bSex: '',
-    box9c: '',
-    box9d: '',
+    box9: (apptBox11d === 'YES' || apptHasOtherInsurance) ? formatInsuredName(apptRawOtherName) : '',
+    box9a: (apptBox11d === 'YES' || apptHasOtherInsurance) ? apptSecPolicy : '',
+    box9bDob: (apptBox11d === 'YES' || apptHasOtherInsurance) && apptRawOtherDob ? parseDobToMmDdYy(apptRawOtherDob) : { mm: '', dd: '', yy: '' },
+    box9bSex: (apptBox11d === 'YES' || apptHasOtherInsurance) && apptRawOtherSex ? parseSex(apptRawOtherSex) : '',
+    box9c: (apptBox11d === 'YES' || apptHasOtherInsurance) && apptRawOtherEmployer ? apptRawOtherEmployer : '',
+    box9d: (apptBox11d === 'YES' || apptHasOtherInsurance) ? apptSecComp : '',
     box10Employment: box10.box10Employment,
     box10AutoAccident: box10.box10AutoAccident,
     box10OtherAccident: box10.box10OtherAccident,
@@ -532,7 +579,7 @@ export const mapAppointmentToCmsClaim = (appointment) => {
     box11InsuredSex,
     box11b: '',
     box11c: appointment.insuranceCompany || appointment.insuranceCarrier || '',
-    box11d,
+    box11d: apptBox11d,
     box12Signature: '',
     box12Date: dos,
     box13Signature: '',

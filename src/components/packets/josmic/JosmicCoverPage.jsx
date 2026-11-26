@@ -8,24 +8,36 @@ import fmLogo from '../../../assets/fm-logo.jpeg';
 /**
  * Format date string safely to MM/DD/YYYY
  */
-const formatDateStr = (dateStr) => {
-  if (!dateStr) return '';
-  const trimmed = String(dateStr).trim();
+const formatDateStr = (dateVal) => {
+  if (!dateVal) return '';
+  if (dateVal instanceof Date) {
+    const m = String(dateVal.getMonth() + 1).padStart(2, '0');
+    const d = String(dateVal.getDate()).padStart(2, '0');
+    const y = dateVal.getFullYear();
+    return `${m}/${d}/${y}`;
+  }
+  const trimmed = String(dateVal).trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
     const parts = trimmed.split('T')[0].split('-');
     if (parts.length === 3) {
-      return `${parts[1]}/${parts[2]}/${parts[0]}`;
+      return `${parts[1].padStart(2, '0')}/${parts[2].padStart(2, '0')}/${parts[0]}`;
     }
+  }
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
+    const parts = trimmed.split('/');
+    return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
   }
   return trimmed;
 };
 
 export const JosmicCoverPage = ({
   readOnly = false,
+  isExporting = false,
   blankMode = false,
   packetData = null,
   bill = null,
-  serviceLines = []
+  serviceLines = [],
+  appointments = []
 }) => {
   const docKey = 'JOSMIC_COVER';
   const storage = packetData?.clinicalDocStorage?.[docKey] || {};
@@ -50,23 +62,88 @@ export const JosmicCoverPage = ({
   // Extract Statement Number
   const dbStatementNumber = bill?.statementNumber || bill?.statementNo || bill?.billNumber || packetData?.statementNumber || '125639';
 
-  // Compute Service Dates range
+  // Compute Service Dates range strictly from actual billed services & appointments
   const computeDosRange = () => {
+    const dateSet = new Set();
+
+    // 1. Collect dates from actual billed service lines
     const lines = serviceLines && serviceLines.length > 0 ? serviceLines : (bill?.serviceLines || bill?.items || []);
     if (lines.length > 0) {
-      const dates = lines
-        .map(l => l.dos || l.dateOfService || l.date)
-        .filter(Boolean)
-        .map(formatDateStr);
-      if (dates.length > 1) {
-        return `${dates[0]} - ${dates[dates.length - 1]}`;
-      } else if (dates.length === 1) {
-        return dates[0];
-      }
+      lines.forEach(l => {
+        const d = l.dos || l.dateOfService || l.date;
+        const formatted = formatDateStr(d);
+        if (formatted) dateSet.add(formatted);
+      });
     }
-    const initDate = formatDateStr(packetData?.initialDate || packetData?.incidentDate || '09/08/2026');
-    const discDate = formatDateStr(packetData?.dischargeDate || '09/16/2026');
-    return initDate && discDate && initDate !== discDate ? `${initDate} - ${discDate}` : initDate;
+
+    // 2. Collect dates from actual MD Consultation appointments
+    const appts = appointments && appointments.length > 0
+      ? appointments
+      : (packetData?.appointments || []);
+
+    if (appts.length > 0) {
+      const patientId = packetData?.patientId || packetData?.patient?.id || packetData?.patient?.patientId;
+      const caseId = packetData?.id;
+      const caseNum = packetData?.caseId;
+
+      appts.forEach(a => {
+        // Patient check
+        if (patientId && a.patientId && a.patientId !== patientId) return;
+        // Case check
+        if (a.caseId && caseId && a.caseId !== caseId && a.caseId !== caseNum) return;
+        // Status check: Include only completed or billed services. Exclude CONFIRMED (unless completed/billed), cancelled, no-show, and unperformed appointments.
+        const status = (a.status || '').toUpperCase();
+        const isBilledOrCompleted = status === 'COMPLETED' || status === 'BILLED' || a.isBilled || a.billed;
+        if (!isBilledOrCompleted) return;
+        // Provider check
+        const provId = (a.providerId || '').toLowerCase();
+        const provName = (a.providerName || '').toLowerCase();
+        const apptType = (a.appointmentType || '').toLowerCase();
+        const reason = (a.reasonForVisit || '').toLowerCase();
+        const cpt = (a.cptCode || '').toLowerCase();
+        const isMdConsult =
+          provId === 'prov-josmic' ||
+          provId === 'usr-sa' ||
+          provName.includes('josmic') ||
+          provName.includes('pain') ||
+          provName.includes('wellness center') ||
+          provName.includes('adeoye') ||
+          provName.includes('sarah connor') ||
+          apptType.includes('pain') ||
+          apptType.includes('md') ||
+          apptType.includes('consult') ||
+          reason.includes('pain') ||
+          reason.includes('evaluation') ||
+          cpt.includes('99204') ||
+          cpt.includes('99203') ||
+          cpt.includes('99205') ||
+          cpt.includes('99214') ||
+          cpt.includes('99213');
+
+        if (isMdConsult) {
+          const d = a.date || a.appointmentDate || a.dos;
+          const formatted = formatDateStr(d);
+          if (formatted) dateSet.add(formatted);
+        }
+      });
+    }
+
+    if (dateSet.size === 0) {
+      return '';
+    }
+
+    const sortedDates = Array.from(dateSet).sort((a, b) => {
+      const toIso = (str) => {
+        const p = str.split('/');
+        return p.length === 3 ? `${p[2]}-${p[0]}-${p[1]}` : str;
+      };
+      return toIso(a).localeCompare(toIso(b));
+    });
+
+    if (sortedDates.length === 1) {
+      return sortedDates[0];
+    }
+    return `${sortedDates[0]} - ${sortedDates[sortedDates.length - 1]}`;
   };
 
   const dbServiceDates = computeDosRange();
@@ -81,13 +158,17 @@ export const JosmicCoverPage = ({
       : (computedLineCharges || dbTotals.totalCharges || 0))) || 0;
   const dbTotalBalance = formatCurrency(rawBalance);
 
+  const savedServiceDates = storage.serviceDates !== undefined
+    ? storage.serviceDates
+    : (blankMode ? '' : dbServiceDates);
+
   // Local state for editable fields
   const [formData, setFormData] = useState({
     patientName: storage.patientName !== undefined ? storage.patientName : (blankMode ? '' : dbPatientName),
     patientId: storage.patientId !== undefined ? storage.patientId : (blankMode ? '' : dbPatientId),
     billToName: storage.billToName !== undefined ? storage.billToName : (blankMode ? '' : dbBillToName),
     billToAddress: storage.billToAddress !== undefined ? storage.billToAddress : (blankMode ? '' : dbBillToAddress),
-    serviceDates: storage.serviceDates !== undefined ? storage.serviceDates : (blankMode ? '' : dbServiceDates),
+    serviceDates: savedServiceDates,
     statementNumber: storage.statementNumber !== undefined ? storage.statementNumber : (blankMode ? '' : dbStatementNumber),
     totalBalance: storage.totalBalance !== undefined ? storage.totalBalance : (blankMode ? '' : dbTotalBalance),
   });
@@ -105,12 +186,16 @@ export const JosmicCoverPage = ({
       });
     } else {
       const s = packetData?.clinicalDocStorage?.[docKey] || {};
+      const sDates = s.serviceDates !== undefined
+        ? s.serviceDates
+        : dbServiceDates;
+
       setFormData({
         patientName: s.patientName !== undefined ? s.patientName : dbPatientName,
         patientId: s.patientId !== undefined ? s.patientId : dbPatientId,
         billToName: s.billToName !== undefined ? s.billToName : dbBillToName,
         billToAddress: s.billToAddress !== undefined ? s.billToAddress : dbBillToAddress,
-        serviceDates: s.serviceDates !== undefined ? s.serviceDates : dbServiceDates,
+        serviceDates: sDates,
         statementNumber: s.statementNumber !== undefined ? s.statementNumber : dbStatementNumber,
         totalBalance: s.totalBalance !== undefined ? s.totalBalance : dbTotalBalance,
       });
@@ -125,7 +210,8 @@ export const JosmicCoverPage = ({
     bill?.id,
     bill?.statementNumber,
     bill?.totals?.balanceDue,
-    blankMode
+    blankMode,
+    dbServiceDates
   ]);
 
   const handleFieldChange = async (field, value) => {
@@ -149,8 +235,8 @@ export const JosmicCoverPage = ({
 
   return (
     <div
-      className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 flex flex-col justify-between overflow-hidden print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none"
-      style={{ width: '850px', minHeight: '1100px' }}
+      className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 flex flex-col justify-between overflow-hidden print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none box-border"
+      style={{ width: '850px', height: '1100px', minHeight: '1100px', maxHeight: '1100px' }}
     >
       <div className="flex-1 flex flex-col">
         {/* Top Header Banner: Dark Burgundy Background matching Page 2 theme */}
@@ -170,17 +256,6 @@ export const JosmicCoverPage = ({
                 Houston, TX 77063 | 346-338-7020
               </p>
             </div>
-          </div>
-          <div className="text-right">
-            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider leading-none">
-              MD CONSULTATION<br />COVER PAGE
-            </h2>
-            <p className="text-xs font-mono text-white/90 mt-1.5 font-bold">
-              Statement No. {formData.statementNumber || dbStatementNumber}
-            </p>
-            <p className="text-xs text-white/90 mt-0.5 font-medium">
-              Statement Date: {formData.serviceDates || dbServiceDates}
-            </p>
           </div>
         </div>
 
@@ -206,24 +281,36 @@ export const JosmicCoverPage = ({
                 <span className="block font-black text-[11px] text-[#722F37] tracking-wider uppercase mb-1">
                   PATIENT
                 </span>
-                <input
-                  type="text"
-                  value={formData.patientName}
-                  onChange={(e) => handleFieldChange('patientName', e.target.value)}
-                  placeholder="Patient Name"
-                  disabled={readOnly}
-                  className="w-full text-base sm:text-lg font-black text-slate-900 bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition"
-                />
-                <div className="flex items-center gap-1 text-xs text-slate-500 font-mono mt-1">
-                  <span>Patient ID:</span>
+                {readOnly || isExporting ? (
+                  <div className="w-full min-h-[30px] py-0.5 leading-normal overflow-visible block text-base sm:text-lg font-black text-slate-900 break-words">
+                    {formData.patientName || ''}
+                  </div>
+                ) : (
                   <input
                     type="text"
-                    value={formData.patientId}
-                    onChange={(e) => handleFieldChange('patientId', e.target.value)}
-                    placeholder="Patient ID"
+                    value={formData.patientName}
+                    onChange={(e) => handleFieldChange('patientName', e.target.value)}
+                    placeholder="Patient Name"
                     disabled={readOnly}
-                    className="flex-1 font-mono text-xs text-slate-600 bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 outline-none transition"
+                    className="w-full min-h-[30px] py-0.5 leading-normal overflow-visible block text-base sm:text-lg font-black text-slate-900 bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition"
                   />
+                )}
+                <div className="flex items-center gap-1 text-xs text-slate-500 font-mono mt-1">
+                  <span>Patient ID:</span>
+                  {readOnly || isExporting ? (
+                    <span className="font-mono text-xs text-slate-700 font-bold leading-normal overflow-visible">
+                      {formData.patientId || ''}
+                    </span>
+                  ) : (
+                    <input
+                      type="text"
+                      value={formData.patientId}
+                      onChange={(e) => handleFieldChange('patientId', e.target.value)}
+                      placeholder="Patient ID"
+                      disabled={readOnly}
+                      className="flex-1 font-mono text-xs text-slate-600 bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 outline-none transition"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -233,7 +320,7 @@ export const JosmicCoverPage = ({
                   <span className="block font-black text-[11px] text-[#722F37] tracking-wider uppercase">
                     BILLED TO
                   </span>
-                  {!readOnly && (
+                  {!readOnly && !isExporting && (
                     <div className="print:hidden w-44">
                       <SearchableLawyerSelect
                         value={formData.billToName}
@@ -261,22 +348,35 @@ export const JosmicCoverPage = ({
                     </div>
                   )}
                 </div>
-                <input
-                  type="text"
-                  value={formData.billToName}
-                  onChange={(e) => handleFieldChange('billToName', e.target.value)}
-                  placeholder="Attorney / Firm"
-                  disabled={readOnly}
-                  className="w-full text-sm sm:text-base font-bold text-slate-900 bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition"
-                />
-                <textarea
-                  rows={2}
-                  value={formData.billToAddress}
-                  onChange={(e) => handleFieldChange('billToAddress', e.target.value)}
-                  placeholder="Address"
-                  disabled={readOnly}
-                  className="w-full text-xs text-slate-600 bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition resize-none mt-0.5"
-                />
+                {readOnly || isExporting ? (
+                  <div>
+                    <div className="w-full text-sm sm:text-base font-bold text-slate-900 leading-normal break-words overflow-visible">
+                      {formData.billToName || ''}
+                    </div>
+                    <div className="w-full text-xs text-slate-600 leading-normal whitespace-pre-line break-words overflow-visible mt-0.5">
+                      {formData.billToAddress || ''}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={formData.billToName}
+                      onChange={(e) => handleFieldChange('billToName', e.target.value)}
+                      placeholder="Attorney / Firm"
+                      disabled={readOnly}
+                      className="w-full text-sm sm:text-base font-bold text-slate-900 bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition"
+                    />
+                    <textarea
+                      rows={2}
+                      value={formData.billToAddress}
+                      onChange={(e) => handleFieldChange('billToAddress', e.target.value)}
+                      placeholder="Address"
+                      disabled={readOnly}
+                      className="w-full text-xs text-slate-600 bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition resize-none mt-0.5"
+                    />
+                  </>
+                )}
               </div>
             </div>
 
@@ -284,50 +384,68 @@ export const JosmicCoverPage = ({
             <div className="border-t border-[#eed8dc] my-5"></div>
 
             {/* Bottom 3 Columns: SERVICE DATES, STATEMENT NO., TOTAL BALANCE */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-3 sm:gap-4 items-center">
               {/* SERVICE DATES */}
-              <div>
+              <div className="min-w-0">
                 <span className="block font-extrabold text-[10.5px] text-[#722F37] tracking-wider uppercase mb-1">
                   SERVICE DATES
                 </span>
-                <input
-                  type="text"
-                  value={formData.serviceDates}
-                  onChange={(e) => handleFieldChange('serviceDates', e.target.value)}
-                  placeholder="MM/DD/YYYY - MM/DD/YYYY"
-                  disabled={readOnly}
-                  className="w-full text-xs sm:text-sm font-bold text-slate-800 font-mono bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition"
-                />
+                {readOnly || isExporting ? (
+                  <div className="w-full min-h-[30px] py-1 text-xs sm:text-[13px] font-bold text-slate-800 font-mono leading-normal overflow-visible block break-words">
+                    {formData.serviceDates || ''}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.serviceDates}
+                    onChange={(e) => handleFieldChange('serviceDates', e.target.value)}
+                    placeholder="MM/DD/YYYY - MM/DD/YYYY"
+                    disabled={readOnly}
+                    className="w-full min-h-[32px] h-8 py-1 text-xs sm:text-[13px] font-bold text-slate-800 font-mono leading-normal bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition tracking-tight overflow-visible disabled:opacity-100 disabled:text-slate-800 block"
+                  />
+                )}
               </div>
 
               {/* STATEMENT NO. */}
-              <div>
+              <div className="min-w-0">
                 <span className="block font-extrabold text-[10.5px] text-[#722F37] tracking-wider uppercase mb-1">
                   STATEMENT NO.
                 </span>
-                <input
-                  type="text"
-                  value={formData.statementNumber}
-                  onChange={(e) => handleFieldChange('statementNumber', e.target.value)}
-                  placeholder="Statement #"
-                  disabled={readOnly}
-                  className="w-full text-xs sm:text-sm font-bold text-slate-800 font-mono bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition"
-                />
+                {readOnly || isExporting ? (
+                  <div className="w-full min-h-[30px] py-1 text-xs sm:text-sm font-bold text-slate-800 font-mono leading-normal overflow-visible block break-words">
+                    {formData.statementNumber || ''}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.statementNumber}
+                    onChange={(e) => handleFieldChange('statementNumber', e.target.value)}
+                    placeholder="Statement #"
+                    disabled={readOnly}
+                    className="w-full min-h-[32px] h-8 py-1 text-xs sm:text-sm font-bold text-slate-800 font-mono leading-normal bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition overflow-visible disabled:opacity-100 disabled:text-slate-800 block"
+                  />
+                )}
               </div>
 
               {/* TOTAL BALANCE */}
-              <div>
+              <div className="min-w-0">
                 <span className="block font-extrabold text-[10.5px] text-[#722F37] tracking-wider uppercase mb-1">
                   TOTAL BALANCE
                 </span>
-                <input
-                  type="text"
-                  value={formData.totalBalance}
-                  onChange={(e) => handleFieldChange('totalBalance', e.target.value)}
-                  placeholder="$0.00"
-                  disabled={readOnly}
-                  className="w-full text-base sm:text-lg font-black text-[#722F37] font-mono bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition"
-                />
+                {readOnly || isExporting ? (
+                  <div className="w-full min-h-[30px] py-0.5 text-base sm:text-lg font-black text-[#722F37] font-mono leading-normal overflow-visible block break-words">
+                    {formData.totalBalance || ''}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.totalBalance}
+                    onChange={(e) => handleFieldChange('totalBalance', e.target.value)}
+                    placeholder="$0.00"
+                    disabled={readOnly}
+                    className="w-full min-h-[32px] h-8 py-0.5 text-base sm:text-lg font-black text-[#722F37] font-mono leading-normal bg-transparent hover:bg-white/60 focus:bg-white rounded px-1 -mx-1 outline-none transition overflow-visible disabled:opacity-100 disabled:text-[#722F37] block"
+                  />
+                )}
               </div>
             </div>
           </div>

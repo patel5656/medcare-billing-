@@ -28,6 +28,7 @@ export const JosmicBillingStatement = ({
   bill = null,
   selectedCase = null,
   readOnly = false,
+  isExporting = false,
   blankMode = false,
   providerId = 'prov-josmic',
   appointments: propAppointments = null
@@ -213,8 +214,8 @@ export const JosmicBillingStatement = ({
 
   return (
     <div
-      className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 flex flex-col justify-between overflow-hidden print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none"
-      style={{ width: '850px', minHeight: '1100px' }}
+      className="w-[850px] max-w-full relative bg-white text-slate-900 font-sans shadow-2xl mx-auto border border-slate-300 flex flex-col justify-between overflow-hidden print:w-full print:max-w-none print:h-auto print:min-h-0 print:p-0 print:m-0 print:border-none print:shadow-none box-border"
+      style={{ width: '850px', height: '1100px', minHeight: '1100px', maxHeight: '1100px' }}
     >
       <div className="flex-1 flex flex-col">
         {/* Top Header Banner: Dark Burgundy Background matching reference design */}
@@ -258,22 +259,35 @@ export const JosmicBillingStatement = ({
                 BILL TO
               </div>
               <div className="p-3 space-y-0.5 text-slate-800">
-                <input
-                  type="text"
-                  value={formData.billToName}
-                  onChange={(e) => handleFieldChange('billToName', e.target.value)}
-                  placeholder="Attorney / Law Firm"
-                  disabled={readOnly}
-                  className="w-full font-bold text-slate-900 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition"
-                />
-                <textarea
-                  rows={2}
-                  value={formData.billToAddress}
-                  onChange={(e) => handleFieldChange('billToAddress', e.target.value)}
-                  placeholder="Attorney Address"
-                  disabled={readOnly}
-                  className="w-full text-xs text-slate-700 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition resize-none"
-                />
+                {readOnly || isExporting ? (
+                  <>
+                    <div className="w-full font-bold text-slate-900 px-1 min-h-[18px] leading-normal break-words overflow-visible">
+                      {formData.billToName || (blankMode ? '' : dbBillToName)}
+                    </div>
+                    <div className="w-full text-xs text-slate-700 px-1 min-h-[16px] leading-normal whitespace-pre-line break-words overflow-visible">
+                      {formData.billToAddress || (blankMode ? '' : dbBillToAddress)}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={formData.billToName}
+                      onChange={(e) => handleFieldChange('billToName', e.target.value)}
+                      placeholder="Attorney / Law Firm"
+                      disabled={readOnly}
+                      className="w-full font-bold text-slate-900 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition"
+                    />
+                    <textarea
+                      rows={2}
+                      value={formData.billToAddress}
+                      onChange={(e) => handleFieldChange('billToAddress', e.target.value)}
+                      placeholder="Attorney Address"
+                      disabled={readOnly}
+                      className="w-full text-xs text-slate-700 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition resize-none"
+                    />
+                  </>
+                )}
               </div>
             </div>
 
@@ -283,33 +297,52 @@ export const JosmicBillingStatement = ({
                 PATIENT
               </div>
               <div className="p-3 space-y-0.5 text-slate-800">
-                <input
-                  type="text"
-                  value={formData.patientName}
-                  onChange={(e) => handleFieldChange('patientName', e.target.value)}
-                  placeholder="Patient Name"
-                  disabled={readOnly}
-                  className="w-full font-bold text-slate-900 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition"
-                />
-                <input
-                  type="text"
-                  value={formData.patientAddress}
-                  onChange={(e) => handleFieldChange('patientAddress', e.target.value)}
-                  placeholder="Patient Address"
-                  disabled={readOnly}
-                  className="w-full text-xs text-slate-700 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition"
-                />
-                <div className="flex items-center gap-1 text-xs text-slate-600 font-mono pt-1">
-                  <span>Patient ID:</span>
-                  <input
-                    type="text"
-                    value={formData.patientId}
-                    onChange={(e) => handleFieldChange('patientId', e.target.value)}
-                    placeholder="Patient ID"
-                    disabled={readOnly}
-                    className="flex-1 font-bold text-slate-800 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition"
-                  />
-                </div>
+                {readOnly || isExporting ? (
+                  <>
+                    <div className="w-full font-bold text-slate-900 px-1 min-h-[18px] leading-normal break-words overflow-visible">
+                      {formData.patientName || (blankMode ? '' : dbPatientName)}
+                    </div>
+                    <div className="w-full text-xs text-slate-700 px-1 min-h-[16px] leading-normal break-words overflow-visible">
+                      {formData.patientAddress || (blankMode ? '' : dbPatientAddress)}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-slate-600 font-mono pt-1 px-1">
+                      <span>Patient ID:</span>
+                      <span className="font-bold text-slate-800 leading-normal overflow-visible">
+                        {formData.patientId || (blankMode ? '' : dbPatientId)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={formData.patientName}
+                      onChange={(e) => handleFieldChange('patientName', e.target.value)}
+                      placeholder="Patient Name"
+                      disabled={readOnly}
+                      className="w-full font-bold text-slate-900 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition"
+                    />
+                    <input
+                      type="text"
+                      value={formData.patientAddress}
+                      onChange={(e) => handleFieldChange('patientAddress', e.target.value)}
+                      placeholder="Patient Address"
+                      disabled={readOnly}
+                      className="w-full text-xs text-slate-700 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition"
+                    />
+                    <div className="flex items-center gap-1 text-xs text-slate-600 font-mono pt-1">
+                      <span>Patient ID:</span>
+                      <input
+                        type="text"
+                        value={formData.patientId}
+                        onChange={(e) => handleFieldChange('patientId', e.target.value)}
+                        placeholder="Patient ID"
+                        disabled={readOnly}
+                        className="flex-1 font-bold text-slate-800 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -344,7 +377,7 @@ export const JosmicBillingStatement = ({
                         <td className="p-2 text-right font-bold text-slate-900 bg-slate-50/50">{formatCurrency(item.lineBal)}</td>
                       </tr>
                     ))}
-                    {Array.from({ length: Math.max(0, 10 - displayItems.length) }).map((_, fIdx) => (
+                    {Array.from({ length: Math.max(0, 8 - displayItems.length) }).map((_, fIdx) => (
                       <tr key={`fill-${fIdx}`} className="h-7">
                         <td className="p-2 border-r border-slate-200">&nbsp;</td>
                         <td className="p-2 border-r border-slate-200">&nbsp;</td>
@@ -384,14 +417,20 @@ export const JosmicBillingStatement = ({
               COMMENTS
             </div>
             <div className="p-2.5">
-              <input
-                type="text"
-                value={formData.comments}
-                onChange={(e) => handleFieldChange('comments', e.target.value)}
-                placeholder="Enter statement comments..."
-                disabled={readOnly}
-                className="w-full text-xs text-slate-700 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition"
-              />
+              {readOnly || isExporting ? (
+                <div className="w-full text-xs text-slate-700 px-1 min-h-[18px] leading-normal break-words overflow-visible">
+                  {formData.comments || ''}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={formData.comments}
+                  onChange={(e) => handleFieldChange('comments', e.target.value)}
+                  placeholder="Enter statement comments..."
+                  disabled={readOnly}
+                  className="w-full text-xs text-slate-700 bg-transparent hover:bg-slate-50 focus:bg-white rounded px-1 outline-none transition"
+                />
+              )}
             </div>
           </div>
 
